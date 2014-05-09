@@ -1,0 +1,61 @@
+splinecurves2dv2
+
+1   #grading factor
+
+#                       ^ y
+#                       | 
+#  A  ----   B  ----------------  C  ------  D
+#  |  Metal  |        Oxide       |  Metal   |
+#  E  ----   F  --------0-------  G  ------  H ------> x
+#  |                                         |
+#  |              Semiconductor              |
+#  |                                         |
+#  I  -------------------------------------- J
+#
+#  Coordinates in micrometer
+#
+points
+ 1 -2  1   #A
+ 2 -1  1   #B
+ 3  1  1   #C
+ 4  2  1   #D
+ 5 -2  0   #E
+ 6 -1  0   #F
+ 7  1  0   #G
+ 8  2  0   #H
+ 9 -2 -3   #I
+10  2 -3   #J
+
+# boundary curves consisting of
+# dl    dr      np      p1      p2      flaglist
+# with 
+# dl ... sub-domain nr on left side 
+# dr ... sub-domain nr on right side 
+# np ... curve is given by 2 (or 3) points
+# p1, p2 ... points defining the curve
+# flagslist
+segments
+1       4       2       5       6      -maxh=0.5
+1       2       2       6       2      -maxh=0.5      
+1       0       2       2       1      -maxh=0.5      
+1       0       2       1       5      -maxh=0.5      
+
+2       4       2       6       7      -maxh=0.5
+2       3       2       7       3      -maxh=0.5       
+2       0       2       3       2      -maxh=0.5 
+
+3       4       2       7       8      -maxh=0.5
+3       0       2       8       4      -maxh=0.5 
+3       0       2       4       3      -maxh=0.5 
+
+4       0       2       5       9      -maxh=0.5
+4       0       2       9      10      -maxh=0.5 
+4       0       2      10       8      -maxh=0.5
+
+
+materials
+1       domain1   -maxh=0.5 -col=[1,0,0]
+2       domain2   -maxh=0.5 -col=[0,1,0]
+3       domain3   -maxh=0.5 -col=[0,1,1]
+4       domain4   -maxh=0.5 -col=[1,1,0]
+

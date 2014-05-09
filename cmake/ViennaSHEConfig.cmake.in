@@ -1,0 +1,32 @@
+#- CMake configuration file for ViennaSHE
+# Sets the following variables if ViennaSHE was found:
+#  VIENNASHE_FOUND         : TRUE if found
+#  VIENNASHE_INCLUDE_DIRS  : Include-directories to be used
+#  VIENNASHE_LIBRARIES     : Libraries to link against
+# Although ViennaSHE is a headers-only library, it still requires an OpenCL
+# implementation, which is why it is necessary to link against a library.
+
+# Compute paths
+get_filename_component(VIENNASHE_CMAKE_DIR "${CMAKE_CURRENT_LIST_FILE}" PATH)
+if(EXISTS "${VIENNASHE_CMAKE_DIR}/CMakeCache.txt")
+   # in build tree
+   get_filename_component(VIENNASHE_INSTALL_PREFIX "${VIENNASHE_CMAKE_DIR}" PATH)
+   set(VIENNASHE_INCLUDE_DIR "${_VIENNASHE_PREFIX}")
+else()
+   set(VIENNASHE_INSTALL_PREFIX "${VIENNASHE_CMAKE_DIR}/@CONF_REL_INSTALL_PREFIX@")
+   set(VIENNASHE_INCLUDE_DIR "${VIENNASHE_CMAKE_DIR}/@CONF_REL_INCLUDE_DIR@")
+endif()
+
+# Find OpenCL
+set(_VIENNASHE_CMAKE_MODULE_PATH "${CMAKE_MODULE_PATH}")
+list(INSERT CMAKE_MODULE_PATH 0 "${VIENNASHE_CMAKE_DIR}")
+if(ViennaSHE_FIND_REQUIRED)
+   find_package(OpenCL QUIET REQUIRED)
+else()
+   find_package(OpenCL QUIET)
+endif()
+set(CMAKE_MODULE_PATH "${_VIENNASHE_CMAKE_MODULE_PATH}")
+
+# Set up variables
+set(VIENNASHE_INCLUDE_DIRS ${VIENNASHE_INCLUDE_DIR} ${OPENCL_INCLUDE_DIRS})
+set(VIENNASHE_LIBRARIES ${OPENCL_LIBRARIES})

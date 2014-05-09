@@ -1,0 +1,93 @@
+************************************************
+****           ViennaSHE Readme             ****
+************************************************
+
+Table of Contents
+------------------
+1. Requirements
+2. Installation
+3. Project Layout
+4. Authors and Contact
+A. License
+
+
+(for detailed informations, have a look into the doc/ folder containing a PDF manual and doxygen-created reference documentation)
+
+
+
+1. Requirements
+-----------------
+ViennaSHE requires only 
+ - a not too dated C++ compiler (e.g. gcc 4.x.x),
+ - the C++ Standard Template Library,
+ - ViennaGrid (http://viennagrid.sourceforge.net), and
+ - ViennaCL (http://viennacl.sourceforge.net)
+
+For building the examples, CMake can be used.
+
+
+2. Installation
+-----------------
+
+The first step is to extract the file:
+
+Unix-based OS:
+$> gunzip ViennaSHE-1.2.0.tar.gz
+$> tar -xf ViennaSHE-1.2.0.tar
+$> cd ViennaSHE-1.2.0
+
+Detailed instructions for the various operating systems can obtained by opening the file
+  ./doc/html/manual-page-installation.html
+in your favorite browser. An online version is available at
+  http://viennashe.sourceforge.net/doc/manual-page-installation.html
+
+
+3. Project Layout
+-----------------
+
+---- ViennaSHE-1.X.X
+   |
+   |-- build/ - Build folder for the examples
+   |
+   |-- cmake/ - Auxiliary files for the CMake build system
+   |
+   |-- doc/ - HTML documentation
+   |
+   |-- examples/ - Tutorial and benchmarking applications
+        |
+        |-- data/ - Test meshes for the tutorials
+        |
+        |-- devices/ - Tutorial applications for different semiconductor devices
+        |
+        |-- libviennashe/ - How to use ViennaSHE as a shared C library
+        |
+        |-- python/ - Example usage of the Python wrappers
+   |
+   |-- libviennashe/ - The shared C-library wrapper
+   |
+   |-- python/ - The Python bindings for using ViennaSHE from Python
+   |
+   |-- src/ - Interface to the solvers used in ViennaSHE
+   |
+   |-- tests/ - Automated test suite for ViennaSHE
+   |
+   |-- viennacl/ - The library source code of ViennaCL
+   |
+   |-- viennagrid/ - The library source code of ViennaGrid
+   |
+   |-- viennashe/ - The library source code of ViennaSHE
+
+
+4. Authors and Contact
+------------------------
+
+ViennaSHE was developed under the aegis of the 'Institute for Microelectronics' and the 'Institute for Analysis and Scientific Computing' at the 'Vienna University of Technology'.
+It is supervised by Prof. Tibor Grasser and Prof. Ansgar J\"ungel and contains code contributed by Karl Rupp, Markus Bina, and Peter Lagger.
+
+Please send any support requests to our mailing list at viennashe-support@lists.sourceforge.net
+(feel free to sign up here first: https://lists.sourceforge.net/lists/listinfo/viennashe-support)
+
+A. License
+------------
+ViennaSHE is distributed under the MIT (X11) License. See file LICENSE.
+

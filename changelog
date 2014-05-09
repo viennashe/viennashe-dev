@@ -1,0 +1,66 @@
+/** \page changelog    Change Log
+
+## Version 1.2.x
+
+### Version 1.2.0
+Most internals of ViennaSHE have been redesigned to better support the coupling of different models.
+This also includs a shift from compile-time dispatches towards runtime dispatches, which reduces compilation times and paves the way for opening up ViennaSHE to scripting languages.
+The developer repository moves to GitHub, fostering community-driven development.
+A detailed list of significant changes is as follows:
+  - API: Now providing 'viennashe/core.hpp' as a single include file for the user.
+  - Boost: Eliminated all dependencies. ViennaSHE is now free from Boost, simplifying installation particularly on Windows.
+  - CMake: Version 2.6 instead of 2.8 is sufficient, hence supporting older OSes (e.g. CentOS 5).
+  - Contacts: To eliminate spurious self-interactions, the doping at the contacts is internally set to a constant (i.e. maximum of doping concentrations in cells attached to contact) prior to running any simulations.
+  - Doxygen: Documentation is now entirely based on HTML-output, merging the API documentation with the (previously PDF) manual.
+  - General: Added optional coupling with heat equation.
+  - General: Quantum corrections using the density gradient model are now available.
+  - General: Switched to a cell-based finite volume discretization.
+    As a consequence, simplex meshes are no longer required to have the Delaunay property, and arbitrary distorted quadrilateral and hexahedral meshes can be used.
+  - Interfacing: Added an experimental shared C library (libviennashe).
+  - Interfacing: Added experimental bindings for Python (folder python/).
+  - IO: All result quantities can now be written to VTK together rather than individually.
+  - IO: Added device reader from VTK.
+  - Logging: Fixed spurious overhead, which was particularly notable during the equation assembly stage.
+  - Logging: Output is much more structured. Important data (update norms, etc.) displayed as a table.
+  - Logging: Now enabled by default. Disable via VIENNASHE_DISABLE_LOGGING preprocessor symbol.
+  - SHE: A user can select a discretization of either the carrier distribution function f, or the generalized distribution function g (product of f with the density of states).
+  - SHE: Adaptive SHE was removed due to time constraints. Will be re-added in release 1.3.0.
+  - SHE: Boundary conditions can now be selected to be either of generation-recombination type, or a Maxwellian at the contact.
+  - SHE: Maximum and minimum kinetic energy ranges can be specified for electrons and holes separately, reducing the memory footprint and execution times when applying high bias voltages.
+  - Solvers: Now built in a separate static library to speed up the overall compilation process.
+  - Standalone Executable: Removed. New standalone executable to come in release 1.3.0.
+  - ViennaData: No longer used.
+  - ViennaGrid: Updated from 1.x-branch to version 2.1.0.
+
+## Version 1.1.x
+
+### Version 1.1.1
+A number of internal changes were applied while keeping the public API. Most notably:
+  - Changed name of standalone executable from vshe to viennashe.
+  - Updated ViennaCL to version 1.4.1, reducing simulation times significantly.
+  - The current density returned is now the electric current density rather than the particle current density.
+  - Improved numerical stability for tetrahedral and triangular meshes.
+  - Fixed warnings and compilation issues with some versions of GCC and Clang (thanks to Prof. Jungemann for reporting).
+  - Changed the initial guess for carrier densities to equilibrium densities (makes a difference whenever \f$np \ne n_i^2\f$).
+
+### Version 1.1.0
+The simulator has experienced a major update. Any compatibility with Version 1.0.x has been dropped in favor of a refined interface.
+In the following a list of the key features is given:
+  - Self-consistent bipolar solution the Poisson equation and two Boltzmann equations for electrons and holes, respectively, using a trapping model for generation/recombination (the model used for deriving Shockley-Read-Hall for drift-diffusion).
+  - Added implementations of carrier-carrier- as well as impact ionization scattering.
+  - Added implementations of a Newton-type scheme for Drift-Diffusion as well as SHE.
+  - Additional evaluators for the (generalized) (energy) distribution function.
+  - Fine-grained control over simulator output via a logging facility.
+  - Implemented full-band model as suggested by Jin et al.
+  - Replaced Dirichlet boundary conditions for SHE at the contacts by generation-recombination-type boundary conditions as suggested by Schroeder et al. and Jungemann et al.
+
+## Version 1.0.x
+
+### Version 1.0.1
+Bugfix release: Corrected parameter alpha in Modena model, polished documentation
+
+### Version 1.0.0
+First release
+
+
+*/
