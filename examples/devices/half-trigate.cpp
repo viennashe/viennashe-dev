@@ -160,7 +160,21 @@ int main()
   **/
   std::cout << "* main(): Creating and scaling device..." << std::endl;
   DeviceType device;
-  device.load_mesh("../examples/data/half-trigate57656.mesh");
+  try
+  {
+    device.load_mesh("../examples/data/half-trigate57656.mesh");
+  }
+  catch (std::runtime_error const & e)
+  {
+    std::cerr << "-----------------------------------------------------------" << std::endl;
+    std::cerr << "--- NOTE: Please download the mesh file from:" << std::endl;
+    std::cerr << "--- http://viennashe.sourceforge.net/half-trigate57656.mesh" << std::endl;
+    std::cerr << "--- and place it in folder ../examples/data/" << std::endl;
+    std::cerr << "--- (this way the repository remains light-weight)" << std::endl;
+    std::cerr << "-----------------------------------------------------------" << std::endl;
+    throw e;
+  }
+
   device.scale(1e-9);
 
 
