@@ -1,0 +1,269 @@
+
+
+/**
+
+   \page manual-page-physics    Physics
+
+The SHE equations incorporate material-specific properties by the velocity term \f$\mathbf v\f$, the modulus \f$\vert \mathbf \mathbf k \vert\f$ of the wave vector as a function of energy, the generalized density of states \f$Z\f$, and the scattering operator \f$Q\f$. However, the velocity term \f$\mathbf v\f$ and the density of states \f$Z\f$ are not independent and depend on the dispersion relation \f$\varepsilon(\mathbf k)\f$ by
+\f{align*}{
+ \mathbf v &= \frac{1}{\hbar} \nabla_{\mathbf k} \varepsilon \ , \\
+ Z(\varepsilon, \theta, \varphi) &= \frac{\vert \mathbf k \vert^2}{4\pi^3} \frac{\partial \vert \mathbf k \vert}{\partial \varepsilon} \ .
+\f}
+Note that different prefactors for the definition of the density of states are in use, thus extra care needs to be taken when comparing values for the density of states from different sources.
+The third quantity, namely the modulus of the wave vector, is obtained from inverting the dispersion relation.
+Consequently, the choice of the dispersion relation plays a central role for the accuracy of the SHE method.
+The dispersion relations available in ViennaSHE are discussed below.
+
+The second half of this chapter is devoted to the various scattering effects.
+Since scattering balances the energy gain of carriers due to the electric field, accurate expressions for the scattering operators are mandatory.
+ViennaSHE provides the most important linear scattering operators, see \ref manual-sec-scattering
+
+\warning <i>Keep in mind that ViennaSHE 1.2.0 is not rigorously calibrated! Before any quantitative interpretation of the obtained simulation results, ensure a proper calibration for your application domain first.</i>
+
+\section manual-sec-dispersion Dispersion Relations
+
+ViennaSHE includes three common dispersion relations used for the SHE method.
+All relations are spherically symmetric in the Herring-Vogt transformed space, which has been shown to be a fairly good approximation \cite Hong:Deterministic-Solvers-book \cite Jin:Efficient-full-band-SHE.
+
+\subsection manual-subsec-dispersion-parabolic Parabolic Dispersion
+Due to the nonuniformity of the crystal lattice in silicon with respect to a change in direction,
+the dispersion relation linking the particle momentum with the particle energy cannot be accurately described by the idealized setting of an infinitely deep quantum well,
+for which the solution of Schr&ouml;dinger's equation yields a parabolic dependence of the energy on the wave vector:
+\f{align*}{
+ \varepsilon(\mathbf{k}) = \frac{\hbar^2 \vert\mathbf{k}\vert^2}{2 m^* } \ ,
+\f}
+where \f$\hbar\f$ is the scaled Planck constant and \f$m^*\f$ is the effective mass. Still, this quadratic relationship termed <i>parabolic band approximation</i> is a good approximation near the minimum of the energy valley.
+Due to its simple analytical form, the parabolic dispersion relation is often used up to high energies, for which it fails to provide an accurate description of the material.
+
+
+
+\subsection manual-subsec-dispersion-nonparabolic Non-Parabolic Dispersion (Modena)
+A more accurate approximation to the band structure in silicon can be obtained by a slight modification of the form
+\f{align*}{
+ \gamma(\varepsilon) = \frac{\hbar^2 \mathbf{k}^2}{2 m^* } \ ,
+\f}
+where the typical choice
+\f{align*}{
+ \gamma(\varepsilon) = \varepsilon ( 1 + \alpha \varepsilon)
+\f}
+is known as <i>Kane's</i> model \cite Kane:Band-Structure.
+The parameter \f$\alpha\f$ is called <b>nonparabolicity factor</b>; in the case \f$\alpha = 0\f$ one obtains again
+the parabolic dispersion relation. The non-parabolic approximation with \f$\alpha = 0.5\f$ already provides a good approximation of the dispersion relation for electrons in relaxed silicon at low energies.
+However, for kinetic energies above \f$1.75\f$ eV the nonparabolic approximation fails to describe the nonmonotonicity of the density of states in silicon.
+
+The non-parabolic dispersion relation is usually referred to as <i>Modena model</i> in publications on the SHE method \cite Hong:fully-decoupled-scheme \cite Jin:Efficient-full-band-SHE, thus ViennaSHE follows this nomenclature.
+
+\subsection manual-subsec-dispersion-ext-vecchi Extended Vecchi Model
+Without going into the details of the derivation, it is possible to drop the assumption of having an explicit dispersion relation \f$\varepsilon(\mathbf k)\f$,
+and instead use fullband-data for the velocity and the density of states directly. This model proposed by Jin <i>et al.</i> \cite Jin:Efficient-full-band-SHE
+is referred to as <b>extended Vecchi model</b>, as a similar idea restricted to first-order SHE has been used by Vecchi <i>et al.</i> \cite Vecchi:Modeling-electron-and-hole-transport.
+
+To summarize, an overview of different dispersion relations is as follows:
+
+<center>
+![Density of States.](energy-band-dos.png)
+![Carrier Velocity.](energy-band-velocity.png)
+<b>Comparison of the density of states and the carrier velocity for the various band models.
+          The many-band model \cite Brunetti:Many-band-silicon-model and the fitted full-band model from Matz <i>et al.</i> \cite Matz:SHE-of-conduction-band are not included in ViennaSHE as they are superseded by the fullband-model of Jin <i>et al.</i> \cite Jin:Efficient-full-band-SHE </b>
+</center>
+
+\section manual-sec-scattering Scattering Mechanisms
+While the band structure links the particle energy with the particle momentum, it does not fully describe the propagation of carriers.
+In the presence of an electrostatic force, carriers would be accelerated and thus gain energy indefinitely unless scattering with the crystal lattice or with other carriers
+is included in the model. ViennaSHE provides the most important scattering mechanisms in relaxed silicon, which are discussed in the following.
+The scattering operator is assumed to be given in the form
+\f{align*}{
+ Q\{f\} = \frac{1}{(2\pi)^3} \int_{\mathcal{BZ}} s(\mathbf{x}, \mathbf{k}^\prime, \mathbf{k}) f(\mathbf{x}, \mathbf{k}^\prime, t) - s(\mathbf{x}, \mathbf{k}, \mathbf{k}^\prime)
+f(\mathbf{x}, \mathbf{k}, t) \: \mathrm{d}\mathbf k^\prime \ ,
+\f}
+where it has to emphasized that scaling factors in front of the scattering integral, here \f$1/(2\pi)^3\f$, need to be taken into account when comparing scattering rates from different sources.
+The commonly written small sample volume \f$V_{\mathrm s}\f$ as prefactor for the scattering integral is not written explicitly in the following.
+
+A detailed discussion of scattering mechanisms can be found e.g.~in the book of Lundstrom \cite Lundstrom:Fundamentals-carrier-transport .
+In the context of the SHE method, various scattering mechanisms are discussed by Hong <i>et al.</i> \cite Hong:Deterministic-Solvers-book.
+
+\subsection manual-subsec-scattering-acoustical Acoustical Phonon Scattering
+Atoms in the crystal lattice vibrate around their fixed equilibrium locations at nonzero temperature. These vibrations are quantized by phonons with energy
+\f$\hbar \omega_{\mathrm{phon}}\f$. Since the change in particle energy due to acoustic phonon scattering is very small, the process is typically modelled as an
+elastic process. The scattering rate can thus be written as
+\f{align*}{
+ s_{\mathrm{ac}}(\mathbf{x}, \mathbf{k}, \mathbf{k}^\prime) =
+     \sigma_{\mathrm{ac}}  \delta(\varepsilon(\mathbf{k}) - \varepsilon(\mathbf{k}^\prime)) \ ,
+\f}
+where the coefficient \f$\sigma_{\mathrm{ac}}\f$ is given by
+\f{align*}{
+ \sigma_{\mathrm{ac}} = \frac{2 \pi k_{\mathrm{B}}T \mathcal{E}^2}{\hbar \rho u_{\mathrm l}^2 } \ ,
+\f}
+with deformation potential \f$\mathcal E\f$, density of mass \f$\rho\f$, and longitudinal sound velocity \f$u_{\mathrm l}\f$.
+
+<center>
+<table>
+<tr><th>                             </th><th>Si                            </th><th>Ge                            </th></tr>
+<tr><td>\f$\rho\f$                   </td><td> \f$2.33\f$ g/cm\f$^3\f$      </td><td> 5.32 g/cm\f$^3\f$            </td></tr>
+<tr><td>\f$u_{\mathrm l}\f$          </td><td> \f$9.05 \times 10^5\f$ cm/s  </td><td> \f$5.40 \times 10^5\f$ cm/s  </td></tr>
+<tr><td>\f$\epsilon\f$               </td><td> \f$11.7 \times \epsilon_0\f$ </td><td> \f$16.0 \times \epsilon_0\f$ </td></tr>
+<tr><td>\f$\mathcal E_{\mathrm e}\f$ </td><td> \f$8.90\f$ eV                </td><td> \f$8.79\f$ eV                </td></tr>
+<tr><td>\f$\mathcal E_{\mathrm h}\f$ </td><td> \f$5.12\f$ eV                </td><td> \f$7.40\f$ eV                </td></tr>
+</table>
+<b>Material parameters for silicon and germanium, cf. \cite Jungemann:hierarchical-device-simulation. <br />
+          The subscripts \f$\mathrm e\f$ and \f$\mathrm h\f$ are used to distinguish between electrons and holes.</b>
+</center>
+
+
+Since acoustic phonon scattering is modeled as an elastic scattering process \cite Jacoboni:Monte-Carlo-Book, it does not couple different energy levels.
+
+
+\subsection manual-subsec-scattering-optical Optical Phonon Scattering
+Unlike acoustical phonon scattering, optical phonon scattering is modelled as an inelastic process leading to a change of the particle energy.
+With the phonon occupation number \f$N_{\mathrm{phon}}\f$ given by the Bose-Einstein statistics
+\f{align*}{
+ N_{\mathrm{phon}} = \frac{1}{\exp\bigl(\frac{\hbar \omega_{\mathrm{phon}}}{k_B T}\bigr) - 1} \ ,
+\f}
+the scattering rate for the initial state \f$\mathbf{k}\f$ and the final state \f$\mathbf{k}^\prime\f$ can be written as
+\f{align*}{
+ s_{\mathrm{op}}(\mathbf{x}, \mathbf{k}, \mathbf{k}^\prime) =
+    \sigma_{\mathrm{op}} \bigl[
+          N_{\mathrm{phon}}\hphantom{)}  \delta(\varepsilon(\mathbf{k}) - \varepsilon(\mathbf{k}^\prime) + \hbar \omega_{\mathrm{op}})
+          + (1+N_{\mathrm{phon}}) \delta(\varepsilon(\mathbf{k}) - \varepsilon(\mathbf{k}^\prime) - \hbar \omega_{\mathrm{op}})
+         \bigr] \ ,
+\f}
+where \f$\sigma_{\mathrm{op}} (\mathbf{x}, \mathbf{k}, \mathbf{k}^\prime)\f$ is symmetric in \f$\mathbf{k}\f$ and \f$\mathbf{k}^\prime\f$ and given by
+\f{align*}{
+ \sigma_{\mathrm{op}} = \frac{\pi (D_{\mathrm t} K_\nu)^2}{\rho \omega_\nu} \ ,
+\f}
+with coupling constant \f$D_{\mathrm t} K_\nu\f$, mass density \f$\rho\f$, and phonon frequency \f$\omega_\nu\f$.
+Values for the individual modes are as follows:
+
+<center>
+<table>
+<tr><td>\f$D_{\mathrm t} K\f$           </td><td> \f$4.0 \times 10^8\f$ eV/cm </td></tr>
+<tr><td>\f$\hbar \omega_{\mathrm op}\f$ </td><td> \f$50\f$ meV                </td></tr>
+</table>
+<b>Parameters used for optical phonon scattering in ViennaSHE as published in</b> \cite Rahmat:Simulation-of-Semiconductor-Devices-using-SHE .
+</center>
+
+It should be noted that optical phonon scattering couples the energy levels \f$H - \hbar \omega_{\mathrm{op}}\f$, \f$H\f$ and \f$H + \hbar \omega_{\mathrm{op}}\f$ in an asymmetric manner, because
+scattering from higher energy to lower energy is more likely than vice versa.
+
+
+
+\subsection manual-subsec-scattering-impurities  Ionized Impurity Scattering
+
+Dopants in a semiconductor are fixed charges inside the crystal lattice. Since carriers are charged particles as well, their trajectories are
+influenced by these fixed charges, leading to a change of their momentum.
+The model by Brooks and Herring \cite Brooks:Ionized-Impurity \cite Jacoboni:Monte-Carlo-Book suggests an elastic scattering process with scattering coefficient
+\f{align*}{
+ s_{\mathrm{imp}}(\mathbf{x}, \mathbf{k}, \mathbf{k}^\prime) =
+     \sigma_{\mathrm{imp}}(\mathbf{x}, \mathbf{k}, \mathbf{k}^\prime) \delta(\varepsilon(\mathbf{x}) - \varepsilon(\mathbf{x}^\prime)) \ ,
+\f}
+where \f$\sigma_{\mathrm{imp}} (\mathbf{x}, \mathbf{k}, \mathbf{k}^\prime)\f$ is symmetric in \f$\mathbf{k}\f$ and \f$\mathbf{k}^\prime\f$ and given by
+\f{align*}{
+ \sigma_{\mathrm{imp}}(\mathbf{x}, \mathbf{k}, \mathbf{k}^\prime) = \frac{2\pi}{\hbar} \frac{N_{\mathrm I} \mathrm{q}^4}{\epsilon^2} \frac{1}{\left( (\mathbf k^\prime - \mathbf k)^2 + 1/\lambda_{\mathrm D}^2 \right)^2} \ .
+\f}
+The ordinality of the impurity charge is assumed to be one, and \f$N_{\mathrm a}\f$ and \f$N_{\mathrm d}\f$ denote the acceptor and donator concentrations respectively.
+The Debye length \f$\lambda_{\mathrm D}\f$ under assumption of local equilibrium is given by
+\f{align*}{
+ \lambda_{\mathrm D} = \frac{\epsilon k_{\mathrm{B}}T}{\mathrm{q}^2 (n+p)} \ .
+\f}
+Similar to elastic acoustical phonon scattering, ionized impurity scattering does not couple different energy levels. However, a considerable complication stems
+from the angular dependence
+of the coefficient \f$\sigma_{\mathrm{imp}}\f$.
+This complication can be circumvented by approximating the anisotropic coefficient by an elastic-isotropic process with the same momentum relaxation time \f$\tau_{\mathrm{m}; \mathrm{ii}}\f$
+\cite Jungemann:hierarchical-device-simulation.
+The momentum relaxation time is computed for an isotropic dispersion relation by an integration over the whole Brillouin zone and by weighting the change of
+direction of the momentum \cite Lundstrom:Fundamentals-carrier-transport :
+\f{align*}{
+ \frac{1}{\tau_{\mathrm{m}; \mathrm{ii}}(\mathbf k)} = \frac{1}{(2\pi)^3} \int_{\mathcal{BZ}} s_{\mathrm{imp}}(\mathbf{x}, \mathbf{k},
+\mathbf{k}^\prime) (1 - \cos(\theta)) \mathrm{d}\mathbf k^3
+\f}
+Here, the \f$z\f$-axis for the integration in the Brillouin zone is chosen such that it is aligned with \f$\mathbf k\f$, hence the angle between \f$\mathbf k\f$ and
+\f$\mathbf k^\prime\f$ is given by the inclination \f$\theta\f$. Transformation to spherical coordinates leads to
+\f{align*}{
+ \frac{1}{\tau_{\mathrm{m}; \mathrm{ii}}(\mathbf k)} = \frac{4\pi^3 N_{\mathrm I} \mathrm{q}^4}{\hbar\epsilon^2}
+    \int_0^\infty \int_0^\pi  \frac{1 - \cos(\theta)}{\left( 4 \vert \mathbf k \vert^2 \sin^2(\theta/2) + 1/\lambda_{\mathrm D}^2 \right)^2} \sin \theta \mathrm{d}\theta Z \mathrm{d}\varepsilon
+\f}
+where the density of states \f$Z\f$ is independent of the angles because of the assumption of an isotropic dispersion relation. The integral over the inclination
+\f$\theta\f$ can be computed analytically as
+\f{align*}{
+ \int_0^\pi  \frac{1 - \cos(\theta)}{\left( (\mathbf k^\prime - \mathbf k)^2 + 1/\lambda_{\mathrm D}^2 \right)^2} \sin \theta \mathrm{d}\theta = \frac{1}{4 \vert
+\mathbf k \vert^4} \left[ \ln(1+4 \lambda_{\mathrm D}^2 \vert \mathbf k \vert^2) - \frac{4 \lambda_{\mathrm D}^2 \vert \mathbf k \vert^2}{1+4 \lambda_{\mathrm
+D}^2 \vert \mathbf k \vert^2} \right] \ .
+\f}
+Therefore, the isotropic scattering coefficient
+\f{align*}{
+ s_{\mathrm{imp}; \mathrm{iso}}(\mathbf{x}, \mathbf{k}, \mathbf{k}^\prime) = \frac{\pi}{\hbar} \frac{N_{\mathrm I} \mathrm{q}^4}{\epsilon^2} \frac{1}{4 \vert
+\mathbf k \vert^4} \left[ \ln(1+4 \lambda_{\mathrm D}^2 \vert \mathbf k \vert^2) - \frac{4 \lambda_{\mathrm D}^2 \vert \mathbf k \vert^2}{1+4 \lambda_{\mathrm
+D}^2 \vert \mathbf k \vert^2} \right]
+\f}
+has the same momentum relaxation time as the anisotropic coefficient given above.
+Note that \f$\vert \mathbf k \vert\f$ should be evaluated consistently with the approximated band.
+Moreover, since the Brooks-Herring model fails to correctly describe the carrier mobility at high doping concentrations, an empirical fit factor is usually
+employed in addition \cite Jungemann:hierarchical-device-simulation.
+
+
+ \subsection manual-subsec-scattering-impact  Impact Ionization Scattering
+If free carriers acquire enough energy, they may lift electrons in the valence band to the conduction band after collision.
+This process is commonly referred to as impact ionization, where one electron generates an additional electron-hole pair.
+The final energy of an incoming electron with energy \f$\varepsilon\f$ is
+\f{align*}{
+ \varepsilon^\prime = \frac{\varepsilon - E_{\mathrm{gap}}}{3} \ ,
+\f}
+where it is assumed that all three carriers involved end up with the same kinetic energy.
+The impact ionization coefficient is typically modeled by a power-law with respect to the kinetic energy.
+Further details can be found in the textbook by Jungemann and Meinerzhagen \cite Jungemann:hierarchical-device-simulation.
+
+
+
+ \subsection manual-subsec-scattering-carrier-carrier Carrier-Carrier Scattering
+Very important for particularly the high energy tail of the distribution function is carrier-carrier scattering \cite Rauch:role-of-e-e-scattering.
+ A carrier-carrier scattering mechanism
+ requires that the two source states are occupied, and the two final states after scattering are empty. This leads to a scattering operator of the form
+\f{align*}{
+ Q\{f\} = \frac{1}{(2\pi)^3} \int_{\mathcal{BZ}} \int_{\mathcal{BZ}} \int_{\mathcal{BZ}}
+                & s(\mathbf{x}, \mathbf{k}^\prime, \mathbf{k}, \mathbf{k}_2^\prime, \mathbf{k}_2)
+                   f(\mathbf{x}, \mathbf{k}^\prime, t) (1-f(\mathbf{x}, \mathbf{k}, t))
+                   f(\mathbf{x}, \mathbf{k}_2^\prime, t) (1-f(\mathbf{x}, \mathbf{k}_2, t))\\
+    & \ - s(\mathbf{x}, \mathbf{k}, \mathbf{k}^\prime, \mathbf{k}_2, \mathbf{k}_2^\prime)
+                       f(\mathbf{x}, \mathbf{k}, t)(1-f(\mathbf{x}, \mathbf{k}^\prime, t))
+                       f(\mathbf{x}, \mathbf{k}_2, t)(1-f(\mathbf{x}, \mathbf{k}_2^\prime, t))
+ \mathrm{d}\mathbf k^\prime \mathrm{d}\mathbf k_2  \mathrm{d}\mathbf k_2^\prime  \ ,
+\f}
+where the scattering coefficient \f$s(\cdot, \cdot, \cdot, \cdot, \cdot)\f$ now depends on the spatial location and on two pairs of initial and final states.
+With a low-density approximation, the nonlinearity of degree four of the carrier-carrier scattering operator reduces to second order:
+ \f{align*}{
+ Q_{\mathrm{cc}}\{f\} &= \frac{1}{(2\pi)^3} \int_{\mathcal{BZ}} \int_{\mathcal{BZ}} \int_{\mathcal{BZ}}
+                 s(\mathbf{x}, \mathbf{k}^\prime, \mathbf{k}, \mathbf{k}_2^\prime, \mathbf{k}_2)
+                   f(\mathbf{x}, \mathbf{k}^\prime, t)
+                   f(\mathbf{x}, \mathbf{k}_2^\prime, t)
+               - s(\mathbf{x}, \mathbf{k}, \mathbf{k}^\prime, \mathbf{k}_2, \mathbf{k}_2^\prime)
+                       f(\mathbf{x}, \mathbf{k}, t)
+                       f(\mathbf{x}, \mathbf{k}_2, t)
+ \mathrm{d}\mathbf k^\prime \mathrm{d}\mathbf k_2  \mathrm{d}\mathbf k_2^\prime
+ \f}
+The scattering coefficient can be derived to be of the form
+\f{align*}{
+ s(\mathbf{x}, \mathbf{k}^\prime, \mathbf{k}, \mathbf{k}_2^\prime, \mathbf{k}_2)
+   =  \sigma_{\mathrm{cc}}(\mathbf x, \mathbf k, \mathbf k^\prime, \mathbf k_2, \mathbf k_2^\prime)
+       \delta(\mathbf k + \mathbf k^\prime - \mathbf k_2 - \mathbf k_2^\prime)
+       \delta(\varepsilon + \varepsilon^\prime - \varepsilon_2 - \varepsilon_2^\prime) \ ,
+\f}
+where the two delta distributions refer to conservation of momentum and energy respectively, and
+\f{align*}{
+ \sigma_{\mathrm{cc}}
+    = \sigma_{\mathrm{cc}}(\mathbf x, \mathbf k, \mathbf k^\prime, \mathbf k_2, \mathbf k_2^\prime)
+    = \frac{2\pi}{\hbar} \frac{\mathrm{q}^4 n(\mathbf x)}{\epsilon^2} \frac{1}{((\mathbf k^\prime - \mathbf k)^2 + 1/\lambda_{\mathrm D}^2)^2} \ .
+\f}
+The set of parameters is similar to that of ionized impurity scattering, with the impurity density \f$N_{\mathrm a} + N_{\mathrm d}\f$ replaced by the carrier density \f$n\f$.
+A projection onto spherical harmonics is very involved and is thus not further discussed here. Some details can be found in \cite rupp:carrier-carrier-scattering.
+
+
+\section manual-sec-boundary-conditions Boundary Conditions
+As for any system of partial differential equations, the BTE needs to be equipped with boundary conditions in order to be completely specified.
+For the SHE method, different types of boundary conditions have been used.
+
+In noncontact boundary regions, homogeneous Neumann boundary conditions with respect to the spatial coordinate are imposed. Similarly, homogeneous Neumann
+boundary conditions are imposed at the band-edge and at the highest energies considered in the simulation.
+At the contacts, ViennaSHE imposes either fixed Dirichlet conditions (Maxwellian distribution), or (by default) the recombination/generation-type boundary conditions as used by Schroeder <i>et al.</i> \cite Schroeder:boundary-conditions-for-SHE and Jungemann <i>et al.</i> \cite Jungemann:Stable-Discretization.
+The refined boundary model proposed by Hong <i>et al.</i> \cite Hong:fully-decoupled-scheme is not available in ViennaSHE yet.
+
+*/

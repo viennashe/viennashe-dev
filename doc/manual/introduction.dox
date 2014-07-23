@@ -1,0 +1,56 @@
+
+
+/**
+
+   \page manual-page-introduction    Introduction
+
+The Boltzmann Transport Equation (BTE) is commonly considered to provide the best semiclassical description of carrier transport.
+Carriers are described in a classical fashion by a continuous distribution function \f$f\f$, which depends on the spatial location \f$\mathbf x\f$, momentum \f$\mathbf p\f$ and time \f$t\f$.
+The carrier momentum \f$\mathbf p\f$ is related to a quantum-mechanical wave number \f$\mathbf k\f$ by the relation \f$\mathbf p = \hbar \mathbf k\f$, where \f$\hbar\f$ is the modified Planck constant.
+Without going into the details of various derivations (see e.g. \cite Jungel:transport-equations \cite Lundstrom:Fundamentals-carrier-transport \cite Markowich:Semiconductor-equations), the BTE is given by
+\f[
+ \frac{\partial f}{\partial t} + \mathbf v \cdot \nabla_{\mathbf x} f + \mathbf F \cdot \nabla_{\mathbf p} f = Q\{f\} \ ,
+\f]
+where function arguments are omitted. Here, \f$\mathbf v\f$ denotes the carrier velocity in dependence of the carrier momentum, \f$\mathbf F\f$ refers to the electrostatic force, and \f$Q\f$ is the scattering operator.
+A formulation based on the wavevector \f$\mathbf k\f$ rather than momentum \f$\mathbf p\f$ transforms the gradient as \f$\nabla_{\mathbf p} \mapsto \nabla_{\mathbf k} / \hbar\f$.
+
+The description of carries by means of a distribution function with respect to the spatial variable \f$\mathbf x\f$, the momentum \f$\mathbf p\f$ and time \f$t\f$ leads to a seven-dimensional problem space, which makes the direct solution of the BTE very demanding.
+A promising approach for the direct numerical solution of the BTE is the spherical harmonics expansion (SHE) method, which is the approach taken in ViennaSHE.
+The method formally relies on an expansion of the distribution function \f$f(\mathbf x, \mathbf k, t)\f$ with spatial location \f$\mathbf x\f$, wave vector \f$\mathbf k\f$ and time \f$t\f$ into spherical harmonics \f$Y^{l,m}\f$ of the form
+\f[
+ f(\mathbf x, \mathbf k, t) = \sum_{l=0}^\infty \sum_{m=-l}^l f_{l,m}(\mathbf x, \varepsilon, t) Y^{l,m}(\theta, \varphi) \ ,
+\f]
+where the three-dimensional wave vector \f$\mathbf k\f$ is written in spherical coordinates \f$\varepsilon\f$, \f$\theta\f$ and \f$\varphi\f$ on equi-energy surfaces.
+Extensive state-of-the-art descriptions of the method can be found in the book of Hong <i>et al.</i> \cite Hong:Deterministic-Solvers-book  and in the dissertation of Rupp \cite rupp:diss-et.
+
+The implementation of the SHE method is considerably more complex than macroscopic transport models such as the drift-diffusion model. This is on the one hand due to the additional energy coordinate, which leads to increased computational effort both in terms of memory and execution times, and on the other hand due to the fact that a coupled system of PDEs for each of the expansion coefficients \f$f_{l,m}\f$ needs to be solved. Therefore, the entry barrier for a successful implementation of the SHE method is very high.
+
+ViennaSHE is a free open-source implementation of the SHE method for the simulation of semiconductor devices.
+It can be used either as a standalone simulator, which is controlled by a configuration provided by a XML file, or as a simulator library, which enables the full flexibility with respect to pre- and post-processing.
+In the current first release, the calculation of the distribution function of electrons in relaxed silicon neglecting the Pauli principle is provided.
+The goals of the project are two-fold: On the one hand, ViennaSHE should lower the entry barrier for the SHE method by providing a reference
+implementation.
+On the other hand, ViennaSHE provides researches and engineers
+with a considerably faster computation of the carrier distribution function for realistic device geometries than provided by the Monte Carlo method.
+We are confident that ViennaSHE enables a better understanding of the physical processes of semiconductor devices in the deca-nanometer
+regime.
+
+ViennaSHE is based on a solid numerical foundation by means of the following three libraries:
+   - <a href="http:/viennacl.sourceforge.net/">ViennaCL</a> for the solution of the resulting systems of linear equations. Optional GPU support is provided through the use of OpenCL.
+   - <a href="http:/viennagrid.sourceforge.net/">ViennaGrid</a> is a generic mesh handling library. It heavily relies on template metaprogramming techniques in order to provide a unified interface for meshes of arbitrary dimensions and arbitrary cell types. In particular, the assembly algorithms in ViennaSHE are such that a single implementation fits all the different meshes without sacrificing runtime efficiency.
+
+Due to the library-centric design, the code base in ViennaSHE is kept light-weight. The total complexity is split into smaller complexities inside each of the other libraries.
+
+
+To close this introduction, please note that ViennaSHE is currently NOT calibrated to any measurement data, only partial comparisons with existing Monte Carlo device simulator have been carried out.
+Thus, ViennaSHE must be used with extreme caution for the derivation of any quantitative results, even though a lot of care has been taken for the collection of model parameters.
+Consequently, the simulation results should only provide a qualitative understanding of the carrier interaction in a semiconductor device, and users can already familiarize themselves with the handling of the simulator.
+The quantitative accuracy of the simulation results will be improved with subsequent releases of ViennaSHE.
+
+\warning <i>Keep in mind that ViennaSHE 1.2.0 is not rigorously calibrated! Before any quantitative interpretation of the obtained simulation results, ensure a proper calibration for your application domain first.</i>
+
+<i>User contributions welcome! If you wish to contribute a feature to ViennaSHE, do not hesitate to contact us e.g. via the mailing list at viennashe-support@lists.sourceforge.net</i>
+
+
+
+*/

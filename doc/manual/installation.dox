@@ -1,0 +1,104 @@
+
+
+/**
+
+   \page manual-page-installation    Installation
+
+The necessary steps for compiling and running the various examples in ViennaSHE are outlined for several different platforms in the following.
+Although we run nightly tests on various platforms, we cannot check every possible combination of hardware, operating system, and compiler.
+If you experience any trouble, do not hesitate to ask for help at our mailinglist: viennashe-support@lists.sourceforge.net
+
+ \section Dependencies
+ To simplify installation, the required dependencies for using ViennaSHE are kept as small as possible:
+
+  <table>
+  <tr><td> A recent C++ compiler </td><td> GCC version 4.2.x or above, Clang 3.0 or above, and Visual C++ 2005 or above are known to work.</td></tr>
+  <tr><td> <a href="http://viennacl.sourceforge.net">ViennaCL</a>     </td><td> The ViennaCL sources are included in the ViennaSHE package, no separate installation required. </td></tr>
+  <tr><td> <a href="http://viennagrid.sourceforge.net">ViennaGrid</a> </td><td> The ViennaGrid sources are included in the ViennaSHE package, no separate installation required. </td></tr>
+  </table>
+
+ Moreover, the following optional components are available:
+
+  <table>
+  <tr><td> <a href="http://www.cmake.org/">CMake</a>     </td><td> Using CMake as a build system makes it easy to configure your builds appropriately. </td></tr>
+  <tr><td> OpenCL </td><td> If you intend to leverage GPU acceleration through ViennaCL, make sure you installed an OpenCL-capable vendor driver.  </td></tr>
+  <tr><td> OpenMP </td><td> This comes with your compiler. GCC 4.2.x and some versions of Visual Studio include support for OpenMP. Please consult your compiler manual.</td></tr>
+  </table>
+
+
+ \section Generic Installation
+
+ViennaSHE is distributed with a couple of examples on how to interface the simulator.
+To build all examples, type
+
+    $> cd /your-ViennaSHE-path/build/
+
+Execute
+
+    $> cmake ..
+
+to obtain a Makefile and type
+
+    $> make
+
+to trigger the build process.
+
+To use ViennaSHE as a simulator library in your own projects, it is sufficient to copy the source folders
+src/, viennashe/, viennacl/, and viennagrid/ either into your project folder.
+If ViennaCL or ViennaGrid is already
+installed on your system, the respective folder can be skipped.
+
+On Unix-like operating systems, the global system include path is usually /usr/include/ or /usr/local/include/.
+On Windows, the situation strongly depends on your development environment.
+We advise to consult the documentation of the compiler on how to set the include path correctly.
+With Visual Studio 9.0 this is usually something like C:\\Program Files\\Microsoft Visual Studio 9.0\\VC\\include and can be set in Tools -> Options -> Projects and Solutions -> VC++-Directories.
+
+  \section manual-installation-exa Building the Examples
+
+For building the examples, we suppose that CMake is properly set up on your system.
+The instructions for the various operating systems are as follows
+
+  \subsection manual-installation-linux Linux
+
+To build the examples, open a terminal and change to:
+
+    $> cd /your-ViennaSHE-path/build/
+
+Execute
+
+    $> cmake ..
+
+to obtain a Makefile and type
+
+    $> make
+
+to build the examples and the standalone executable. If desired, one can build each example separately instead:
+
+    $> make nin-diode-1d      #builds the 1d nin-diode example
+
+You may speed up the building process by using multiple concurrent jobs, e.g. make -j4.
+
+
+  \subsection manual-installation-mac  Mac OS X
+
+For the GCC compiler the Xcode \cite xcode package has to be installed. To install CMake, external portation
+tools such as Fink \cite fink, DarwinPorts \cite darwinports, or MacPorts \cite macports have to be used.
+
+The build process of ViennaSHE is similar to Linux.
+
+  \subsection manual-installation-windows  Windows
+
+In the following the procedure is outlined for Visual Studio: Assuming that CMake is
+already installed, Visual Studio solution and project files can be created using CMake:
+    - Open the CMake GUI.
+    - Set the ViennaSHE base directory as source directory.
+    - Set the build/ directory as build directory.
+    - Click on ’Configure’ and select the appropriate generator (e.g. Visual Studio 9 2008)
+    - Click on 'Configure' again
+    - Click on ’Generate’
+    - The project files can now be found in the ViennaSHE build directory, where they can be opened and compiled with Visual Studio (provided that the include and library paths are set correctly.
+
+Note that the examples should be executed from the build/ folder in order to access the correct input files.
+
+
+*/

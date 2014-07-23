@@ -1,0 +1,19 @@
+
+
+
+/**
+*
+*  \page usermanual User Manual
+
+This manual describes the use of %ViennaSHE for the deterministic numerical solution
+of the Boltzmann transport equation using spherical harmonics expansions and consists of multiple parts:
+  <table>
+  <tr><td>\subpage manual-page-introduction </td><td>Provides a first overview of ViennaSHE</td></tr>
+  <tr><td>\subpage manual-page-installation </td><td>How to install ViennaSHE</td></tr>
+  <tr><td>\subpage manual-page-physics      </td><td>A description of the semiconductor physics relevant for ViennaSHE</td></tr>
+  <tr><td>\subpage manual-page-api          </td><td>The programming details</td></tr>
+  <tr><td>\subpage changelog                </td><td>Lists the Changes to ViennaSHE in each release</td></tr>
+  <tr><td>\subpage manual-page-license      </td><td>The permissive MIT/X11 license</td></tr>
+  </table>
+*/
+
