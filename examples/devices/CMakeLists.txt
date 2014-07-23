@@ -1,5 +1,5 @@
 
-foreach(device-tutorial half-trigate mosfet nin-diode-1d nin-diode-2d np-diode-bipolar resistor mosfet-dg nin-diode-2d-hde mos1d-dg )
+foreach(device-tutorial half-trigate mosfet mosfet-hcd nin-diode-1d nin-diode-2d np-diode-bipolar resistor mosfet-dg nin-diode-2d-hde mos1d-dg )
    add_executable(${device-tutorial} ${device-tutorial}.cpp)
    target_link_libraries(${device-tutorial} shesolvers)
 
