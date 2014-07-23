@@ -25,6 +25,7 @@
 #include "viennashe/models/bandgap.hpp"
 #include "viennashe/models/carrier_mass.hpp"
 #include "viennashe/models/mobility.hpp"
+#include "viennashe/models/hot_carrier.hpp"
 
 //#include "viennashe/models/random_dopant_model.hpp"
 
