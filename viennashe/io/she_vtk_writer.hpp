@@ -730,6 +730,23 @@ namespace viennashe
       my_vtk_writer(mesh, device.segmentation(), filename);
     }
 
+    template <typename DeviceType>
+    void write_cell_quantity_to_VTK_file(std::vector<double> const & vtk_data,
+                                         DeviceType const & device,
+                                         std::string filename,
+                                         std::string name_in_file = "viennashe_quantity")
+    {
+      typedef typename DeviceType::mesh_type                                       MeshType;
+
+      typedef typename viennagrid::result_of::cell<MeshType>::type                 CellType;
+
+      log::info<log_she_vtk_writer>() << "* write_quantity_to_VTK_file(): Writing data to '" << filename
+                                      << "' (can be viewed with e.g. ParaView)" << std::endl;
+
+      viennagrid::io::vtk_writer<MeshType> my_vtk_writer;
+      my_vtk_writer.add_scalar_data_on_cells(viennagrid::make_accessor<CellType>(vtk_data), name_in_file);
+      my_vtk_writer(device.mesh(), device.segmentation(), filename);
+    }
 
     /** @brief Convenience routine for writing a single macroscopic quantity to a VTK file.
      *
@@ -745,15 +762,12 @@ namespace viennashe
                                          std::string filename,
                                          std::string name_in_file = "viennashe_quantity")
     {
-      typedef typename DeviceType::mesh_type              MeshType;
+      typedef typename DeviceType::mesh_type                                       MeshType;
 
-      typedef typename viennagrid::result_of::cell<MeshType>::type                 CellType;
       typedef typename viennagrid::result_of::const_cell_range<MeshType>::type     CellContainer;
       typedef typename viennagrid::result_of::iterator<CellContainer>::type        CellIterator;
 
-      MeshType const & mesh = device.mesh();
-
-      CellContainer cells(mesh);
+      CellContainer cells(device.mesh());
       std::vector<double> vtk_data(cells.size());
       for (CellIterator cit = cells.begin();
            cit != cells.end();
@@ -762,13 +776,7 @@ namespace viennashe
         vtk_data[static_cast<std::size_t>(cit->id().get())] = quantity(*cit);
       }
 
-      log::info<log_she_vtk_writer>() << "* write_quantity_to_VTK_file(): Writing data to '"
-                << filename
-                << "' (can be viewed with e.g. ParaView)" << std::endl;
-
-      viennagrid::io::vtk_writer<MeshType> my_vtk_writer;
-      my_vtk_writer.add_scalar_data_on_cells(viennagrid::make_accessor<CellType>(vtk_data), name_in_file);
-      my_vtk_writer(mesh, device.segmentation(), filename);
+      write_cell_quantity_to_VTK_file(vtk_data, device, filename, name_in_file);
     }
 
     namespace result_of

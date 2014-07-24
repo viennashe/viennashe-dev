@@ -151,7 +151,7 @@ int main()
   **/
   std::cout << "* main(): Creating and scaling device..." << std::endl;
   DeviceType device;
-  device.load_mesh("../examples/data/mosfet840.mesh");
+  device.load_mesh("../data/mosfet840.mesh");
   device.scale(1e-9);
 
 
@@ -240,7 +240,7 @@ int main()
 
     First we set up a new configuration object, enable
     electrons and holes, and specify that we want to use
-    SHE for electons, but only a simple continuity equation for holes:
+    SHE for electons and holes:
   **/
   std::cout << "* main(): Setting up first-order SHE (semi-self-consistent using 40 Gummel iterations)..." << std::endl;
   viennashe::config config;
@@ -332,17 +332,25 @@ int main()
   viennashe::models::hcd_model_operator<viennashe::simulator<DeviceType> > hcdmod(she_simulator, hcdparams);
 
   CellContainer cells(device.mesh());
-  for (long i = 0; i < 3; ++i)
+
+  for (size_t i = 0; i < 3; ++i)
   {
+    std::vector<double> nit_in_timestep(cells.size(), 0.0);
     std::cout << "-- HCD Time step " << i << " --" << std::endl;
-    double time = i * 10 + 10;
+    double time = std::pow(10,i);
     for (CellIterator cit = cells.begin(); cit != cells.end(); ++cit)
     {
       if (viennashe::materials::is_semiconductor(device.get_material(*cit)))
-        std::cout << time << " s -Nit: " << *cit << " => " << hcdmod(*cit, dipole, time) << std::endl;
+      {
+        double res = hcdmod(*cit, dipole, time);
+        std::cout << time << " s - Nit: " << *cit << " => " << res << std::endl;
+        nit_in_timestep[static_cast<std::size_t>(cit->id().get())] = res;
+      }
     }
+    std::stringstream filename;
+    filename << "mosfet_she_hcd_nit_" << i;
+    viennashe::io::write_quantity_to_VTK_file(nit_in_timestep, device, filename.str());
   }
-
 
   /** Finally, print a small message to let the user know that everything succeeded **/
   std::cout << "* main(): Results can now be viewed with your favorite VTK viewer (e.g. ParaView)." << std::endl;
