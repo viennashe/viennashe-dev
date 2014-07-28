@@ -82,6 +82,10 @@ namespace viennashe
    {
       typedef typename DeviceType::mesh_type       MeshType;
 
+     typedef typename viennashe::simulator<DeviceType>::potential_type         PotentialAccessor;
+     typedef typename viennashe::simulator<DeviceType>::electron_density_type  CarrierAccessor;
+     typedef viennashe::config::mobility_type                                  MobilityModel;
+
     public:
       typedef typename viennagrid::result_of::cell<MeshType>::type              cell_type;
       typedef typename QuantitiesListType::unknown_quantity_type                quantity_type;
@@ -97,8 +101,8 @@ namespace viennashe
          : device_(d), conf_(conf),
            mobility_model_n_(viennashe::models::create_constant_mobility_model(d, 0.1430)),
            mobility_model_p_(viennashe::models::create_constant_mobility_model(d, 0.0480)),
-           Jfield_dd_n_(d, viennashe::ELECTRON_TYPE_ID, quantities.get_unknown_quantity(viennashe::quantity::potential()), quantities.get_unknown_quantity(viennashe::quantity::electron_density()), mobility_model_n_),
-           Jfield_dd_p_(d, viennashe::HOLE_TYPE_ID,     quantities.get_unknown_quantity(viennashe::quantity::potential()), quantities.get_unknown_quantity(viennashe::quantity::hole_density()),         mobility_model_p_),
+           Jfield_dd_n_(d, viennashe::ELECTRON_TYPE_ID, quantities.get_unknown_quantity(viennashe::quantity::potential()), quantities.get_unknown_quantity(viennashe::quantity::electron_density()), conf.mobility(ELECTRON_TYPE_ID)),
+           Jfield_dd_p_(d, viennashe::HOLE_TYPE_ID,     quantities.get_unknown_quantity(viennashe::quantity::potential()), quantities.get_unknown_quantity(viennashe::quantity::hole_density()),     conf.mobility(HOLE_TYPE_ID)),
            Jfield_she_n_(d, conf, quantities.electron_distribution_function()),
            Jfield_she_p_(d, conf, quantities.hole_distribution_function()),
            Efield_(d, quantities.get_unknown_quantity(viennashe::quantity::potential())) {}
@@ -146,8 +150,8 @@ namespace viennashe
       mobility_type mobility_model_n_;
       mobility_type mobility_model_p_;
 
-      viennashe::current_density_wrapper<DeviceType, quantity_type, quantity_type, mobility_type> Jfield_dd_n_;
-      viennashe::current_density_wrapper<DeviceType, quantity_type, quantity_type, mobility_type> Jfield_dd_p_;
+      viennashe::current_density_wrapper<DeviceType, quantity_type, quantity_type, MobilityModel> Jfield_dd_n_;
+      viennashe::current_density_wrapper<DeviceType, quantity_type, quantity_type, MobilityModel> Jfield_dd_p_;
       viennashe::she::current_density_wrapper<DeviceType, she_quantity_type>       Jfield_she_n_;
       viennashe::she::current_density_wrapper<DeviceType, she_quantity_type>       Jfield_she_p_;
       viennashe::electric_field_wrapper<DeviceType, quantity_type>                 Efield_;

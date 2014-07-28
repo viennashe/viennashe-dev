@@ -384,7 +384,7 @@ namespace viennashe
     SpatialUnknownType const & quantum_corr    = (ctype == ELECTRON_TYPE_ID) ? quantities.get_unknown_quantity(viennashe::quantity::density_gradient_electron_correction())
                                                                              : quantities.get_unknown_quantity(viennashe::quantity::density_gradient_hole_correction());
 
-    double mobility = 1.0; //[KR] TODO: Add better mobility model here. Doesn't really matter as long as there is no recombination...
+    typename viennashe::config::mobility_type mobility_model = conf.mobility(ctype);
 
     scharfetter_gummel flux_approximator(ctype);
     scharfetter_gummel_dVi flux_approximator_dVi(ctype);
@@ -426,6 +426,7 @@ namespace viennashe
         if (!other_cell_ptr) continue;
 
         const double T = 0.5 * (device.get_lattice_temperature(*cit) + device.get_lattice_temperature(*other_cell_ptr));
+        double mobility = mobility_model.evaluate(*cit, *focit, *other_cell_ptr);
 
         if ( (carrier_density.get_unknown_mask(*other_cell_ptr) || carrier_density.get_boundary_type(*other_cell_ptr) == BOUNDARY_DIRICHLET) )
         {

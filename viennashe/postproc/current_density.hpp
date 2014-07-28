@@ -107,7 +107,7 @@ namespace viennashe
                                         : carrier_.get_value(c1);
         const double T  = device_.get_lattice_temperature(c1);
 
-        const double mobility = mobility_(c1, c2, potential_);
+        const double mobility = mobility_.evaluate(c1, facet, c2);
 
         const double connection_len  = viennagrid::norm_2(viennagrid::centroid(c2) - viennagrid::centroid(c1));
         const double potential_outer = potential_(c2);
@@ -142,11 +142,16 @@ namespace viennashe
         typedef typename viennagrid::result_of::cell<MeshType>::type    cell_type;
         typedef bool    value_type;
 
-        macroscopic_carrier_mask_filter(SimulatorQuantity const & quan) : quantity_(quan) {}
+        macroscopic_carrier_mask_filter(DeviceType const & dev, SimulatorQuantity const & quan) : device_(dev), quantity_(quan) {}
 
-        value_type operator()(cell_type const & c) const { return quantity_.get_unknown_mask(c); } //TODO: Might need fixing!
+        value_type operator()(cell_type const & c) const
+        {
+          return viennashe::materials::is_semiconductor(device_.get_material(c));
+          //return quantity_.get_unknown_mask(c); //TODO: Might need fixing!
+        }
 
       private:
+        DeviceType const & device_;
         SimulatorQuantity const & quantity_;
     };
 
@@ -192,7 +197,7 @@ namespace viennashe
           typedef typename viennagrid::result_of::const_facet_range<CellType>::type   FacetOnCellContainer;
           typedef detail::current_density_on_facet<DeviceType, PotentialQuantityType, CarrierQuantityType, MobilityModel> current_density_evaluator;
 
-          detail::macroscopic_carrier_mask_filter<DeviceType, CarrierQuantityType>    carrier_contribution_filter(carrier_);
+          detail::macroscopic_carrier_mask_filter<DeviceType, CarrierQuantityType>    carrier_contribution_filter(device_, carrier_);
 
           std::vector<double> J(3);
 
@@ -228,21 +233,20 @@ namespace viennashe
    * @param mobility_model   The mobility model functor
    * @param container        A reference to the container, which is going to be filled with values, ie. std::vector
    */
-  template <typename DeviceType,
-            typename PotentialQuantityType,
-            typename CarrierQuantityType,
-            typename MobilityModel,
+  template <typename DeviceT,
             typename ContainerType>
-  void write_current_density_to_container(DeviceType const & device,
-                                          PotentialQuantityType const & potential,
-                                          CarrierQuantityType const & carrier,
+  void write_current_density_to_container(viennashe::simulator<DeviceT> const & sim,
                                           viennashe::carrier_type_id ctype,
-                                          MobilityModel const & mobility_model,
                                           ContainerType & container)
   {
-    current_density_wrapper<DeviceType, PotentialQuantityType, CarrierQuantityType, MobilityModel> Jfield(device, ctype, potential, carrier, mobility_model);
+    typedef typename viennashe::simulator<DeviceT>::potential_type         PotentialAccessor;
+    typedef typename viennashe::simulator<DeviceT>::electron_density_type  CarrierAccessor;
+    typedef viennashe::config::mobility_type                               MobilityModel;
 
-    viennashe::write_macroscopic_quantity_to_container(device, Jfield, container);
+    typedef viennashe::current_density_wrapper<DeviceT, PotentialAccessor, CarrierAccessor, MobilityModel>  CurrentDensityWrapper;
+    CurrentDensityWrapper Jfield(sim.device(), ctype, sim.potential(), (ctype == ELECTRON_TYPE_ID) ? sim.electron_density() : sim.hole_density(), sim.config().mobility(ctype));
+
+    viennashe::write_macroscopic_quantity_to_container(sim.device(), Jfield, container);
   }
 
 

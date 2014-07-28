@@ -139,21 +139,21 @@ namespace viennashe
    * @param conductor The conductor segment adjacent to the semiconductor
    * @return The current in Ampere
    */
-  template < typename DeviceType,
-             typename PotentialAccessor,
-             typename AccessorTypeCarrier,
-             typename MobilityModel,
-             typename SegmentType >
-  double get_terminal_current(DeviceType const & device,
+  template < typename DeviceT,
+             typename SegmentT >
+  double get_terminal_current(viennashe::simulator<DeviceT> const & sim,
                               viennashe::carrier_type_id ctype,
-                              PotentialAccessor const & potential,
-                              AccessorTypeCarrier const & carrier,
-                              MobilityModel const & mobility_model,
-                              SegmentType const & semi,
-                              SegmentType const & conductor)
+                              SegmentT const & semi,
+                              SegmentT const & conductor)
   {
-    viennashe::current_density_wrapper<DeviceType, PotentialAccessor, AccessorTypeCarrier, MobilityModel> Jfield(device, ctype, potential, carrier, mobility_model);
-    return viennashe::get_terminal_current(device, Jfield, semi, conductor);
+    typedef typename viennashe::simulator<DeviceT>::potential_type         PotentialAccessor;
+    typedef typename viennashe::simulator<DeviceT>::electron_density_type  CarrierAccessor;
+    typedef viennashe::config::mobility_type                               MobilityModel;
+
+    typedef viennashe::current_density_wrapper<DeviceT, PotentialAccessor, CarrierAccessor, MobilityModel>  CurrentDensityWrapper;
+    CurrentDensityWrapper Jfield(sim.device(), ctype, sim.potential(), (ctype == ELECTRON_TYPE_ID) ? sim.electron_density() : sim.hole_density(), sim.config().mobility(ctype));
+
+    return viennashe::get_terminal_current(sim.device(), Jfield, semi, conductor);
   }
 
 } // viennashe

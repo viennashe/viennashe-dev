@@ -151,7 +151,7 @@ int main()
   **/
   std::cout << "* main(): Creating and scaling device..." << std::endl;
   DeviceType device;
-  device.load_mesh("../data/mosfet840.mesh");
+  device.load_mesh("../examples/data/mosfet840.mesh");
   device.scale(1e-9);
 
 
@@ -218,15 +218,18 @@ int main()
   SegmentType const & drain_contact  = device.segment(4);
   SegmentType const & body           = device.segment(6);
 
-  std::cout << "* main(): Drain electron current Id_e = " << viennashe::get_terminal_current(device, viennashe::ELECTRON_TYPE_ID,
-      dd_simulator.potential(), dd_simulator.electron_density(),
-      viennashe::models::create_constant_mobility_model(device, 0.1430),
-      body, drain_contact ) * 1e-6 << std::endl;
-  std::cout << "* main(): Drain hole current Id_h = " << viennashe::get_terminal_current(device, viennashe::HOLE_TYPE_ID,
-      dd_simulator.potential(), dd_simulator.hole_density(),
-      viennashe::models::create_constant_mobility_model(device, 0.0460),
-      body, drain_contact ) * 1e-6 << std::endl;
+  std::cout << "* main(): Drain electron current Id_e = " << viennashe::get_terminal_current(dd_simulator, viennashe::ELECTRON_TYPE_ID, body, drain_contact ) * 1e-6 << std::endl;
+  std::cout << "* main(): Drain hole current Id_h = "     << viennashe::get_terminal_current(dd_simulator, viennashe::HOLE_TYPE_ID,     body, drain_contact ) * 1e-6 << std::endl;
 
+
+  CellContainer cells_nit(device.mesh());
+  std::vector<double> nit_test(cells_nit.size(), 1e18);
+  dd_cfg.mobility_electrons(new viennashe::models::hcd_mobility<DeviceType>(nit_test, 0.1430));
+
+  viennashe::simulator<DeviceType> dd_simulator2(device, dd_cfg);
+  dd_simulator2.run();
+
+  std::cout << "* main(): Drain electron current (degraded) Id_e = " << viennashe::get_terminal_current(dd_simulator2, viennashe::ELECTRON_TYPE_ID, body, drain_contact ) * 1e-6 << std::endl;
 
 
   /** <h3>Self-Consistent SHE Simulations</h3>
@@ -347,6 +350,7 @@ int main()
         nit_in_timestep[static_cast<std::size_t>(cit->id().get())] = res;
       }
     }
+
     std::stringstream filename;
     filename << "mosfet_she_hcd_nit_" << i;
     viennashe::io::write_quantity_to_VTK_file(nit_in_timestep, device, filename.str());

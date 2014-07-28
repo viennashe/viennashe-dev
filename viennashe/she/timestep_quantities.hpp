@@ -241,6 +241,7 @@ namespace viennashe
         ResultQuantityType        potential()    const { return quantity(viennashe::quantity::potential()); }
         ResultQuantityType electron_density()    const { return quantity(viennashe::quantity::electron_density()); }
         ResultQuantityType     hole_density()    const { return quantity(viennashe::quantity::hole_density()); }
+        ResultQuantityType      nit_density()    const { return quantity(viennashe::quantity::nit_density()); }
         ResultQuantityType         dg_pot_n()    const { return quantity(viennashe::quantity::density_gradient_electron_correction()); }
         ResultQuantityType         dg_pot_p()    const { return quantity(viennashe::quantity::density_gradient_hole_correction()); }
         ResultQuantityType lattice_temperature() const { return quantity(viennashe::quantity::lattice_temperature()); }

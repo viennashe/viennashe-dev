@@ -948,10 +948,8 @@ namespace viennashe
           }
           else
           {
-            viennashe::write_current_density_to_container(device,
-                                                          simulator_obj.potential(),
-                                                          quan, viennashe::ELECTRON_TYPE_ID,
-                                                          viennashe::models::create_constant_mobility_model(device, 0.1430),
+            viennashe::write_current_density_to_container(simulator_obj,
+                                                          viennashe::ELECTRON_TYPE_ID,
                                                           current_n);
           }
           my_vtk_writer.add_vector_data_on_cells(viennagrid::make_accessor<CellType>(current_n), "Electron current density");
@@ -980,10 +978,8 @@ namespace viennashe
           }
           else
           {
-            viennashe::write_current_density_to_container(device,
-                                                          simulator_obj.potential(),
-                                                          quan, viennashe::HOLE_TYPE_ID,
-                                                          viennashe::models::create_constant_mobility_model(device, 0.0460),
+            viennashe::write_current_density_to_container(simulator_obj,
+                                                          viennashe::HOLE_TYPE_ID,
                                                           current_p);
           }
           my_vtk_writer.add_vector_data_on_cells(viennagrid::make_accessor<CellType>(current_p), "Hole current density");
@@ -991,6 +987,7 @@ namespace viennashe
 
 
         // lattice temperature
+        /*
         if (quan.get_name() == viennashe::quantity::lattice_temperature())
         {
           typedef typename SimulatorType::SHETimeStepQuantitiesT QuantitiesType;
@@ -1003,7 +1000,7 @@ namespace viennashe
           viennashe::write_macroscopic_quantity_to_container(device, pdacc, pwr_density_container);
 
           my_vtk_writer.add_scalar_data_on_cells(viennagrid::make_accessor<CellType>(pwr_density_container), "Joule heating power density");
-        }
+        } */
 
 
         my_vtk_writer.add_scalar_data_on_cells(viennagrid::make_accessor<CellType>(quan.values()), quan.get_name());

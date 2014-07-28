@@ -28,6 +28,7 @@
 #include "viennashe/she/exception.hpp"
 #include "viennashe/solvers/config.hpp"
 #include "viennashe/she/scattering/config.hpp"
+#include "viennashe/models/mobility.hpp"
 
 #include "viennashe/simulator_quantity.hpp"
 
@@ -85,6 +86,13 @@ namespace viennashe
            };
   };
 
+  /** @brief Provides IDs for the mobility models */
+  struct mobility_model_ids
+  {
+      enum { constant_mobility,           // constant mobility
+             hcd_mobility                 // mobility including degradation due to N_it
+           };
+  };
 
   /** @brief The boundary condition configuration for SHE   */
   class she_boundary_conditions_config
@@ -120,11 +128,13 @@ namespace viennashe
 
   /** @brief The main SHE configuration class. To be adjusted by the user for his/her needs. */
   class config
-    : public dispersion_relation_ids
+    : public dispersion_relation_ids,
+      public mobility_model_ids
   {
     public:
       typedef viennashe::solvers::linear_solver_config      linear_solver_config_type;
       typedef viennashe::solvers::nonlinear_solver_config   nonlinear_solver_config_type;
+      typedef viennashe::models::mobility_proxy             mobility_type;
       typedef viennashe::physics::dispersion_proxy          dispersion_relation_type;
 
 
@@ -135,6 +145,8 @@ namespace viennashe
        hole_equation_id_(EQUATION_CONTINUITY),
        with_traps_( false ),
        with_trap_selfconsistency_( false ),
+       mobility_electrons_(new viennashe::models::constant_mobility(0.1430)),
+       mobility_holes_(new viennashe::models::constant_mobility(0.0460)),
        dispersion_relation_electrons_( new viennashe::physics::modena_dispersion<viennashe::materials::si>(viennashe::ELECTRON_TYPE_ID) ),
        dispersion_relation_holes_( new viennashe::physics::modena_dispersion<viennashe::materials::si>(viennashe::HOLE_TYPE_ID) ),
        she_discretization_id_(SHE_DISCRETIZATION_EVEN_ODD_ORDER_DF),
@@ -165,6 +177,8 @@ namespace viennashe
        hole_equation_id_(other.hole_equation_id_),
        with_traps_( other.with_traps_ ),
        with_trap_selfconsistency_(other.with_trap_selfconsistency_),
+       mobility_electrons_(other.mobility_electrons_->clone()) ,
+       mobility_holes_(other.mobility_holes_->clone()) ,
        dispersion_relation_electrons_(other.dispersion_relation_electrons_->clone()) ,
        dispersion_relation_holes_(other.dispersion_relation_holes_->clone()) ,
        she_discretization_id_(other.she_discretization_id_),
@@ -194,6 +208,8 @@ namespace viennashe
         with_holes_ = other.with_holes_;
         with_traps_ = other.with_traps_;
         with_trap_selfconsistency_ = other.with_trap_selfconsistency_;
+        mobility_electrons_ = std::auto_ptr< viennashe::models::mobility_base >(other.mobility_electrons_->clone());
+        mobility_holes_ = std::auto_ptr< viennashe::models::mobility_base >(other.mobility_holes_->clone());
         dispersion_relation_electrons_ = std::auto_ptr< viennashe::physics::dispersion_base >(other.dispersion_relation_electrons_->clone());
         dispersion_relation_holes_ = std::auto_ptr< viennashe::physics::dispersion_base >(other.dispersion_relation_holes_->clone());
         she_discretization_id_ = other.she_discretization_id_;
@@ -248,17 +264,57 @@ namespace viennashe
 
 
 
-      /** @brief Returns the dispersion relation for electrons */
-      viennashe::physics::dispersion_proxy dispersion_relation_electrons() const
+      /** @brief Returns the mobility model for electrons */
+      viennashe::models::mobility_proxy mobility_electrons() const
       {
-        return viennashe::physics::dispersion_proxy(dispersion_relation_electrons_.get());
+        return viennashe::models::mobility_proxy(mobility_electrons_.get());
       }
 
-      /** @brief Returns the dispersion relation for holes */
-      viennashe::physics::dispersion_proxy dispersion_relation_holes() const
+      /** @brief Returns the mobility model for holes */
+      viennashe::models::mobility_proxy mobility_holes() const
       {
-        return viennashe::physics::dispersion_proxy(dispersion_relation_holes_.get());
+        return viennashe::models::mobility_proxy(mobility_holes_.get());
       }
+
+      /** @brief Returns the mobility model for the provided carrier type */
+      viennashe::models::mobility_proxy mobility(viennashe::carrier_type_id ctype) const
+      {
+        if (ctype == viennashe::ELECTRON_TYPE_ID)
+          return viennashe::models::mobility_proxy(mobility_electrons_.get());
+        else if (ctype == viennashe::HOLE_TYPE_ID)
+          return viennashe::models::mobility_proxy(mobility_holes_.get());
+        else
+          throw viennashe::carrier_type_not_supported_exception("Invalid carrier type for obtaining the mobility model from the simulator configuration.");
+      }
+
+
+      /** @brief Sets a new mobility model for electrons. Takes ownership of pointer. */
+      void mobility_electrons(viennashe::models::mobility_base * new_model)
+      {
+        mobility_electrons_ = std::auto_ptr< viennashe::models::mobility_base >( new_model );
+      }
+
+      /** @brief Sets a new mobility model for holes. Takes ownership of pointer. */
+      void mobility_holes(viennashe::models::mobility_base * new_model)  //TODO: Think about incorporation of materials here
+      {
+        mobility_holes_ = std::auto_ptr< viennashe::models::mobility_base >( new_model );
+      }
+
+      /** @brief Sets a new mobility model for the respective carrier type
+       *
+       * @param new_model         Pointer to the new mobility model object. Takes ownership of pointer.
+       * @param ctype             Identifier of the carrier type
+       */
+      void mobility(viennashe::models::mobility_base * new_model, viennashe::carrier_type_id ctype)
+      {
+        if (ctype == viennashe::ELECTRON_TYPE_ID)
+          mobility_electrons(new_model);
+        else
+          mobility_holes(new_model);
+      }
+
+
+      //////////////////////////
 
       /** @brief Returns the dispersion relation for electrons */
       viennashe::physics::dispersion_proxy dispersion_relation(viennashe::carrier_type_id ctype) const
@@ -588,6 +644,8 @@ namespace viennashe
       equation_id hole_equation_id_;
       bool with_traps_;
       bool with_trap_selfconsistency_;
+      std::auto_ptr< viennashe::models::mobility_base >     mobility_electrons_;
+      std::auto_ptr< viennashe::models::mobility_base >     mobility_holes_;
       std::auto_ptr< viennashe::physics::dispersion_base >  dispersion_relation_electrons_;
       std::auto_ptr< viennashe::physics::dispersion_base >  dispersion_relation_holes_;
       she_discretization_type_id  she_discretization_id_;

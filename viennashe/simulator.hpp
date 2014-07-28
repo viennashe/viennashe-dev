@@ -708,6 +708,7 @@ namespace viennashe
       typedef ResultQuantityType          potential_type;
       typedef ResultQuantityType   electron_density_type;
       typedef ResultQuantityType       hole_density_type;
+      typedef ResultQuantityType                nit_type;
 
 
       /** @brief Constructs the self-consistent simulator object
@@ -1178,6 +1179,13 @@ namespace viennashe
       {
         return quantities().hole_density();
       }
+
+      /** @brief Returns a wrapper for the hole density, which can be evaluated in every vertex of the mesh   */
+      nit_type nit_density() const
+      {
+        return quantities().nit_density();
+      }
+
 
       /** @brief Returns a wrapper for the trap occupancy, which can be evaluated in every vertex of the mesh */
       //trap_occupancy_type trap_occupancy() const

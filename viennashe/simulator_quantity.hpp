@@ -36,6 +36,7 @@ namespace viennashe
     inline std::string potential()                               { return "Electrostatic potential"; }
     inline std::string electron_density()                        { return "Electron density"; }
     inline std::string hole_density()                            { return "Hole density"; }
+    inline std::string nit_density()                             { return "N_it density"; }
     inline std::string density_gradient_electron_correction()    { return "DG electron correction potential"; }
     inline std::string density_gradient_hole_correction()        { return "DG hole correction potential"; }
     inline std::string lattice_temperature()                     { return "Lattice temperature"; }
