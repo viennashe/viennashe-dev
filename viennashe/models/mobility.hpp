@@ -164,8 +164,8 @@ namespace viennashe
         double nit_density = (  nit_values_[static_cast<std::size_t>(cell_0.id().get())]
                               + nit_values_[static_cast<std::size_t>(cell_1.id().get())] ) / 2.0;
 
-        facet_centroid[1] = 0.0;
-        return mu_ / (1.0 + 1e-18 * nit_density * std::exp(std::abs(facet_centroid[1])/1e-8));
+        //facet_centroid[1] = 0.0;
+        return mu_ / (1.0 + 1e-18 * nit_density * std::exp(-1.0 * std::abs(facet_centroid[1])/1e-8));
       }
 
       mobility_base * clone() const { return new hcd_mobility(nit_values_, mu_); }

@@ -86,11 +86,11 @@ namespace viennashe
             const double vg  = dispersion_.velocity(kinetic_energy);
             const double edf = edf_(el_, kinetic_energy);
              */
-            return (  ccs_(kinetic_energy)
+            return (  std::max(ccs_(kinetic_energy), 0.0)
                     * dispersion_.symmetry_factor()     //in order to get consistent results when dividing by the carrier density
                     * dispersion_.density_of_states(kinetic_energy)
                     * dispersion_.velocity(kinetic_energy)
-                    * edf_(el_, kinetic_energy)
+                    * std::abs(edf_(el_, kinetic_energy))
                    );
           }
 
@@ -129,7 +129,7 @@ namespace viennashe
           Eref(viennashe::physics::constants::q),
           omega(1e11),
           hbaromega(viennashe::physics::constants::q * 0.075),
-          nu(1e-13),
+          nu(1e-10),//(1e-13),
           Nitmax(1e19),
           N(3),
           Ethn(viennashe::physics::constants::q * 0.1),
@@ -262,18 +262,30 @@ namespace viennashe
           for (std::size_t i = 0; i < params_.N; ++i)
           {
             const double r = this->get_r(i, Ea, dipole_reduction, cell, ccs_ab);
+            //if (r < 0)  //TODO: For some reason unknown to KR this can be negative. Skipping such cases for now...
+            //  continue;
+
             const double p = this->get_p(i, cell);
 
             P += p;
             C += 1.0 * std::pow(kdown / kup, static_cast<double>(i));
             R += r   * std::pow(kup / kdown, static_cast<double>(i));
-
           }
           R = R * C; // normalization
 
           const double hlp = std::sqrt( R * R + 4.0 * P * R * Nitmax);
-          Nt += ( hlp * std::tanh(0.5 * time * hlp) - R ) / (2.0 * P);
+          if (hlp != hlp)
+          {
+            std::cerr << "hlp is NaN!" << std::endl;
+            std::cerr << "R: " << R << std::endl;
+            std::cerr << "P: " << P << std::endl;
+            std::cerr << "Nitmax: " << Nitmax << std::endl;
 
+            throw std::runtime_error("hlp is NaN!");
+          }
+          //std::cout << "hlp: " << hlp << ", P: " << P << std::endl;
+
+          Nt += std::max(( hlp * std::tanh(0.5 * time * hlp) - R ) / (2.0 * P), 0.0);
         }
         //std::cout << "OUTER LOOP TOOK: " << timer.elapsed() << std::endl;
 
@@ -320,7 +332,15 @@ namespace viennashe
         //detail::capture_cross_section_hcd ccs_ab( -1.0 * Eadd, params_.Eref, params_.sigma0, params_.p);
         ccs_ab.set_Eadd(-1.0 * Eadd);
 
-        const double i_ab_value = acc_electrons_(cell, ccs_ab, params_.Ethn) + acc_holes_(cell, ccs_ab, params_.Ethp);
+        const double i_ab_electrons = acc_electrons_(cell, ccs_ab, params_.Ethn);
+        const double i_ab_holes = acc_holes_(cell, ccs_ab, params_.Ethp);
+        const double i_ab_value = i_ab_electrons + i_ab_holes;
+
+        if (i_ab_electrons < 0)
+          std::cerr << "i_ab_electrons: " << i_ab_electrons << std::endl;
+
+        if (i_ab_holes < 0)
+          std::cerr << "i_ab_holes: " << i_ab_holes << std::endl;
 
         return i_ab_value + params_.nu * std::exp( - Eadd / kbtl );
       }
@@ -399,8 +419,8 @@ namespace viennashe
                          hcd_parameters params)
         : she_simulator_(she_simulator),
           params_(params),
-          acc_n_(she_simulator.config(), she_simulator.quantities().hole_distribution_function()),
-          acc_p_(she_simulator.config(), she_simulator.quantities().electron_distribution_function()),
+          acc_n_(she_simulator.config(), she_simulator.quantities().electron_distribution_function()),
+          acc_p_(she_simulator.config(), she_simulator.quantities().hole_distribution_function()),
           hcd_(she_simulator.device(), acc_n_, acc_p_, params_),
           Efield_(she_simulator.device(), she_simulator_.potential())
       {}

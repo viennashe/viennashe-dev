@@ -218,18 +218,9 @@ int main()
   SegmentType const & drain_contact  = device.segment(4);
   SegmentType const & body           = device.segment(6);
 
+  double drain_current = viennashe::get_terminal_current(dd_simulator, viennashe::ELECTRON_TYPE_ID, body, drain_contact ) * 1e-6;
   std::cout << "* main(): Drain electron current Id_e = " << viennashe::get_terminal_current(dd_simulator, viennashe::ELECTRON_TYPE_ID, body, drain_contact ) * 1e-6 << std::endl;
   std::cout << "* main(): Drain hole current Id_h = "     << viennashe::get_terminal_current(dd_simulator, viennashe::HOLE_TYPE_ID,     body, drain_contact ) * 1e-6 << std::endl;
-
-
-  CellContainer cells_nit(device.mesh());
-  std::vector<double> nit_test(cells_nit.size(), 1e18);
-  dd_cfg.mobility_electrons(new viennashe::models::hcd_mobility<DeviceType>(nit_test, 0.1430));
-
-  viennashe::simulator<DeviceType> dd_simulator2(device, dd_cfg);
-  dd_simulator2.run();
-
-  std::cout << "* main(): Drain electron current (degraded) Id_e = " << viennashe::get_terminal_current(dd_simulator2, viennashe::ELECTRON_TYPE_ID, body, drain_contact ) * 1e-6 << std::endl;
 
 
   /** <h3>Self-Consistent SHE Simulations</h3>
@@ -314,7 +305,7 @@ int main()
     Since the terminal currents are not directly visible in the VTK files, we compute them directly here.
     To simplify matters, we only compute the electron current from the body segment into the drain contact based on the solution of the SHE equations:
   **/
-  std::cout << "* main(): Drain hole current Id_e = " << viennashe::get_terminal_current(
+  std::cout << "* main(): Drain electron current Id_e = " << viennashe::get_terminal_current(
       device, config, she_simulator.quantities().electron_distribution_function(), body, drain_contact ) * 1e-6
       << std::endl;
 //  std::cout << "Id_h = " << viennashe::get_terminal_current(
@@ -336,20 +327,40 @@ int main()
 
   CellContainer cells(device.mesh());
 
-  for (size_t i = 0; i < 3; ++i)
+  for (size_t i = 0; i < 4; ++i)
   {
     std::vector<double> nit_in_timestep(cells.size(), 0.0);
-    std::cout << "-- HCD Time step " << i << " --" << std::endl;
-    double time = std::pow(10,i);
-    for (CellIterator cit = cells.begin(); cit != cells.end(); ++cit)
+    double time = std::pow(10,i) * 1e-3;
+    std::cout << "-- HCD Time step " << i << " at t = " << time << " sec --" << std::endl;
+
+    std::size_t cells_visited = 0;
+    for (CellIterator cit = cells.begin(); cit != cells.end(); ++cit, ++cells_visited)
     {
       if (viennashe::materials::is_semiconductor(device.get_material(*cit)))
       {
         double res = hcdmod(*cit, dipole, time);
-        std::cout << time << " s - Nit: " << *cit << " => " << res << std::endl;
+        //std::cout << time << " s - Nit: " << *cit << " => " << res << std::endl;
         nit_in_timestep[static_cast<std::size_t>(cit->id().get())] = res;
+        std::cout << "\r* Progress: " << std::setprecision(3) <<  static_cast<double>(100.0 * cells_visited) / cells.size() << " %";
+        std::cout.flush();
       }
     }
+    std::cout << std::endl;
+
+    // Postprocessing:
+    dd_cfg.mobility_electrons(new viennashe::models::hcd_mobility<DeviceType>(nit_in_timestep, 0.1430));
+    dd_cfg.nonlinear_solver().max_iters(1);
+
+    viennashe::simulator<DeviceType> dd_simulator_nit(device, dd_cfg);
+    dd_simulator_nit.set_initial_guess(viennashe::quantity::potential(),        dd_simulator.potential());
+    dd_simulator_nit.set_initial_guess(viennashe::quantity::electron_density(), dd_simulator.electron_density());
+    dd_simulator_nit.set_initial_guess(viennashe::quantity::hole_density(),     dd_simulator.hole_density());
+    dd_simulator_nit.run();
+
+    double drain_current_degraded = viennashe::get_terminal_current(dd_simulator_nit, viennashe::ELECTRON_TYPE_ID, body, drain_contact ) * 1e-6;
+    std::cout << "* main(): Drain electron current (not degraded): " << drain_current << std::endl;
+    std::cout << "* main(): Drain electron current (degraded): = " << drain_current_degraded << std::endl;
+    std::cout << "* main(): Delta I_{d;lin} = " << 100.0 * std::abs( (drain_current - drain_current_degraded) / drain_current ) << " %" << std::endl;
 
     std::stringstream filename;
     filename << "mosfet_she_hcd_nit_" << i;
