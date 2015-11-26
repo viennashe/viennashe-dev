@@ -78,14 +78,6 @@ namespace viennashe
     template <typename DeviceType>
     class scattering_base
     {
-      protected:
-        typedef typename DeviceType::mesh_type              MeshType;
-
-        typedef typename viennagrid::result_of::point<MeshType>::type      PointType;
-        typedef typename viennagrid::result_of::vertex<MeshType>::type     VertexType;
-        typedef typename viennagrid::result_of::facet<MeshType>::type      FacetType;
-        typedef typename viennagrid::result_of::cell<MeshType>::type       CellType;
-
       public:
         typedef std::vector<scatter_process_descriptor>   scatter_processes_type;
         typedef scatter_processes_type                    value_type;
@@ -94,11 +86,7 @@ namespace viennashe
 
         virtual ~scattering_base() {}
 
-        virtual scatter_processes_type operator()(FacetType const & elem,
-                                                  double kinetic_energy,
-                                                  viennashe::carrier_type_id ctype) const = 0;
-
-        virtual scatter_processes_type operator()(CellType const & elem,
+        virtual scatter_processes_type operator()(viennagrid_element_id elem,
                                                   double kinetic_energy,
                                                   viennashe::carrier_type_id ctype) const = 0;
 

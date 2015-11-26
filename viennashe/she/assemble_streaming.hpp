@@ -17,10 +17,7 @@
 
 
 // viennagrid
-#include "viennagrid/mesh/mesh.hpp"
-#include "viennagrid/algorithm/norm.hpp"
-#include "viennagrid/algorithm/volume.hpp"
-#include "viennagrid/algorithm/voronoi.hpp"
+#include "viennagrid/viennagrid.h"
 
 // viennashe
 #include "viennashe/math/spherical_harmonics.hpp"
@@ -51,6 +48,35 @@ namespace viennashe
   namespace she
   {
 
+    double compute_weighted_interface_area(viennagrid_mesh mesh,
+                                           viennagrid_element_id cell,
+                                           viennagrid_element_id other_cell,
+                                           viennagrid_element_id facet)
+    {
+      std::vector<double> centroid_1(3), centroid_2(3);
+
+      double connection_len;
+      viennagrid_element_centroid(mesh, cell,       &(centroid_1[0]));
+      viennagrid_element_centroid(mesh, other_cell, &(centroid_2[0]));
+
+      for (std::size_t i=0; i<centroid_1.size(); ++i)
+        centroid_1[i] -= centroid_2[i];
+      viennagrid_norm_2(3, &(centroid_1[0]), &connection_len);
+
+      std::vector<double> cell_connection_normalized(3);
+      for (std::size_t i=0; i<cell_connection_normalized.size(); ++i)
+        cell_connection_normalized[i] = centroid_1[i] / connection_len;
+
+      std::vector<double> facet_unit_normal = viennashe::util::outer_cell_normal_at_facet(mesh, cell, facet);
+
+      double facet_volume;
+      viennagrid_element_volume(mesh, facet, &facet_volume);
+      double normal_share;
+      viennagrid_inner_prod(3, &(facet_unit_normal[0]), &(cell_connection_normalized[0]), &normal_share);
+
+      return facet_volume * normal_share;
+    }
+
     /** @brief Worker function for the assembly of the free streaming operator. Handles the assembly of both even and odd unknowns.
      *
      * @tparam HarmonicsIter1    Iterator over the indices of the spherical harmonics to be assembled. Even harmonics for even unknowns, odd harmonics for odd unknowns
@@ -67,26 +93,24 @@ namespace viennashe
               typename SHEQuantity,
               typename MatrixType,
               typename VectorType,
-              typename CellType,
-              typename FacetType,
               typename CouplingMatrixType>
     void assemble_free_streaming_operator_on_box(DeviceType const & device,
                                                  viennashe::config const & conf,
                                                  SHEQuantity const & quan,
                                                  MatrixType & A,
                                                  VectorType & /*b*/,
-                                                 CellType const & cell, FacetType const & facet, std::size_t index_H,
+                                                 viennagrid_element_id cell, viennagrid_element_id facet, std::size_t index_H,
                                                  CouplingMatrixType const & coupling_matrix_diffusion,
                                                  CouplingMatrixType const & coupling_matrix_drift,
                                                  bool odd_assembly)
     {
-      typedef typename viennagrid::result_of::point<CellType>::type     PointType;
-
       typename viennashe::config::dispersion_relation_type dispersion = conf.dispersion_relation(quan.get_carrier_type_id());
 
       //const bool with_full_newton = (conf.nonlinear_solver().id() == viennashe::solvers::nonlinear_solver_ids::newton_nonlinear_solver);
 
-      CellType const *other_cell_ptr = util::get_other_cell_of_facet(device.mesh(), facet, cell);
+      viennagrid_element_id *other_cell_ptr;
+      util::get_other_cell_of_facet(device.mesh(), facet, cell, &other_cell_ptr);
+
       if (!other_cell_ptr) return;
 
       long row_index = odd_assembly ? quan.get_unknown_index(facet, index_H) : quan.get_unknown_index(cell, index_H);
@@ -99,11 +123,7 @@ namespace viennashe
       if (col_index < 0) //other element does not carry an unknown, so nothing to do here
         return;
 
-      PointType cell_connection = viennagrid::centroid(cell) - viennagrid::centroid(*other_cell_ptr);
-      const double connection_len = viennagrid::norm_2(cell_connection);
-      PointType cell_connection_normalized = cell_connection / viennagrid::norm(cell_connection);
-      PointType facet_unit_normal = viennashe::util::outer_cell_normal_at_facet(cell, facet);
-      const double weighted_interface_area = viennagrid::volume(facet) * std::fabs(viennagrid::inner_prod(facet_unit_normal, cell_connection_normalized));
+      const double weighted_interface_area = compute_weighted_interface_area(device.mesh(), cell, *other_cell_ptr, facet);
 
       long expansion_order_row    = static_cast<long>(odd_assembly ? quan.get_expansion_order(facet, index_H) : quan.get_expansion_order(cell,  index_H));
       long expansion_order_column = static_cast<long>(odd_assembly ? quan.get_expansion_order(cell,  index_H) : quan.get_expansion_order(facet, index_H));
@@ -237,11 +257,23 @@ namespace viennashe
       // 'drift' term
       //
 
+      double connection_len;
+      {
+        std::vector<double> centroid_1(3), centroid_2(3);
+        viennagrid_element_centroid(device.mesh(), cell,            &(centroid_1[0]));
+        viennagrid_element_centroid(device.mesh(), *other_cell_ptr, &(centroid_2[0]));
+
+        for (std::size_t i=0; i<centroid_1.size(); ++i)
+          centroid_1[i] -= centroid_2[i];
+        viennagrid_norm_2(3, &(centroid_1[0]), &connection_len);
+      }
+
+
       double Z             = averaged_density_of_states(quan, dispersion, facet, index_H);
       double int_Z_over_hk = integral_Z_over_hk(lower_kinetic_energy,
                                                 upper_kinetic_energy,
                                                 dispersion);
-      double force = force_on_facet_accessor()(quan, *other_cell_ptr, cell, index_H); //TODO: Here we need the global force, not just the projection on the edge
+      double force = force_on_facet_accessor()(quan, device.mesh(), *other_cell_ptr, cell, index_H); //TODO: Here we need the global force, not just the projection on the edge
       //force_along_edge(controller, other_vertex, vertex, index_H);
 
       double matrix_coeff_drift = 0;

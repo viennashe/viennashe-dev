@@ -25,7 +25,7 @@
 #include "viennashe/core.hpp"
 
 // ViennaGrid mesh configurations:
-#include "viennagrid/config/default_configs.hpp"
+#include "viennagrid/viennagrid.h"
 
 
 /** \example nin-diode-1d.cpp
@@ -110,7 +110,7 @@ int main()
       In one dimension there is no other element type available, while in
       two and three spatial dimensions one can choose from triangles, quadrilaterals, etc.
   **/
-  typedef viennashe::device<viennagrid::line_1d_mesh>            DeviceType;
+  typedef viennashe::device<viennagrid_mesh>            DeviceType;
 
   std::cout << viennashe::preamble() << std::endl;
 
@@ -152,7 +152,7 @@ int main()
       This is achieved by the function init_device() we defined above:
   **/
   std::cout << "* main(): Initializing device..." << std::endl;
-  init_device(device);
+  //init_device(device);
 
 
   /** <h3>Drift-Diffusion Simulations</h3>
@@ -200,7 +200,7 @@ int main()
     which is somewhat reasonable for one-dimensional device simulations,
     we write all simulation results to a VTK file, where it can be inspected with e.g. ParaView:
   **/
-  viennashe::io::write_quantities_to_VTK_file(dd_simulator, "nin1d_dd_quan");
+  //viennashe::io::write_quantities_to_VTK_file(dd_simulator, "nin1d_dd_quan");
 
 
   /** <h3>Self-Consistent SHE Simulations</h3>
@@ -274,7 +274,7 @@ int main()
 
   /** In addition, we write all macroscopic quantities such as carrier concentrations to a VTK file:
   **/
-  viennashe::io::write_quantities_to_VTK_file(she_simulator, "nin1d_she_quan");
+  //viennashe::io::write_quantities_to_VTK_file(she_simulator, "nin1d_she_quan");
 
 
   /** To easily plot 1d-graphs showing the computed energy distribution function, we also write the results

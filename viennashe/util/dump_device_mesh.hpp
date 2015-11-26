@@ -17,7 +17,7 @@
 #include "viennashe/forwards.h"
 #include "viennashe/device.hpp"
 
-#include "viennagrid/forwards.hpp"
+#include "viennagrid/viennagrid.h"
 
 namespace viennashe
 {

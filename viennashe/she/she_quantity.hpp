@@ -23,7 +23,7 @@
 #include <vector>
 #include <string>
 
-#include "viennagrid/mesh/mesh.hpp"
+#include "viennagrid/viennagrid.h"
 
 #include "viennashe/forwards.h"
 
@@ -57,8 +57,8 @@ namespace viennashe
              typename ValueT = double>
     class unknown_she_quantity
     {
-      std::size_t get_id(AssociatedT1 const & elem) const { return static_cast<std::size_t>(elem.id().get()); }
-      std::size_t get_id(AssociatedT2 const & elem) const { return static_cast<std::size_t>(elem.id().get()); }
+      std::size_t get_id(AssociatedT1 const & elem) const { return std::size_t(viennagrid_index_from_element_id(elem)); }
+      //std::size_t get_id(AssociatedT2 const & elem) const { return static_cast<std::size_t>(elem.id().get()); }
 
       public:
         typedef ValueT         value_type;
@@ -106,53 +106,53 @@ namespace viennashe
         equation_id get_equation() const { return equation_; }
 
         ValueT const * get_values(AssociatedT1 const & elem, std::size_t index_H) const { return &(values1_.at(array_index(get_id(elem), index_H)).at(0)); }
-        ValueT const * get_values(AssociatedT2 const & elem, std::size_t index_H) const { return &(values2_.at(array_index(get_id(elem), index_H)).at(0)); }
+        //ValueT const * get_values(AssociatedT2 const & elem, std::size_t index_H) const { return &(values2_.at(array_index(get_id(elem), index_H)).at(0)); }
 
         void set_values(AssociatedT1 const & elem, std::size_t index_H, ValueT const * values)
         {
           for (std::size_t i=0; i < this->get_unknown_num(elem, index_H); ++i)
             values1_.at(array_index(get_id(elem), index_H)).at(i) = values[i];
         }
-        void set_values(AssociatedT2 const & elem, std::size_t index_H, ValueT const * values)
+        /*void set_values(AssociatedT2 const & elem, std::size_t index_H, ValueT const * values)
         {
           for (std::size_t i=0; i < this->get_unknown_num(elem, index_H); ++i)
             values2_.at(array_index(get_id(elem), index_H)).at(i) = values[i];
-        }
+        }*/
 
         // Dirichlet and Neumann
         ValueT get_boundary_value(AssociatedT1 const & elem, std::size_t index_H) const         { return boundary_values1_.at(array_index(get_id(elem), index_H));         }
-        ValueT get_boundary_value(AssociatedT2 const & elem, std::size_t index_H) const         { return boundary_values2_.at(array_index(get_id(elem), index_H));         }
+        //ValueT get_boundary_value(AssociatedT2 const & elem, std::size_t index_H) const         { return boundary_values2_.at(array_index(get_id(elem), index_H));         }
 
         void   set_boundary_value(AssociatedT1 const & elem, std::size_t index_H, ValueT value) {        boundary_values1_.at(array_index(get_id(elem), index_H)) = value; }
-        void   set_boundary_value(AssociatedT2 const & elem, std::size_t index_H, ValueT value) {        boundary_values2_.at(array_index(get_id(elem), index_H)) = value; }
+        //void   set_boundary_value(AssociatedT2 const & elem, std::size_t index_H, ValueT value) {        boundary_values2_.at(array_index(get_id(elem), index_H)) = value; }
 
         boundary_type_id get_boundary_type(AssociatedT1 const & elem) const                   { return boundary_types1_.at(get_id(elem));         }
-        boundary_type_id get_boundary_type(AssociatedT2 const & elem) const                   { return boundary_types2_.at(get_id(elem));         }
+        //boundary_type_id get_boundary_type(AssociatedT2 const & elem) const                   { return boundary_types2_.at(get_id(elem));         }
 
         void             set_boundary_type(AssociatedT1 const & elem, boundary_type_id value) {        boundary_types1_.at(get_id(elem)) = value; }
-        void             set_boundary_type(AssociatedT2 const & elem, boundary_type_id value) {        boundary_types2_.at(get_id(elem)) = value; }
+        //void             set_boundary_type(AssociatedT2 const & elem, boundary_type_id value) {        boundary_types2_.at(get_id(elem)) = value; }
 
         // Unknown handling
         bool   get_unknown_mask(AssociatedT1 const & elem, std::size_t index_H) const       { return defined_but_unknown_mask1_.at(array_index(get_id(elem), index_H));         }
-        bool   get_unknown_mask(AssociatedT2 const & elem, std::size_t index_H) const       { return defined_but_unknown_mask2_.at(array_index(get_id(elem), index_H));         }
+        //bool   get_unknown_mask(AssociatedT2 const & elem, std::size_t index_H) const       { return defined_but_unknown_mask2_.at(array_index(get_id(elem), index_H));         }
 
         void   set_unknown_mask(AssociatedT1 const & elem, std::size_t index_H, bool value) {        defined_but_unknown_mask1_.at(array_index(get_id(elem), index_H)) = value; }
-        void   set_unknown_mask(AssociatedT2 const & elem, std::size_t index_H, bool value) {        defined_but_unknown_mask2_.at(array_index(get_id(elem), index_H)) = value; }
+        //void   set_unknown_mask(AssociatedT2 const & elem, std::size_t index_H, bool value) {        defined_but_unknown_mask2_.at(array_index(get_id(elem), index_H)) = value; }
 
         bool   get_unknown_mask(AssociatedT1 const & elem) const       { return spatial_mask1_.at(get_id(elem));         }
-        bool   get_unknown_mask(AssociatedT2 const & elem) const       { return spatial_mask2_.at(get_id(elem));         }
+        //bool   get_unknown_mask(AssociatedT2 const & elem) const       { return spatial_mask2_.at(get_id(elem));         }
 
         void   set_unknown_mask(AssociatedT1 const & elem, bool value) {        spatial_mask1_.at(get_id(elem)) = value; }
-        void   set_unknown_mask(AssociatedT2 const & elem, bool value) {        spatial_mask2_.at(get_id(elem)) = value; }
+        //void   set_unknown_mask(AssociatedT2 const & elem, bool value) {        spatial_mask2_.at(get_id(elem)) = value; }
 
         long   get_unknown_index(AssociatedT1 const & elem, std::size_t index_H) const       { return unknowns_indices1_.at(array_index(get_id(elem), index_H));         }
-        long   get_unknown_index(AssociatedT2 const & elem, std::size_t index_H) const       { return unknowns_indices2_.at(array_index(get_id(elem), index_H));         }
+        //long   get_unknown_index(AssociatedT2 const & elem, std::size_t index_H) const       { return unknowns_indices2_.at(array_index(get_id(elem), index_H));         }
 
         void   set_unknown_index(AssociatedT1 const & elem, std::size_t index_H, long value) {        unknowns_indices1_.at(array_index(get_id(elem), index_H)) = value; }
-        void   set_unknown_index(AssociatedT2 const & elem, std::size_t index_H, long value) {        unknowns_indices2_.at(array_index(get_id(elem), index_H)) = value; }
+        //void   set_unknown_index(AssociatedT2 const & elem, std::size_t index_H, long value) {        unknowns_indices2_.at(array_index(get_id(elem), index_H)) = value; }
 
         std::size_t  get_expansion_order(AssociatedT1 const & elem, std::size_t index_H) const        { return expansion_order1_.at(array_index(get_id(elem), index_H)); }
-        std::size_t  get_expansion_order(AssociatedT2 const & elem, std::size_t index_H) const        { return expansion_order2_.at(array_index(get_id(elem), index_H)); }
+        //std::size_t  get_expansion_order(AssociatedT2 const & elem, std::size_t index_H) const        { return expansion_order2_.at(array_index(get_id(elem), index_H)); }
 
         void   set_expansion_order(AssociatedT1 const & elem, std::size_t index_H, std::size_t value)
         {
@@ -162,14 +162,14 @@ namespace viennashe
           else
             values1_.at(array_index(get_id(elem), index_H)) = std::vector<ValueT>();
         }
-        void   set_expansion_order(AssociatedT2 const & elem, std::size_t index_H, std::size_t value)
+        /*void   set_expansion_order(AssociatedT2 const & elem, std::size_t index_H, std::size_t value)
         {
           expansion_order2_.at(array_index(get_id(elem), index_H)) = value;
           if (value > 0)
             values2_.at(array_index(get_id(elem), index_H)).resize(static_cast<std::size_t>(odd_unknowns_on_node(static_cast<long>(this->get_expansion_order(elem, index_H)))));
           else
             values2_.at(array_index(get_id(elem), index_H)) = std::vector<ValueT>();
-        }
+        }*/
 
         std::size_t  get_unknown_num(AssociatedT1 const & elem, std::size_t index_H) const
         {
@@ -178,13 +178,13 @@ namespace viennashe
           else
             return 0;
         }
-        std::size_t  get_unknown_num(AssociatedT2 const & elem, std::size_t index_H) const
+        /*std::size_t  get_unknown_num(AssociatedT2 const & elem, std::size_t index_H) const
         {
           if ( this->get_unknown_index(elem, index_H) >= 0 )
             return  static_cast<std::size_t>(odd_unknowns_on_node(static_cast<long>(get_expansion_order(elem, index_H))));
           else
             return 0;
-        }
+        }*/
 
         bool   get_expansion_adaption(AssociatedT1 const & elem) const   { return expansion_order_adaption_.at(get_id(elem)); }
         void   set_expansion_adaption(AssociatedT1 const & elem, bool b) {        expansion_order_adaption_.at(get_id(elem)) = b; }
@@ -199,21 +199,21 @@ namespace viennashe
 
         // band gap center
         ValueT get_bandedge_shift(AssociatedT1 const & elem) const { return bandedge_shift1_.at(get_id(elem)); }
-        ValueT get_bandedge_shift(AssociatedT2 const & elem) const { return bandedge_shift2_.at(get_id(elem)); }
+        //ValueT get_bandedge_shift(AssociatedT2 const & elem) const { return bandedge_shift2_.at(get_id(elem)); }
 
         void set_bandedge_shift(AssociatedT1 const & elem, ValueT value) { bandedge_shift1_.at(get_id(elem)) = value; }
-        void set_bandedge_shift(AssociatedT2 const & elem, ValueT value) { bandedge_shift2_.at(get_id(elem)) = value; }
+        //void set_bandedge_shift(AssociatedT2 const & elem, ValueT value) { bandedge_shift2_.at(get_id(elem)) = value; }
 
         ValueT get_kinetic_energy(AssociatedT1 const & elem, std::size_t index_H) const
         {
           return (ctype_ == ELECTRON_TYPE_ID) ? get_value_H(index_H) - bandedge_shift1_.at(get_id(elem))
                                               : bandedge_shift1_.at(get_id(elem)) - get_value_H(index_H);
         }
-        ValueT get_kinetic_energy(AssociatedT2 const & elem, std::size_t index_H) const
+        /*ValueT get_kinetic_energy(AssociatedT2 const & elem, std::size_t index_H) const
         {
           return (ctype_ == ELECTRON_TYPE_ID) ? get_value_H(index_H) - bandedge_shift2_.at(get_id(elem))
                                               : bandedge_shift2_.at(get_id(elem)) - get_value_H(index_H);
-        }
+        }*/
 
         carrier_type_id get_carrier_type_id() const { return ctype_; }
 

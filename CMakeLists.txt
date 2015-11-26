@@ -1,5 +1,9 @@
 
 cmake_minimum_required(VERSION 2.6)
+include ($ENV{VIENNAUTILSPATH}/cmake/vienna_build_common.cmake NO_POLICY_SCOPE)
+
+vienna_build_setup_project(viennashe viennagrid viennautils)
+
 if(COMMAND cmake_policy)
   cmake_policy(SET CMP0009 NEW)
   cmake_policy(SET CMP0011 NEW)
@@ -7,14 +11,16 @@ endif(COMMAND cmake_policy)
 
 include(cmake/CMakeLists.txt.in)
 
+vienna_build_add_subprojects()
+
 add_subdirectory(doc)
 
 # Add visibility of headers
 # Necessary for Qt-Creator usage.
 ################
-file( GLOB_RECURSE MAKE_HEADERS_VISIBLE_SRC
+file( GLOB_RECURSE MAKE_HEADERS_VISIBLE_VIENNASHE_SRC
     *.hpp *.h *.dox)
-add_custom_target( MAKE_HEADERS_VISIBLE SOURCES ${MAKE_HEADERS_VISIBLE_SRC} )
+add_custom_target( MAKE_HEADERS_VISIBLE_VIENNASHE SOURCES ${MAKE_HEADERS_VISIBLE_VIENNASHE_SRC} )
 
 # Dist target
 #############

@@ -23,10 +23,7 @@
 #include <vector>
 
 // viennagrid
-#include "viennagrid/mesh/mesh.hpp"
-#include "viennagrid/mesh/element_creation.hpp"
-#include "viennagrid/topology/line.hpp"
-#include "viennagrid/topology/quadrilateral.hpp"
+#include "viennagrid/viennagrid.h"
 
 // viennashe
 #include "viennashe/log/log.hpp"
@@ -133,23 +130,13 @@ namespace viennashe
        * @param segmentation   A mesh segmentation for setting up the segments
        * @param conf           The mesh generation configuration object
        */
-      template <typename MeshT, typename SegmentationT>
-      void generate_device_impl(MeshT & mesh,
-                                SegmentationT & segmentation,
-                                device_generation_config const & conf,
-                                viennagrid::simplex_tag<1>
-                               )
+      template<typename MeshT>
+      void generate_device_1d(MeshT & mesh,
+                              device_generation_config const & conf)
       {
-        typedef typename viennagrid::result_of::point<MeshT>::type     PointType;
-        typedef typename viennagrid::result_of::vertex<MeshT>::type    VertexType;
-        typedef typename viennagrid::result_of::cell<MeshT>::type      CellType;
-
-        typedef typename viennagrid::result_of::cell_tag<MeshT>::type  CellTag;
-
-        typedef typename viennagrid::result_of::handle<MeshT, viennagrid::vertex_tag>::type  VertexHandleType;
-
         typedef typename device_generation_config::segment_description   SegmentDescriptionType;
 
+        typedef double   PointType;
 
         //
         // Prepare vertices at segment boundaries (note that this is O(N^2) with respect to the number of segments N. Not expected to hurt in practice, though...):
@@ -175,9 +162,9 @@ namespace viennashe
 
           for (std::size_t j=0; j<segment_boundary_points.size(); ++j)
           {
-            if (viennagrid::norm_2(p0 - segment_boundary_points[j]) < distance_tolerance )
+            if (std::fabs(p0 - segment_boundary_points[j]) < distance_tolerance )
               insert_p0 = false;
-            if (viennagrid::norm_2(p1 - segment_boundary_points[j]) < distance_tolerance )
+            if (std::fabs(p1 - segment_boundary_points[j]) < distance_tolerance )
               insert_p1 = false;
           }
 
@@ -198,8 +185,6 @@ namespace viennashe
 
         std::vector< std::vector<int> > segment_vertex_ids(conf.size()); // store the global vertex ID for each segment to save lookups later on.
 
-        int vertex_counter = 0;
-
         // iterate over all segments and insert points if not already inserted in mesh. Store vertex ID for each segment.
         for (std::size_t i=0; i<conf.size(); ++i)
         {
@@ -210,6 +195,7 @@ namespace viennashe
           double distance_tolerance = 1e-10 * seg_desc.get_length_x();
 
           // Add get_points_x() points in the segment to the mesh if they haven't been added yet (check segment boundaries)
+          viennagrid_element_id vertex_id;
           for (std::size_t j = 0; j<seg_desc.get_points_x(); ++j)
           {
             PointType candidate_point(seg_desc.get_start_x() + seg_desc.get_length_x() * static_cast<double>(j) / (static_cast<double>(seg_desc.get_points_x()) - 1.0));
@@ -221,12 +207,12 @@ namespace viennashe
               bool found = false;
               for (std::size_t k=0; k<segment_boundary_points.size(); ++k)
               {
-                if (viennagrid::norm_2(candidate_point - segment_boundary_points[k]) < distance_tolerance )
+                if (std::fabs(candidate_point - segment_boundary_points[k]) < distance_tolerance )
                 {
                   if (segment_boundary_ids[k] == -1) // point hasn't been added yet, so add now:
                   {
-                    viennagrid::make_vertex_with_id(mesh, typename VertexType::id_type(vertex_counter), candidate_point);
-                    segment_boundary_ids[k] = vertex_counter++;
+                    viennagrid_mesh_vertex_create(mesh, &candidate_point, &vertex_id);
+                    segment_boundary_ids[k] = vertex_id;
                   }
                   segment_vertex_ids[i][j] = segment_boundary_ids[k];
                   found = true;
@@ -238,8 +224,8 @@ namespace viennashe
             }
             else
             {
-              viennagrid::make_vertex_with_id(mesh, typename VertexType::id_type(vertex_counter), candidate_point);
-              segment_vertex_ids[i][j] = vertex_counter++;
+              viennagrid_mesh_vertex_create(mesh, &candidate_point, &vertex_id);
+              segment_vertex_ids[i][j] = vertex_id;
             }
           }
         }
@@ -249,37 +235,23 @@ namespace viennashe
         // Set up cells:
         //
         log::info<log_generate_device>() << "* generate_device(): Setting up cells..." << std::endl;
-        viennagrid::static_array<VertexHandleType, viennagrid::boundary_elements<CellTag, viennagrid::vertex_tag>::num> cell_vertex_handles;
-        int cell_id = 0;
+        std::vector<viennagrid_element_id> vertices_of_cell(2);
         for (std::size_t i=0; i<conf.size(); ++i)
         {
           SegmentDescriptionType const & seg_desc = conf.at(i);
 
           for (std::size_t j = 0; j<seg_desc.get_points_x() - 1; ++j)
           {
-            cell_vertex_handles[0] = viennagrid::vertices(mesh).handle_at(static_cast<std::size_t>(segment_vertex_ids[i][j]));
-            cell_vertex_handles[1] = viennagrid::vertices(mesh).handle_at(static_cast<std::size_t>(segment_vertex_ids[i][j+1]));
+            vertices_of_cell[0] = segment_vertex_ids[i][j];
+            vertices_of_cell[1] = segment_vertex_ids[i][j+1];
 
-            viennagrid::make_element_with_id<CellType>(segmentation[static_cast<int>(i)],
-                                                       cell_vertex_handles.begin(),
-                                                       cell_vertex_handles.end(),
-                                                       typename CellType::id_type(cell_id++));
+            viennagrid_mesh_element_create(mesh, VIENNAGRID_ELEMENT_TYPE_LINE, 2, &(vertices_of_cell[0]), NULL);
           }
         }
 
         log::info<log_generate_device>() << "* generate_device(): DONE" << std::endl;
       }
 
-      /** @brief Compatibility overload for simplex-lines (viennagrid::simplex_tag<1> and viennagrid::hypercube_tag<1> are the same)
-       */
-      template <typename MeshType>
-      void generate_device_impl(MeshType & mesh,
-                                device_generation_config const & conf,
-                                viennagrid::hypercube_tag<1>
-                               )
-      {
-        generate_device_impl(mesh, conf, viennagrid::simplex_tag<1>());
-      }
 
 
       //
@@ -292,6 +264,7 @@ namespace viennashe
        * @param segmentation   A mesh segmentation for setting up the segments
        * @param conf           The generation configuration object
        */
+      /* TODO: Port to ViennaGrid 3.0
       template <typename MeshT, typename SegmentationT>
       void generate_device_impl(MeshT & mesh,
                                 SegmentationT & segmentation,
@@ -450,7 +423,7 @@ namespace viennashe
         }
 
         log::info<log_generate_device>() << "* generate_device(): DONE" << std::endl;
-      }
+      } */
 
 
     } // namespace detail
@@ -465,10 +438,16 @@ namespace viennashe
      * @param seg     An empty ViennaGrid segementation
      * @param conf    The mesh generation configuration object
      */
-    template <typename MeshT, typename SegmentationT>
-    void generate_device(MeshT & mesh, SegmentationT & seg, device_generation_config const & conf)
+    template <typename MeshT>
+    void generate_device(MeshT & mesh, device_generation_config const & conf)
     {
-      viennashe::util::detail::generate_device_impl(mesh, seg, conf, typename viennagrid::result_of::cell_tag<MeshT>::type());
+      viennagrid_dimension dim;
+      viennagrid_mesh_geometric_dimension_get(mesh, &dim);
+
+      if (dim == 1)
+        viennashe::util::detail::generate_device_1d(mesh, conf);
+      else
+        throw std::runtime_error("generate_device(): Mesh generation only implemented for 1d");
     }
 
     /**
@@ -478,6 +457,7 @@ namespace viennashe
      * @param num_vertices The number of vertices in the domain
      * @param num_cells The number of cells in the domain
      */
+    /* TODO: Port to ViennaGrid 3.0
     template < typename IndexT = unsigned long>
     struct device_from_array_generator
     {
@@ -490,7 +470,7 @@ namespace viennashe
         num_vertices_(num_vertices), num_cells_(num_cells)
       { }
 
-      /** @brief Functor interface. The mesh and the segmentation need to be given. */
+      / ** @brief Functor interface. The mesh and the segmentation need to be given. * /
       template < typename MeshT, typename SegmentationT >
       void operator()(MeshT & mesh, SegmentationT & seg) const
       {
@@ -536,7 +516,7 @@ namespace viennashe
       IndexT    num_vertices_;
       IndexT    num_cells_;
 
-    };
+    }; */
 
     /**
      * @brief A device generator to generate a device from <b>flat</b> C-Arrays (DOES NOT TAKE OWNERSHIP)
@@ -545,6 +525,7 @@ namespace viennashe
      * @param num_vertices The number of vertices in the domain
      * @param num_cells The number of cells in the domain
      */
+    /* TODO: Port to ViennaGrid 3.0
     template < typename IndexT = unsigned long>
     struct device_from_flat_array_generator
     {
@@ -557,7 +538,7 @@ namespace viennashe
         num_vertices_(num_vertices), num_cells_(num_cells)
       { }
 
-      /** @brief Functor interface. The mesh and the segmentation need to be given. */
+      / ** @brief Functor interface. The mesh and the segmentation need to be given. * /
       template < typename MeshT, typename SegmentationT >
       void operator()(MeshT & mesh, SegmentationT & seg) const
       {
@@ -606,7 +587,7 @@ namespace viennashe
       IndexT   num_vertices_;
       IndexT   num_cells_;
 
-    };
+    }; */
 
   } //namespace util
 } //namespace viennashe

@@ -17,10 +17,7 @@
 
 
 // viennagrid
-#include "viennagrid/mesh/mesh.hpp"
-#include "viennagrid/algorithm/norm.hpp"
-#include "viennagrid/algorithm/volume.hpp"
-#include "viennagrid/algorithm/voronoi.hpp"
+#include "viennagrid/viennagrid.h"
 
 // viennashe
 #include "viennashe/config.hpp"
@@ -55,28 +52,30 @@ namespace viennashe
       template <typename PotentialAccessorType,
                 typename ConfigType, typename TagType>
       std::vector<long> get_potential_indices(PotentialAccessorType const & potential_index,
-                                              viennagrid::element<TagType, ConfigType> const & elem)
+                                              viennagrid_mesh mesh,
+                                              viennagrid_element_id elem)
       {
         std::vector<long> ret;
-        for (std::size_t i=0; i<viennagrid::vertices(elem).size(); ++i)
+
+        if (viennagrid_topological_dimension_from_element_id(elem) > 0)
         {
-          if (potential_index(viennagrid::vertices(elem)[i]) >= 0)
-            ret.push_back(potential_index(viennagrid::vertices(elem)[i]));
+
+          viennagrid_element_id *vertices_begin, *vertices_end;
+          viennagrid_mesh_elements_get(mesh, 0, &vertices_begin, &vertices_end);
+
+          for (viennagrid_element_id *it=vertices_begin; it != vertices_end; ++it)
+          {
+            if (potential_index(viennagrid_index_from_element_id(*it)) >= 0)
+              ret.push_back(potential_index(*it));
+          }
+        }
+        else
+        {
+          if (potential_index(viennagrid_index_from_element_id(elem)) >= 0)
+            ret.push_back(potential_index(viennagrid_index_from_element_id(elem)));
         }
         return ret;
       }
-
-      template <typename PotentialAccessorType,
-                typename ConfigType>
-      std::vector<long> get_potential_indices(PotentialAccessorType const & potential_index,
-                                              viennagrid::element<viennagrid::vertex_tag, ConfigType> const & elem)
-      {
-        std::vector<long> ret;
-        if (potential_index(elem) >= 0)
-          ret.push_back(potential_index(elem));
-        return ret;
-      }
-
 
       template <typename T>
       bool is_odd_assembly(T const &, T const &)
@@ -108,34 +107,36 @@ namespace viennashe
       template <typename MeshT, typename FacetT, typename CellT>
       double cell_connection_length(MeshT const & mesh, FacetT const & facet, CellT const &)
       {
-        typedef typename viennagrid::result_of::const_coboundary_range<MeshT, FacetT, CellT>::type     CellOnFacetContainer;
-        typedef typename viennagrid::result_of::iterator<CellOnFacetContainer>::type                   CellOnFacetIterator;
+        viennagrid_dimension cell_dim;
+        viennagrid_mesh_cell_dimension_get(mesh, &cell_dim);
 
-        CellOnFacetContainer cells_on_facet(mesh, viennagrid::handle(mesh, facet));
+        viennagrid_element_id *cells_begin, *cells_end;
+        viennagrid_element_coboundary_elements(mesh, facet, cell_dim, &cells_begin, &cells_end);
 
-        if (cells_on_facet.size() < 2)
+        if (cells_end == cells_begin + 1)
         {
           assert(bool("Logic error: cell_connection_length() called for facet on boundary!"));
         }
 
-        CellOnFacetIterator cofit  = cells_on_facet.begin();
-        CellT const & c1 = *cofit;
-        ++cofit;
-        CellT const & c2 = *cofit;
+        std::vector<double> centroid1(3), centroid2(3);
+        viennagrid_element_centroid(mesh, cells_begin[0], &(centroid1[0]));
+        viennagrid_element_centroid(mesh, cells_begin[1], &(centroid2[0]));
 
-        return viennagrid::norm_2(viennagrid::centroid(c1) - viennagrid::centroid(c2));
+        viennagrid_dimension geo_dim;
+        viennagrid_mesh_geometric_dimension_get(mesh, &geo_dim);
+
+        // compute 2-norm of distance between centroids
+        double ret = 0;
+        for (std::size_t i=0; i<geo_dim; ++i)
+          ret += (centroid1[0] - centroid2[0]) * (centroid1[0] - centroid2[0]);
+
+        return std::sqrt(ret);
       }
 
       template <typename DeviceType>
-      bool has_contact_potential(DeviceType const & device, typename viennagrid::result_of::cell<typename DeviceType::mesh_type>::type const & c)
+      bool has_contact_potential(DeviceType const & device, viennagrid_element_id c)
       {
         return device.has_contact_potential(c);
-      }
-
-      template <typename DeviceType, typename ElementType>
-      bool has_contact_potential(DeviceType const &, ElementType const &)
-      {
-        return false;
       }
 
     }
@@ -173,30 +174,29 @@ namespace viennashe
      * @param c2   Second cell (no Delaunay criterion required!)
      * @param polarity  A polarity tag for distinguishing between electrons and holes
      */
-    template <typename MatrixType, typename CellType, typename PolarityTag>
+    template <typename MatrixType, typename PolarityTag>
     MatrixType coupling_matrix_in_direction_impl(MatrixType const & m1, MatrixType const & m2, MatrixType const & m3,
-                                                   CellType const & c1,   CellType const & c2, PolarityTag const & polarity,
-                                                 viennagrid::cartesian_cs<1>)
+                                                 viennagrid_mesh mesh, viennagrid_element_id c1, viennagrid_element_id c2,
+                                                 PolarityTag const & polarity)
     {
-      typedef typename viennagrid::result_of::point<CellType>::type      PointType;
-
       (void)m2; (void)m3; //prevent unused variable warnings
-      PointType p3 = viennagrid::centroid(c2) - viennagrid::centroid(c1);
-      p3 /= viennagrid::norm(p3); //normalize p3
 
-      if (!p3[0])
-      {
-        log::error() << " Vertices equal! ";
-        log::debug<log_coupling_matrix_in_direction>() << c1 << std::endl;
-        log::debug<log_coupling_matrix_in_direction>() << c2 << std::endl;
-        throw coupled_vertices_equal_exception("Equal vertices encountered!");
-      }
+      std::vector<double> centroid1(3), centroid2(3);
+      viennagrid_element_centroid(mesh, c1, &(centroid1[0]));
+      viennagrid_element_centroid(mesh, c2, &(centroid2[0]));
+
+      double norm = 0;
+      for (std::size_t i=0; i<3; ++i)
+        norm += (centroid2[0] - centroid1[0]) * (centroid2[0] - centroid1[0]);
+      norm = std::sqrt(norm);
+
+      double factor = (centroid2[0] - centroid1[0]) / norm;
 
       //log::debug<log_coupling_matrix_in_direction>() << "Coefficients: " << p3;
       double m_t = viennashe::materials::si::transverse_effective_mass(polarity);
       double m_d = viennashe::materials::si::dos_effective_mass(polarity);
 
-      MatrixType result = m1 * (p3[0] * sqrt(m_d / m_t));
+      MatrixType result = m1 * (factor * sqrt(m_d / m_t));
       return result;
     }
 
@@ -210,7 +210,7 @@ namespace viennashe
      * @param c2   Second cell (no Delaunay criterion required!)
      * @param polarity  A polarity tag for distinguishing between electrons and holes
      */
-    template <typename MatrixType, typename CellType, typename PolarityTag>
+    /*template <typename MatrixType, typename CellType, typename PolarityTag>
     MatrixType coupling_matrix_in_direction_impl(MatrixType const & m1, MatrixType const & m2, MatrixType const & m3,
                                                    CellType const & c1,   CellType const & c2, PolarityTag const & polarity,
                                                  viennagrid::cartesian_cs<2>)
@@ -236,7 +236,7 @@ namespace viennashe
       MatrixType result = m1 * (p3[0] * sqrt(m_d / m_t));
       result += m2 * (p3[1] * sqrt(m_d / m_t));
       return result;
-    }
+    } */
 
 
     /** @brief Returns dot(M, n), where M=(m1, m2, m3) is the vector of coupling matrices, and n = v2 - v1 is the directional vector (i.e. normal vector on box). Three spatial dimensions.
@@ -248,6 +248,7 @@ namespace viennashe
      * @param c2   Second cell (no Delaunay criterion required!)
      * @param polarity  A polarity tag for distinguishing between electrons and holes
      */
+    /*
     template <typename MatrixType, typename CellType, typename PolarityTag>
     MatrixType coupling_matrix_in_direction_impl(MatrixType const & m1, MatrixType const & m2, MatrixType const & m3,
                                                    CellType const & c1,   CellType const & c2, PolarityTag const & polarity,
@@ -267,7 +268,7 @@ namespace viennashe
       result += m3 * (p3[2] * sqrt(m_d / m_l));
 
       return result;
-    }
+    } */
 
 
 
@@ -280,13 +281,15 @@ namespace viennashe
      * @param v2   Second vertex (of Delaunay triangulation connecting two Voronoi boxes)
      * @param polarity  A polarity tag for distinguishing between electrons and holes
      */
-    template <typename MatrixType, typename VertexType, typename PolarityTag>
+    template <typename MatrixType, typename PolarityTag>
     MatrixType coupling_matrix_in_direction(MatrixType const & m1, MatrixType const & m2, MatrixType const & m3,
-                                            VertexType const & v1, VertexType const & v2, PolarityTag const & polarity)
+                                            viennagrid_mesh mesh, viennagrid_element_id v1, viennagrid_element_id v2,
+                                            PolarityTag const & polarity)
     {
-      typedef typename viennagrid::result_of::point<VertexType>::type             PointType;
-      typedef typename viennagrid::result_of::coordinate_system<PointType>::type  CoordinateSystemTag;
-      return coupling_matrix_in_direction_impl(m1, m2, m3, v1, v2, polarity, CoordinateSystemTag());  //using ViennaGrid vertices here
+      //typedef typename viennagrid::result_of::point<VertexType>::type             PointType;
+      //typedef typename viennagrid::result_of::coordinate_system<PointType>::type  CoordinateSystemTag;
+      //return coupling_matrix_in_direction_impl(m1, m2, m3, v1, v2, polarity, CoordinateSystemTag());  //using ViennaGrid vertices here
+      return coupling_matrix_in_direction_impl(m1, m2, m3, mesh, v1, v2, polarity);  //using ViennaGrid vertices here
     }
 
 
@@ -321,69 +324,51 @@ namespace viennashe
 
 
     /** @brief Returns the lower kinetic energy for the discretization box associated with the edge 'edge'. */
-    template <typename DeviceType, typename SHEQuantity, typename FacetType>
+    template <typename DeviceType, typename SHEQuantity>
     double lower_kinetic_energy_at_facet(DeviceType const & device,
                                          SHEQuantity const & quan,
-                                         FacetType const & facet,
+                                         viennagrid_element_id facet,
                                          std::size_t index_H)
     {
-      typedef typename DeviceType::mesh_type   MeshType;
+      viennagrid_dimension cell_dim;
+      viennagrid_mesh_cell_dimension_get(device.mesh(), &cell_dim);
 
-      typedef typename viennagrid::result_of::cell<MeshType>::type                  CellType;
+      viennagrid_element_id *cells_begin, *cells_end;
+      viennagrid_element_coboundary_elements(device.mesh(), facet, cell_dim, &cells_begin, &cells_end);
 
-      typedef typename viennagrid::result_of::const_coboundary_range<MeshType, FacetType, CellType>::type     CellOnFacetContainer;
-      typedef typename viennagrid::result_of::iterator<CellOnFacetContainer>::type                            CellOnFacetIterator;
-
-      CellOnFacetContainer cells_on_facet(device.mesh(), viennagrid::handle(device.mesh(), facet));
-
-      CellOnFacetIterator cofit = cells_on_facet.begin();
-      CellType const & c1 = *cofit;
-      ++cofit;
-
-      if (cofit == cells_on_facet.end())
-        return quan.get_kinetic_energy(c1, index_H);
-
-      CellType const & c2 = *cofit;
+      if (cells_begin + 1 == cells_end)
+        return quan.get_kinetic_energy(cells_begin[0], index_H);
 
       if (index_H == 0)
-        return quan.get_kinetic_energy(c1, index_H) + quan.get_kinetic_energy(c2, index_H) / 2.0;
+        return quan.get_kinetic_energy(cells_begin[0], index_H) + quan.get_kinetic_energy(cells_begin[1], index_H) / 2.0;
 
-      return (  quan.get_kinetic_energy(c1, index_H - 1) + quan.get_kinetic_energy(c2, index_H - 1)
-              + quan.get_kinetic_energy(c1, index_H)     + quan.get_kinetic_energy(c2, index_H)
+      return (  quan.get_kinetic_energy(cells_begin[0], index_H - 1) + quan.get_kinetic_energy(cells_begin[1], index_H - 1)
+              + quan.get_kinetic_energy(cells_begin[0], index_H)     + quan.get_kinetic_energy(cells_begin[1], index_H)
               ) / 4.0;
     }
 
 
     /** @brief Returns the upper kinetic energy of the discretization box for the edge 'edge' */
-    template <typename DeviceType, typename SHEQuantity, typename FacetType>
+    template <typename DeviceType, typename SHEQuantity>
     double upper_kinetic_energy_at_facet(DeviceType const & device,
                                          SHEQuantity const & quan,
-                                         FacetType const & facet,
+                                         viennagrid_element_id facet,
                                          std::size_t index_H)
     {
-      typedef typename DeviceType::mesh_type   MeshType;
+      viennagrid_dimension cell_dim;
+      viennagrid_mesh_cell_dimension_get(device.mesh(), &cell_dim);
 
-      typedef typename viennagrid::result_of::cell<MeshType>::type                  CellType;
+      viennagrid_element_id *cells_begin, *cells_end;
+      viennagrid_element_coboundary_elements(device.mesh(), facet, cell_dim, &cells_begin, &cells_end);
 
-      typedef typename viennagrid::result_of::const_coboundary_range<MeshType, FacetType, CellType>::type     CellOnFacetContainer;
-      typedef typename viennagrid::result_of::iterator<CellOnFacetContainer>::type                            CellOnFacetIterator;
-
-      CellOnFacetContainer cells_on_facet(device.mesh(), viennagrid::handle(device.mesh(), facet));
-
-      CellOnFacetIterator cofit = cells_on_facet.begin();
-      CellType const & c1 = *cofit;
-      ++cofit;
-
-      if (cofit == cells_on_facet.end())
-        return quan.get_kinetic_energy(c1, index_H);
-
-      CellType const & c2 = *cofit;
+      if (cells_begin + 1 == cells_end)
+        return quan.get_kinetic_energy(cells_begin[0], index_H);
 
       if (index_H == quan.get_value_H_size() - 1)
-        return quan.get_kinetic_energy(c1, index_H) + quan.get_kinetic_energy(c2, index_H) / 2.0;
+        return quan.get_kinetic_energy(cells_begin[0], index_H) + quan.get_kinetic_energy(cells_begin[1], index_H) / 2.0;
 
-      return (  quan.get_kinetic_energy(c1, index_H + 1) + quan.get_kinetic_energy(c2, index_H + 1)
-              + quan.get_kinetic_energy(c1, index_H)     + quan.get_kinetic_energy(c2, index_H)
+      return (  quan.get_kinetic_energy(cells_begin[0], index_H + 1) + quan.get_kinetic_energy(cells_begin[1], index_H + 1)
+              + quan.get_kinetic_energy(cells_begin[0], index_H)     + quan.get_kinetic_energy(cells_begin[1], index_H)
               ) / 4.0;
     }
 
@@ -391,13 +376,24 @@ namespace viennashe
    {
     public:
 
-      template <typename SHEQuantity, typename CellType>
+      template <typename SHEQuantity>
       double operator()(SHEQuantity const & quan,
-                        CellType const & c1,
-                        CellType const & c2,
+                        viennagrid_mesh mesh,
+                        viennagrid_element_id const & c1,
+                        viennagrid_element_id const & c2,
                         std::size_t index_H) const
       {
-        const double distance = viennagrid::norm_2(viennagrid::centroid(c1) - viennagrid::centroid(c2));
+        std::vector<double> centroid1(3), centroid2(3);
+        viennagrid_element_centroid(mesh, c1, &(centroid1[0]));
+        viennagrid_element_centroid(mesh, c2, &(centroid2[0]));
+
+        for (std::size_t i=0; i<centroid2.size(); ++i)
+          centroid2[i] -= centroid1[i];
+
+        double distance = 0;
+        for (std::size_t i=0; i<centroid2.size(); ++i)
+          distance += centroid2[i] * centroid2[i];
+        distance = std::sqrt(distance);
 
         const double ekin_v2   = quan.get_kinetic_energy(c2, index_H);
         const double ekin_v1   = quan.get_kinetic_energy(c1, index_H);
@@ -408,9 +404,9 @@ namespace viennashe
     };
 
     /** @brief Returns the height of the control box with respect to energy at the provided element (vertex or edge) and energy. */
-    template <typename SHEQuantity, typename ElementType>
+    template <typename SHEQuantity>
     double box_height(SHEQuantity const & quan,
-                      ElementType const & elem,
+                      viennagrid_element_id elem,
                       std::size_t index_H)
     {
       //NOTE: Don't try to be clever by being more accurate.
@@ -428,11 +424,10 @@ namespace viennashe
 
 
     /** @brief Returns the density of states around a vertex or an edge at total energy specified by index_H. Some averaging is applied near the band edge. */
-    template <typename SHEQuantity,
-              typename CellFacetType>
+    template <typename SHEQuantity>
     double averaged_density_of_states(SHEQuantity const & quan,
                                       viennashe::config::dispersion_relation_type const & dispersion,
-                                      CellFacetType const & cell_facet,
+                                      viennagrid_element_id cell_facet,
                                       std::size_t index_H)
     {
 
@@ -472,11 +467,10 @@ namespace viennashe
      * @param index_H        The index at which to evaluate the integral
      *
     */
-    template <typename SHEQuantity,
-              typename CellFacetType>
+    template <typename SHEQuantity>
     double integral_v(SHEQuantity const & quan,
                       viennashe::config::dispersion_relation_type const & dispersion,
-                      CellFacetType const & cell_facet,
+                      viennagrid_element_id cell_facet,
                       std::size_t index_H)
     {
 
@@ -516,11 +510,10 @@ namespace viennashe
      * @param index_H        The index at which to evaluate the integral
      *
     */
-    template <typename SHEQuantity,
-              typename CellFacetType>
+    template <typename SHEQuantity>
     double integral_vZ(SHEQuantity const & quan,
                        viennashe::config::dispersion_relation_type const & dispersion,
-                       CellFacetType const & cell_facet,
+                       viennagrid_element_id cell_facet,
                        std::size_t index_H)
     {
 
@@ -551,9 +544,9 @@ namespace viennashe
     }
 
     /** @brief Returns the averaged kinetic energy in the box centered at a vertex v with total energy index index_H */
-    template <typename SHEQuantity, typename CellType>
+    template <typename SHEQuantity>
     double averaged_kinetic_energy(SHEQuantity const & quan,
-                                   CellType const & c,
+                                   viennagrid_element_id c,
                                    std::size_t index_H)
     {
       double kin_energy = 0.0;

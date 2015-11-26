@@ -25,7 +25,7 @@
 #include "viennashe/core.hpp"
 
 // ViennaGrid default mesh configurations:
-#include "viennagrid/config/default_configs.hpp"
+#include "viennagrid/viennagrid.h"
 
 
 /** \example nin-diode-2d-hde.cpp
@@ -113,8 +113,7 @@ int main()
       Here we select a ViennaGrid mesh consisting of triangles.
       See \ref manual-page-api or the ViennaGrid manual for other mesh types.
    **/
-  typedef viennagrid::triangular_2d_mesh                        MeshType;
-  typedef viennashe::device<MeshType>                           DeviceType;
+  typedef viennashe::device<viennagrid_mesh>        DeviceType;
 
   std::cout << viennashe::preamble() << std::endl;
 
@@ -133,7 +132,7 @@ int main()
     Here we just need to call the initialization routine defined before:
    **/
   std::cout << "* main(): Creating device..." << std::endl;
-  init_device(device);
+  //init_device(device);
 
   /** <h3>Drift-Diffusion Simulations</h3>
 
@@ -179,7 +178,7 @@ int main()
     is by writing the computed values to a VTK file, where
     it can then be inspected by e.g. ParaView.
   **/
-  viennashe::io::write_quantities_to_VTK_file(dd_simulator, "nin2d_dd_quan");
+  //viennashe::io::write_quantities_to_VTK_file(dd_simulator, "nin2d_dd_quan");
 
 
   /** <h3>Self-Consistent SHE Simulations</h3>
@@ -249,7 +248,7 @@ int main()
 
   /** Finally we also write all macroscopic quantities (electrostatic potential, carrier concentration, temperature profile, etc.) to a single VTK file:
   **/
-  viennashe::io::write_quantities_to_VTK_file(she_simulator, "nin2d-hde_she_quan");
+  //viennashe::io::write_quantities_to_VTK_file(she_simulator, "nin2d-hde_she_quan");
 
   /** Finally, print a small message to let the user know that everything succeeded **/
   std::cout << "* main(): Results can now be viewed with your favorite VTK viewer (e.g. ParaView)." << std::endl;

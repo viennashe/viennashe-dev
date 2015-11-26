@@ -21,8 +21,7 @@
 */
 
 #include <vector>
-#include "viennagrid/accessor.hpp"
-#include "viennagrid/io/vtk_writer.hpp"
+#include "viennagrid/viennagrid.h"
 
 namespace viennashe
 {
@@ -38,20 +37,19 @@ namespace viennashe
     template<typename MeshT, typename QuanAssembler>
     void write_initial_guess(MeshT const& mesh, std::string const& key, QuanAssembler qas)
     {
-      typedef typename viennagrid::result_of::vertex<MeshT>::type                   VertexType;
-      typedef typename viennagrid::result_of::const_vertex_range<MeshT>::type       VertexContainer;
-      typedef typename viennagrid::result_of::iterator<VertexContainer>::type       VertexIterator;
 
-      VertexContainer vertices(mesh);
-      std::vector<double> vtk_data(vertices.size());
-      for(VertexIterator vit = vertices.begin(); vit != vertices.end(); vit++)
+      viennagrid_element_id *vertices_begin, *vertices_end;
+      viennagrid_mesh_elements_get(mesh, 0, &vertices_begin, &vertices_end);
+
+      std::vector<double> vtk_data(vertices_end - vertices_begin);
+      for(viennagrid_element_id *vit = vertices_begin; vit != vertices_end; vit++)
       {
-        vtk_data[vit->id().get()] = qas.current_guess_at(*vit);
+        vtk_data[viennagrid_index_from_element_id(*vit)] = qas.current_guess_at(*vit);
       }
 
-      viennagrid::io::vtk_writer<MeshT> my_vtk_writer;
-      my_vtk_writer.add_scalar_data_on_vertices(viennagrid::make_accessor<VertexType>(vtk_data), key);
-      my_vtk_writer(mesh, key);
+      //viennagrid::io::vtk_writer<MeshT> my_vtk_writer;
+      //my_vtk_writer.add_scalar_data_on_vertices(viennagrid::make_accessor<VertexType>(vtk_data), key);
+      //my_vtk_writer(mesh, key);
     }
 
   } // io

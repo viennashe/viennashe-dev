@@ -45,12 +45,6 @@ namespace viennashe
         typedef timestep_quantities<DeviceType>     self_type;
         typedef std::vector<double>                 VectorType;
 
-        typedef typename DeviceType::mesh_type           MeshType;
-
-        typedef typename viennagrid::result_of::facet<MeshType>::type        FacetType;
-        typedef typename viennagrid::result_of::cell<MeshType>::type         CellType;
-        typedef typename viennagrid::result_of::cell_tag<MeshType>::type     CellTag;
-
         typedef std::vector<std::vector<long> >    index_vector_type;
         typedef std::vector<std::vector<double> >  trap_occupancy_type;
 
@@ -61,18 +55,18 @@ namespace viennashe
       public:
         typedef DeviceType               device_type;
 
-        typedef unknown_she_quantity<CellType, FacetType>     UnknownSHEQuantityType;
-        typedef UnknownSHEQuantityType                        unknown_she_quantity_type;
-        typedef const_she_quantity<CellType, FacetType>       ResultSHEQuantityType;
-        typedef std::deque<UnknownSHEQuantityType>            UnknownSHEQuantityListType;
+        typedef unknown_she_quantity<viennagrid_element_id, viennagrid_element_id>     UnknownSHEQuantityType;
+        typedef UnknownSHEQuantityType                                                 unknown_she_quantity_type;
+        typedef std::deque<UnknownSHEQuantityType>                                     UnknownSHEQuantityListType;
+        typedef const_she_quantity<viennagrid_element_id, viennagrid_element_id>       ResultSHEQuantityType;
 
         typedef viennashe::she::she_df_wrapper<DeviceType, UnknownSHEQuantityType>                       she_df_type;
         typedef viennashe::she::edf_wrapper<DeviceType, UnknownSHEQuantityType>                             edf_type;
         typedef viennashe::she::generalized_edf_wrapper<DeviceType, UnknownSHEQuantityType>     generalized_edf_type;
 
-        typedef unknown_quantity<CellType>       UnknownQuantityType;
-        typedef UnknownQuantityType              unknown_quantity_type;
-        typedef const_quantity<CellType>         ResultQuantityType;
+        typedef unknown_quantity<viennagrid_element_id>       UnknownQuantityType;
+        typedef UnknownQuantityType                           unknown_quantity_type;
+        typedef const_quantity<viennagrid_element_id>         ResultQuantityType;
 
         typedef ResultQuantityType             potential_type;
         typedef ResultQuantityType             electron_density_type;
@@ -89,9 +83,9 @@ namespace viennashe
          *
          * @param c          The respective cell
          */
-        std::size_t num_trap_unknown_indices(CellType const & c) const
+        std::size_t num_trap_unknown_indices(viennagrid_element_id c) const
         {
-          return cell_trap_unknown_indices_.at(std::size_t(c.id().get())).size();
+          return cell_trap_unknown_indices_.at(std::size_t(viennagrid_index_from_element_id(c))).size();
         }
 
         /** @brief Returns an unknown index for traps associated with a cell
@@ -99,16 +93,14 @@ namespace viennashe
          * @param c            The respective cell
          * @param inner_index  The inner index
          */
-        long trap_unknown_index(CellType const & c, long inner_index) const
+        long trap_unknown_index(viennagrid_element_id c, long inner_index) const
         {
-          return cell_trap_unknown_indices_.at(c.id().get()).at(inner_index);
+          return cell_trap_unknown_indices_.at(viennagrid_index_from_element_id(c)).at(inner_index);
         }
 
         void setup_trap_unkown_indices(DeviceType const & device)
         {
-          typedef typename viennagrid::result_of::const_cell_range<MeshType>::type        CellContainer;
-          typedef typename viennagrid::result_of::iterator<CellContainer>::type           CellIterator;
-
+          /*
           typedef typename DeviceType::trap_level_container_type     TrapContainerType;
           typedef typename TrapContainerType::const_iterator         TrapIterator;
 
@@ -139,22 +131,24 @@ namespace viennashe
               cell_trap_unknown_indices_.at(std::size_t(cit->id().get())).clear();
               cell_trap_unknown_indices_.at(std::size_t(cit->id().get())).resize(0);
             }
-          }
+          } */
+
+          throw std::runtime_error("setup_trap_unkown_indices(): TODO: implement");
         }
 
-        double trap_occupancy(CellType const & c, std::size_t inner_index) const
+        double trap_occupancy(viennagrid_element_id c, std::size_t inner_index) const
         {
-          return cell_trap_occupancies_.at(std::size_t(c.id().get())).at(inner_index);
+          return cell_trap_occupancies_.at(std::size_t(viennagrid_index_from_element_id(c))).at(inner_index);
         }
 
-        void trap_occupancy(CellType const & c, std::size_t inner_index, double new_occupancy)
+        void trap_occupancy(viennagrid_element_id c, std::size_t inner_index, double new_occupancy)
         {
           if(new_occupancy < 0.0 || new_occupancy > 1.0)
           {
             log::error() << "ERROR: Invalid trap occupancy: " << new_occupancy << std::endl;
             throw viennashe::invalid_value_exception("trap_level.occupancy: occupancies have to be between 0 and 1!", new_occupancy);
           }
-          cell_trap_occupancies_.at(std::size_t(c.id().get())).at(inner_index) = new_occupancy;
+          cell_trap_occupancies_.at(std::size_t(viennagrid_index_from_element_id(c))).at(inner_index) = new_occupancy;
         }
 
         ////////////// SHE quantities ////////////////////////

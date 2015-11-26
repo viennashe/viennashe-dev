@@ -20,7 +20,7 @@
 #include <string>
 #include <stdexcept>
 
-#include "viennagrid/mesh/coboundary_iteration.hpp"
+#include "viennagrid/viennagrid.h"
 
 #include "viennashe/forwards.h"
 #include "viennashe/materials/all.hpp"
@@ -54,14 +54,10 @@ namespace viennashe
     template <typename DeviceType>
     class semiconductor_filter
     {
-        typedef typename DeviceType::mesh_type     MeshType;
-
       public:
-        typedef typename viennagrid::result_of::cell<MeshType>::type         cell_type;
-
         semiconductor_filter(DeviceType const & d) : device_(d) {}
 
-        bool operator()(cell_type const & cell) const { return viennashe::materials::is_semiconductor(device_.get_material(cell)); }
+        bool operator()(viennagrid_element_id cell) const { return viennashe::materials::is_semiconductor(device_.get_material(cell)); }
 
       private:
         DeviceType const & device_;
@@ -71,16 +67,10 @@ namespace viennashe
     template <typename DeviceType>
     class contact_filter
     {
-        typedef typename DeviceType::mesh_type     MeshType;
-
       public:
-        typedef typename viennagrid::result_of::vertex<MeshType>::type      vertex_type;
-        typedef typename viennagrid::result_of::cell<MeshType>::type        cell_type;
-
         contact_filter(DeviceType const & d) : device_(d) {}
 
-        bool operator()(vertex_type const & v) const { return device_.has_contact_potential(v); }
-        bool operator()(cell_type   const & c) const { return device_.has_contact_potential(c); }
+        bool operator()(viennagrid_element_id element) const { return device_.has_contact_potential(element); }
 
       private:
         DeviceType const & device_;
@@ -90,16 +80,10 @@ namespace viennashe
     template <typename DeviceType>
     class no_contact_filter
     {
-        typedef typename DeviceType::mesh_type     MeshType;
-
       public:
-        typedef typename viennagrid::result_of::vertex<MeshType>::type        vertex_type;
-        typedef typename viennagrid::result_of::cell<MeshType>::type          cell_type;
-
         no_contact_filter(DeviceType const & d) : device_(d) {}
 
-        bool operator()(vertex_type const & v) const { return !device_.has_contact_potential(v); }
-        bool operator()(cell_type const & cell) const { return !device_.has_contact_potential(cell); }
+        bool operator()(viennagrid_element_id element) const { return !device_.has_contact_potential(element); }
 
       private:
         DeviceType const & device_;
@@ -110,17 +94,12 @@ namespace viennashe
     template <typename DeviceType>
     class no_contact_and_semiconductor_filter
     {
-        typedef typename DeviceType::mesh_type     MeshType;
-
       public:
-        typedef typename viennagrid::result_of::cell<MeshType>::type         cell_type;
-
         no_contact_and_semiconductor_filter(DeviceType const & d) : device_(d) {}
 
-        bool operator()(cell_type const & cell) const
+        bool operator()(viennagrid_element_id element) const
         {
-          return !device_.has_contact_potential(cell)
-               && viennashe::materials::is_semiconductor(device_.get_material(cell));
+          return !device_.has_contact_potential(element) && viennashe::materials::is_semiconductor(device_.get_material(element));
         }
 
       private:
@@ -139,6 +118,7 @@ namespace viennashe
     } // detail
 
     /** @brief  A filter returning true if any of the neighboring ncells of dimension 'dim' evaluate to true. */     //TODO: Think about adding this generic filter to ViennaGrid
+    /* TODO: Migrate to ViennaGrid 3.0
     template <typename DeviceType, typename ElementTagT, typename CheckerType>
     class vicinity_filter
     {
@@ -192,21 +172,17 @@ namespace viennashe
       private:
         DeviceType const & device_;
         CheckerType const & checker_;
-    };
+    };*/
 
 
     /** @brief  A filter accepting metal cells only */
     template <typename DeviceType>
     class metal_filter
     {
-        typedef typename DeviceType::mesh_type     MeshType;
-
       public:
-        typedef typename viennagrid::result_of::cells<MeshType>::type         cell_type;
-
         metal_filter(DeviceType const & d) : device_(d) {}
 
-        bool operator()(cell_type const & cell) const { return viennashe::materials::is_conductor(device_.get_material(cell)); }
+        bool operator()(viennagrid_element_id element) const { return viennashe::materials::is_conductor(device_.get_material(element)); }
 
       private:
         DeviceType const & device_;
@@ -216,14 +192,10 @@ namespace viennashe
     template <typename DeviceType>
     class oxide_filter
     {
-        typedef typename DeviceType::mesh_type     MeshType;
-
       public:
-        typedef typename viennagrid::result_of::cell<MeshType>::type         cell_type;
-
         oxide_filter(DeviceType const & d) : device_(d) {}
 
-        bool operator()(cell_type const & cell) const { return viennashe::materials::is_insulator(device_.get_material(cell)); }
+        bool operator()(viennagrid_element_id element) const { return viennashe::materials::is_insulator(device_.get_material(element)); }
 
       private:
         DeviceType const & device_;

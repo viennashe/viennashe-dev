@@ -22,9 +22,7 @@
 #include <vector>
 
 // viennagrid
-#include "viennagrid/mesh/mesh.hpp"
-#include "viennagrid/algorithm/volume.hpp"
-#include "viennagrid/algorithm/interface.hpp"
+#include "viennagrid/viennagrid.h"
 
 // viennashe
 #include "viennashe/forwards.h"
@@ -59,13 +57,6 @@ namespace viennashe
               typename MobilityModel>
     struct current_density_on_facet
     {
-      typedef typename DeviceType::mesh_type MeshType;
-
-      typedef typename viennagrid::result_of::point<MeshType>::type     PointType;
-      typedef typename viennagrid::result_of::vertex<MeshType>::type    VertexType;
-      typedef typename viennagrid::result_of::facet<MeshType>::type     FacetType;
-      typedef typename viennagrid::result_of::cell<MeshType>::type      CellType;
-
       typedef double value_type;
 
       current_density_on_facet(DeviceType const & device,
@@ -75,8 +66,10 @@ namespace viennashe
                                MobilityModel const & mobility_model)
       : device_(device), carrier_type_id_(ctype), potential_(potential), carrier_(carrier), mobility_(mobility_model) { }
 
-      value_type operator()(FacetType const & facet) const
+      value_type operator()(viennagrid_element_id facet) const
       {
+
+        /*
         typedef typename viennagrid::result_of::const_coboundary_range<MeshType, FacetType, CellType>::type    CellOnFacetContainer;
         typedef typename viennagrid::result_of::iterator<CellOnFacetContainer>::type                           CellOnFacetIterator;
 
@@ -121,7 +114,10 @@ namespace viennashe
         const double charge_flux = flux_approximator(carrier_center, carrier_outer, potential_center, potential_outer, connection_len, mobility, T);
         const double Jmag = polarity * mobility * charge_flux;
 
-        return Jmag;
+        return Jmag; */
+
+        throw std::runtime_error("current_density_on_edge(): TODO: implement");
+        return 0;
       } // operator()
 
     private:
@@ -136,15 +132,12 @@ namespace viennashe
     template <typename DeviceType, typename SimulatorQuantity>
     class macroscopic_carrier_mask_filter
     {
-        typedef typename DeviceType::mesh_type           MeshType;
-
       public:
-        typedef typename viennagrid::result_of::cell<MeshType>::type    cell_type;
         typedef bool    value_type;
 
         macroscopic_carrier_mask_filter(SimulatorQuantity const & quan) : quantity_(quan) {}
 
-        value_type operator()(cell_type const & c) const { return quantity_.get_unknown_mask(c); } //TODO: Might need fixing!
+        value_type operator()(viennagrid_element_id c) const { return quantity_.get_unknown_mask(c); } //TODO: Might need fixing!
 
       private:
         SimulatorQuantity const & quantity_;
@@ -162,14 +155,6 @@ namespace viennashe
             typename MobilityModel>
   class current_density_wrapper
   {
-    protected:
-      typedef typename DeviceType::mesh_type MeshType;
-
-      typedef typename viennagrid::result_of::point<MeshType>::type     PointType;
-      typedef typename viennagrid::result_of::vertex<MeshType>::type    VertexType;
-      typedef typename viennagrid::result_of::facet<MeshType>::type     FacetType;
-      typedef typename viennagrid::result_of::cell<MeshType>::type      CellType;
-
     public:
       typedef std::vector<double> value_type;
 
@@ -180,15 +165,16 @@ namespace viennashe
                               MobilityModel const & mobility_model)
         : device_(device), carrier_type_id_(ctype), potential_(potential), carrier_(carrier), mobility_(mobility_model) { }
 
-        double operator()(FacetType const & facet) const
+        /*double operator()(FacetType const & facet) const
         {
           typedef detail::current_density_on_facet<DeviceType, PotentialQuantityType, CarrierQuantityType, MobilityModel> current_density_evaluator;
           current_density_evaluator edge_evaluator(device_, carrier_type_id_, potential_, carrier_, mobility_);
           return edge_evaluator(facet);
-        }
+        }*/
 
-        value_type operator()(CellType const & cell) const
+        value_type operator()(viennagrid_element_id cell) const
         {
+          /*
           typedef typename viennagrid::result_of::const_facet_range<CellType>::type   FacetOnCellContainer;
           typedef detail::current_density_on_facet<DeviceType, PotentialQuantityType, CarrierQuantityType, MobilityModel> current_density_evaluator;
 
@@ -207,7 +193,11 @@ namespace viennashe
                                                  cell, facets_on_cell,
                                                  result, facet_evaluator);
 
-          return result();
+          return result(); */
+
+          throw std::runtime_error("current_density_wrapper::operator(): TODO: implement!");
+
+          return value_type();
         }
 
     private:
@@ -255,6 +245,9 @@ namespace viennashe
   void check_current_conservation(DeviceT const & device,
                                   CurrentDensityT const & current_on_facet)
   {
+    throw std::runtime_error("check_current_conservation(): TODO: implement!");
+
+    /*
     typedef typename DeviceT::mesh_type                 MeshType;
 
     typedef typename viennagrid::result_of::point<MeshType>::type                 PointType;
@@ -314,6 +307,7 @@ namespace viennashe
       }
 
     } // for cells
+    */
   }
 
   template <typename DeviceType,

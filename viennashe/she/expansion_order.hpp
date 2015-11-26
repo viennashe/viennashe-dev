@@ -19,9 +19,7 @@
 #include <iostream>
 
 // viennagrid
-#include "viennagrid/element/element.hpp"
-#include "viennagrid/mesh/mesh.hpp"
-#include "viennagrid/mesh/coboundary_iteration.hpp"
+#include "viennagrid/viennagrid.h"
 
 // viennashe
 #include "viennashe/util/misc.hpp"
@@ -59,22 +57,16 @@ namespace viennashe
     template <typename DeviceType, typename SHEQuantity>
     void lower_expansion_order_near_bandedge(DeviceType const & device, SHEQuantity & quan)
     {
-      typedef typename DeviceType::mesh_type              MeshType;
+      viennagrid_mesh mesh = device.mesh();
 
-      typedef typename viennagrid::result_of::cell<MeshType>::type                  CellType;
+      viennagrid_dimension cell_dim;
+      viennagrid_mesh_cell_dimension_get(mesh, &cell_dim);
 
-      typedef typename viennagrid::result_of::const_cell_range<MeshType>::type      CellContainer;
-      typedef typename viennagrid::result_of::iterator<CellContainer>::type         CellIterator;
-
-      typedef typename viennagrid::result_of::const_facet_range<CellType>::type     FacetOnCellContainer;
-      typedef typename viennagrid::result_of::iterator<FacetOnCellContainer>::type  FacetOnCellIterator;
-
-      MeshType const & mesh = device.mesh();
-
-      CellContainer cells(mesh);
-      for (CellIterator cit = cells.begin();
-          cit != cells.end();
-          ++cit)
+      viennagrid_element_id *cells_begin, *cells_end;
+      viennagrid_mesh_elements_get(mesh, cell_dim, &cells_begin, &cells_end);
+      for (viennagrid_element_id *cit  = cells_begin;
+                                  cit != cells_end;
+                                ++cit)
       {
 
         for (std::size_t index_H = 1; index_H < quan.get_value_H_size() - 1; ++index_H)
@@ -91,13 +83,16 @@ namespace viennashe
           //
 
           bool all_neighbors_have_positive_kinetic_energy = true;
+
           //bring all neighbors of the vertex to order 1
-          FacetOnCellContainer facets_on_cell(*cit);
-          for (FacetOnCellIterator focit = facets_on_cell.begin();
-              focit != facets_on_cell.end();
-              ++focit)
+          viennagrid_element_id *facets_on_cell_begin, *facets_on_cell_end;
+          viennagrid_element_boundary_elements(mesh, *cit, cell_dim - 1, &facets_on_cell_begin, &facets_on_cell_end);
+          for (viennagrid_element_id *focit  = facets_on_cell_begin;
+                                      focit != facets_on_cell_end;
+                                    ++focit)
           {
-            CellType const *other_cell = viennashe::util::get_other_cell_of_facet(mesh, *focit, *cit);
+            viennagrid_element_id *other_cell;
+            viennashe::util::get_other_cell_of_facet(mesh, *focit, *cit, &other_cell);
             if (!other_cell)
               continue;
 
@@ -113,11 +108,12 @@ namespace viennashe
             //set expansion order of all neighbors to one:
             quan.set_expansion_order(*cit, index_H, 1);
 
-            for (FacetOnCellIterator focit = facets_on_cell.begin();
-                focit != facets_on_cell.end();
-                ++focit)
+            for (viennagrid_element_id *focit  = facets_on_cell_begin;
+                                        focit != facets_on_cell_end;
+                                      ++focit)
             {
-              CellType const *other_cell = viennashe::util::get_other_cell_of_facet(mesh, *focit, *cit);
+              viennagrid_element_id *other_cell;
+              viennashe::util::get_other_cell_of_facet(mesh, *focit, *cit, &other_cell);
               if (!other_cell)
                 continue;
 
@@ -140,6 +136,9 @@ namespace viennashe
     void smooth_expansion_order(DeviceType const & device,
                                 SHEQuantity  & quan)
     {
+      throw std::runtime_error("smooth_expansion_order(): TODO: implement!");
+
+      /*
       typedef typename DeviceType::mesh_type              MeshType;
 
       typedef typename viennagrid::result_of::cell<MeshType>::type                  CellType;
@@ -196,6 +195,7 @@ namespace viennashe
         if (!something_changed)
           break;
       }
+      */
     }
 
     /** @brief Writes expansion orders on edges. Edge expansion order is given as max(order(v1), order(v2)), where v1 and v2 denote the cells of the facet
@@ -208,40 +208,26 @@ namespace viennashe
     void write_expansion_order_to_facets(DeviceType & device,
                                         SHEQuantity  & quan)
     {
-      typedef typename DeviceType::mesh_type              MeshType;
+      viennagrid_mesh mesh = device.mesh();
 
-      typedef typename viennagrid::result_of::cell<MeshType>::type                  CellType;
-      typedef typename viennagrid::result_of::facet<MeshType>::type                 FacetType;
+      viennagrid_dimension cell_dim;
+      viennagrid_mesh_cell_dimension_get(mesh, &cell_dim);
 
-      typedef typename viennagrid::result_of::const_facet_range<MeshType>::type     FacetContainer;
-      typedef typename viennagrid::result_of::iterator<FacetContainer>::type        FacetIterator;
-
-      typedef typename viennagrid::result_of::const_coboundary_range<MeshType, FacetType, CellType>::type     CellOnFacetContainer;
-      typedef typename viennagrid::result_of::iterator<CellOnFacetContainer>::type                            CellOnFacetIterator;
-
-      MeshType const & mesh = device.mesh();
-
-      FacetContainer facets(mesh);
-      for (FacetIterator fit = facets.begin();
-           fit != facets.end();
-           ++fit)
+      viennagrid_element_id *facets_begin, *facets_end;
+      viennagrid_mesh_elements_get(mesh, cell_dim - 1, &facets_begin, &facets_end);
+      for (viennagrid_element_id *fit = facets_begin;
+                                  fit != facets_end;
+                                ++fit)
       {
-        CellOnFacetContainer cells_on_facet(device.mesh(), viennagrid::handle(device.mesh(), fit.handle()));
-
-        CellOnFacetIterator cofit = cells_on_facet.begin();
-        CellType const & c1 = *cofit;
-        ++cofit;
-        CellType const *c2_ptr = NULL;
-
-        if (cofit != cells_on_facet.end())
-          c2_ptr = &(*cofit);
+        viennagrid_element_id *cells_on_facet_begin, *cells_on_facet_end;
+        viennagrid_element_coboundary_elements(mesh, *fit, cell_dim, &cells_on_facet_begin, &cells_on_facet_end);
 
         for (size_t index_H = 0; index_H < quan.get_value_H_size(); ++index_H)
         {
-          std::size_t order = quan.get_expansion_order(c1, index_H);
+          std::size_t order = quan.get_expansion_order(cells_on_facet_begin[0], index_H);
 
-          if (c2_ptr != NULL)
-            order = std::max<std::size_t>(order, quan.get_expansion_order(*c2_ptr, index_H));
+          if (cells_on_facet_begin + 1 != cells_on_facet_end)
+            order = std::max<std::size_t>(order, quan.get_expansion_order(cells_on_facet_begin[1], index_H));
           quan.set_expansion_order(*fit, index_H, order);
         }
       }
@@ -263,31 +249,22 @@ namespace viennashe
                                             viennashe::she::unknown_she_quantity<VertexT, EdgeT> & quan,
                                             viennashe::config const & conf)
       {
-        typedef typename DeviceType::mesh_type              MeshType;
-
-        typedef typename viennagrid::result_of::cell<MeshType>::type                  CellType;
-        typedef typename viennagrid::result_of::facet<MeshType>::type                 FacetType;
-
-        typedef typename viennagrid::result_of::const_facet_range<MeshType>::type     FacetContainer;
-        typedef typename viennagrid::result_of::iterator<FacetContainer>::type        FacetIterator;
-
-        typedef typename viennagrid::result_of::const_cell_range<MeshType>::type      CellContainer;
-        typedef typename viennagrid::result_of::iterator<CellContainer>::type         CellIterator;
-
-        typedef typename viennagrid::result_of::const_coboundary_range<MeshType, FacetType, CellType>::type     CellOnFacetContainer;
-        typedef typename viennagrid::result_of::iterator<CellOnFacetContainer>::type                            CellOnFacetIterator;
-
-        MeshType const & mesh = device.mesh();
+        viennagrid_mesh mesh = device.mesh();
 
         std::size_t Lmax = static_cast<std::size_t>(conf.max_expansion_order());
 
         //
         // write expansion order on cells (even unknowns)
         //
-        CellContainer cells(mesh);
-        for (CellIterator cit = cells.begin();
-            cit != cells.end();
-            ++cit)
+
+        viennagrid_dimension cell_dim;
+        viennagrid_mesh_cell_dimension_get(mesh, &cell_dim);
+
+        viennagrid_element_id *cells_begin, *cells_end;
+        viennagrid_mesh_elements_get(mesh, cell_dim, &cells_begin, &cells_end);
+        for (viennagrid_element_id *cit  = cells_begin;
+                                    cit != cells_end;
+                                  ++cit)
         {
           if ( (conf.adaptive_expansions() == false)
               || (Lmax == 1) )
@@ -300,29 +277,23 @@ namespace viennashe
         //
         // Write expansion order on facets (odd unknowns)
         //
-        FacetContainer facets(mesh);
-        for (FacetIterator fit = facets.begin();
-             fit != facets.end();
-             ++fit)
+        viennagrid_element_id *facets_begin, *facets_end;
+        viennagrid_mesh_elements_get(mesh, cell_dim - 1, &facets_begin, &facets_end);
+        for (viennagrid_element_id *fit = facets_begin;
+                                    fit != facets_end;
+                                  ++fit)
         {
-          CellOnFacetContainer cells_on_facet(device.mesh(), viennagrid::handle(device.mesh(), fit.handle()));
-
-          CellOnFacetIterator cofit = cells_on_facet.begin();
-          CellType const & c1 = *cofit;
-          ++cofit;
-          CellType const *c2_ptr = NULL;
-
-          if (cofit != cells_on_facet.end())
-            c2_ptr = &(*cofit);
+          viennagrid_element_id *cells_on_facet_begin, *cells_on_facet_end;
+          viennagrid_element_coboundary_elements(mesh, *fit, cell_dim, &cells_on_facet_begin, &cells_on_facet_end);
 
           for (std::size_t index_H = 0; index_H < quan.get_value_H_size(); ++index_H)
           {
             if ( conf.adaptive_expansions() )
             {
-              std::size_t order = quan.get_expansion_order(c1, index_H);
+              std::size_t order = quan.get_expansion_order(cells_on_facet_begin[0], index_H);
 
-              if (c2_ptr != NULL)
-                order = std::max<std::size_t>(order, quan.get_expansion_order(*c2_ptr, index_H));
+              if (cells_on_facet_begin + 1 != cells_on_facet_end)
+                order = std::max<std::size_t>(order, quan.get_expansion_order(cells_on_facet_begin[1], index_H));
               quan.set_expansion_order(*fit, index_H, order);
             }
             else

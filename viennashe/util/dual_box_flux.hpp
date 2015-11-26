@@ -20,11 +20,7 @@
  */
 
 // viennagrid
-#include "viennagrid/forwards.hpp"
-#include "viennagrid/mesh/mesh.hpp"
-#include "viennagrid/algorithm/volume.hpp"
-#include "viennagrid/algorithm/inner_prod.hpp"
-#include "viennagrid/algorithm/centroid.hpp"
+#include "viennagrid/viennagrid.h"
 
 // viennashe
 #include "viennashe/forwards.h"
@@ -42,6 +38,7 @@ namespace viennashe
 {
   namespace util
   {
+    /*
     namespace detail
     {
       // 1d case:
@@ -124,15 +121,19 @@ namespace viennashe
       }
 
 
-    }
+    } */
 
     /** @brief Returns the unit outer normal of a facet with respect to the provided cell */
-    template <typename CellTagT, typename FacetTagT, typename WrappedConfigT>
-    typename viennagrid::result_of::point< viennagrid::element<CellTagT,WrappedConfigT> >::type
-    outer_cell_normal_at_facet(viennagrid::element<CellTagT,  WrappedConfigT> const & cell,
-                               viennagrid::element<FacetTagT, WrappedConfigT> const & facet)
+    std::vector<double>
+    outer_cell_normal_at_facet(viennagrid_mesh mesh,
+                               viennagrid_element_id cell,
+                               viennagrid_element_id facet)
     {
-      return detail::outer_cell_normal_at_facet(cell, facet);
+      std::vector<double> ret(3);
+
+      throw std::runtime_error("outer_cell_normal_at_facet(): TODO: implement!");
+
+      return ret;
     }
 
 
@@ -151,6 +152,7 @@ namespace viennashe
                                CellT       const & cell,        FacetContainerT const & facets,
                                CellSetterT       & cell_setter, FacetAccessorT  const & facet_access)
     {
+      /*
       typedef typename viennagrid::result_of::iterator<FacetContainerT>::type   FacetOnCellIterator;
       typedef typename DeviceT::mesh_type                                       MeshType;
       typedef typename FacetOnCellIterator::value_type                          FacetType;
@@ -197,7 +199,9 @@ namespace viennashe
       for (std::size_t i=0; i<result.size(); ++i)
         to_value[i] = result[i];
 
-      cell_setter(cell, to_value);
+      cell_setter(cell, to_value);*/
+
+      throw std::runtime_error("dual_box_flux_to_cell(): Not implemented!");
 
     } // dual_box_flux_to_cell
 
@@ -211,6 +215,7 @@ namespace viennashe
     template <typename DeviceType, typename CellSetter, typename FacetAccessor>
     void dual_box_flux_to_cell(DeviceType const & device, CellSetter & cell_setter, FacetAccessor const & facet_accessor)
     {
+      /*
       typedef typename DeviceType::mesh_type  MeshType;
       typedef typename viennagrid::result_of::cell<MeshType>::type                   CellType;
 
@@ -226,7 +231,9 @@ namespace viennashe
       {
         FacetOnCellContainer facets(*cit);
         dual_box_flux_to_cell(*cit, facets, cell_setter, facet_accessor);
-      }
+      }*/
+
+      throw std::runtime_error("dual_box_flux_to_cell(): Not implemented!");
     }
 
   } // util

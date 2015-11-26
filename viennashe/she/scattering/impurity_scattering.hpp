@@ -44,8 +44,6 @@ namespace viennashe
     class ionized_impurity_scattering : public scattering_base<DeviceType>
     {
         typedef scattering_base<DeviceType>                     base_type;
-        typedef typename base_type::FacetType                   FacetType;
-        typedef typename base_type::CellType                    CellType;
 
       public:
         typedef typename base_type::scatter_processes_type      scatter_processes_type;
@@ -54,14 +52,7 @@ namespace viennashe
         explicit ionized_impurity_scattering(DeviceType const & device,
                                              viennashe::config const & conf) : base_type(device, conf), params_(conf.scattering().ionized_impurity()) {  }
 
-        scatter_processes_type operator()(CellType const & elem,
-                                          double kinetic_energy,
-                                          viennashe::carrier_type_id ctype) const
-        {
-          return this->get(elem, kinetic_energy, ctype);
-        }
-
-        scatter_processes_type operator()(FacetType const & elem,
+        scatter_processes_type operator()(viennagrid_element_id elem,
                                           double kinetic_energy,
                                           viennashe::carrier_type_id ctype) const
         {

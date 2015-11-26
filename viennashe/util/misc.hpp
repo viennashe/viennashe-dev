@@ -22,12 +22,10 @@
 #include <string>
 #include <stdexcept>
 #include <cmath>
+#include <vector>
 
 // viennagrid
-#include "viennagrid/forwards.hpp"
-#include "viennagrid/algorithm/voronoi.hpp"
-#include "viennagrid/algorithm/interface.hpp"
-#include "viennagrid/algorithm/boundary.hpp"
+#include "viennagrid/viennagrid.h"
 
 // viennashe
 #include "viennashe/forwards.h"
@@ -191,46 +189,32 @@ namespace viennashe
     } //namespace detail
 
 
-    /** @brief Helper function returning a const-pointer to the 'second cell' of a facet, or NULL if there is no second facet. The 'first' cell is passed to the function. */
-    template <typename MeshT, typename FacetT, typename CellT>
-    CellT const * get_other_cell_of_facet(MeshT const & mesh, FacetT const & facet, CellT const & cell)
+    /** @brief Helper function returning a const-pointer to the 'second cell' of a facet, or NULL if there is no second cell. The 'first' cell is passed to the function. */
+    template <typename MeshT>
+    void get_other_cell_of_facet(MeshT const & mesh, viennagrid_element_id facet, viennagrid_element_id cell, viennagrid_element_id **other_cell)
     {
-      typedef typename viennagrid::result_of::const_coboundary_range<MeshT, FacetT, CellT>::type    CellOnFacetContainer;
-      typedef typename viennagrid::result_of::iterator<CellOnFacetContainer>::type                  CellOnFacetIterator;
+      viennagrid_dimension facet_dim = viennagrid_topological_dimension_from_element_id(facet);
 
-      CellOnFacetContainer cells_on_facet(mesh, viennagrid::handle(mesh, facet));
-      CellOnFacetIterator  cofit = cells_on_facet.begin();
+      viennagrid_element_id *cells_begin, *cells_end;
+      viennagrid_element_coboundary_elements(mesh, facet, facet_dim + 1, &cells_begin, &cells_end);
 
-      if ( &(*cofit) == &(cell))  //one of the two vertices of the edge is different from 'cell'
-        ++cofit;
+      *other_cell = cells_begin;
 
-      if (cofit == cells_on_facet.end()) // Only one cell attached to facet
-        return NULL;
-
-      return &(*cofit);
+      if (cell == cells_begin[0])
+      {
+        if (cells_end == cells_begin + 1)
+          *other_cell = NULL;
+        else
+          *other_cell = cells_begin + 1;
+      }
     }
 
 
-    /** @brief Helper function returning a const-pointer to the 'second cell' of a facet, or NULL if there is no second facet. The 'first' cell is passed to the function. */
+    /** @brief Comment was wrong, needs to be rewritten */
     template <typename DeviceT, typename CellT>
-    CellT const * get_connected_semiconductor_cell(DeviceT const & device, CellT const & cell)
+    viennagrid_element_id * get_connected_semiconductor_cell(DeviceT const & device, CellT const & cell)
     {
-      typedef typename viennagrid::result_of::const_facet_range<CellT>::type        FacetOnCellContainer;
-      typedef typename viennagrid::result_of::iterator<FacetOnCellContainer>::type  FacetOnCellIterator;
-
-      FacetOnCellContainer facets_on_cell(cell);
-      for (FacetOnCellIterator focit = facets_on_cell.begin();
-          focit != facets_on_cell.end();
-          ++focit)
-      {
-        // check whether cell is adjacent to a semiconductor cell:
-        CellT const * other_cell = viennashe::util::get_other_cell_of_facet(device.mesh(), *focit, cell);
-        if (!other_cell)
-          continue;
-
-        if (viennashe::materials::is_semiconductor(device.get_material(*other_cell)))
-          return other_cell;
-      }
+      throw std::runtime_error("get_connected_semiconductor_cell(): Not implemented!");
 
       return NULL;
     }
@@ -268,7 +252,7 @@ namespace viennashe
      * @tparam dim              Topological dimension of the elements on which the quantity is defined (0: vertices)
      * @tparam ValueType        Value type of the quantity (usually double or bool)
      */
-    template <typename DeviceType, typename ElementTagT, typename ValueType = double>
+    template <typename DeviceType, typename ValueType = double>
     class spatial_quantity_wrapper
     {
         typedef spatial_quantity_wrapper self_type;
@@ -276,7 +260,6 @@ namespace viennashe
         typedef typename DeviceType::mesh_type       MeshType;
 
       public:
-        typedef typename viennagrid::result_of::element<MeshType, ElementTagT>::type       element_type;
         typedef ValueType      value_type;
 
         /** @brief Copy over all values from the accessors so that this object can be easily passed around */
@@ -285,45 +268,38 @@ namespace viennashe
                                  VectorType const & quantity_values,
                                  IndexKeyType const & index_array,
                                  BoundaryValueAccessor const & bnd_accessor)
-          : values_(viennagrid::elements<ElementTagT>(device.mesh()).size()), vec_(quantity_values.size())
         {
-          cpp03_static_assert< is_equal<value_type,
-                                        typename VectorType::value_type>::value
-                             >::check();
+          viennagrid_dimension cell_dim;
+          viennagrid_mesh_cell_dimension_get(device.mesh(), &cell_dim);
 
-          typedef typename viennagrid::result_of::const_element_range<MeshType, ElementTagT>::type     ElementContainer;
-          typedef typename viennagrid::result_of::iterator<ElementContainer>::type                       ElementIterator;
-          typedef typename element_type::id_type     id_type;
+          viennagrid_int cell_count;
+          viennagrid_mesh_element_count(device.mesh(), cell_dim, &cell_count);
+          values_.resize(cell_count);
+
 
           // Iterate over all elements and copy values over
-          ElementContainer elements(device.mesh());
-          for (ElementIterator it = elements.begin(); it != elements.end(); ++it)
+          viennagrid_element_id *cells_begin, *cells_end;
+          viennagrid_mesh_elements_get(device.mesh(), cell_dim, &cells_begin, &cells_end);
+          for (viennagrid_element_id *cit = cells_begin; cit != cells_end; ++cit)
           {
-            id_type element_id = it->id();
-            long index = index_array.at(element_id);
+            viennagrid_element_id element_index = viennagrid_index_from_element_id(*cit);
+            long index = index_array.at(element_index);
 
             if (index >= 0)
-              values_.at(element_id) = quantity_values[index];
+              values_.at(element_index) = quantity_values[index];
             else
-              values_.at(element_id) = bnd_accessor(*it);
+              values_.at(element_index) = bnd_accessor(index);
           }
-
-          for (std::size_t i=0; i<quantity_values.size(); ++i)
-            vec_[i] = quantity_values[i];
         }
 
         /** @brief The functor interface. */
-        value_type operator()(element_type const & t) const
+        value_type operator()(viennagrid_element_id const & t) const
         {
-          return values_.at(t.id());
+          return values_.at(viennagrid_index_from_element_id(t));
         }
-
-        /** @brief Returns the internal vector with the quantities. Allows to externally adjust the quantity. */
-        std::vector<double> const & vector() const { return vec_; }
 
       private:
         std::vector<value_type> values_;
-        std::vector<double> vec_;
     };
 
     /** @brief A functor-style wrapper for a spatial quantity which is externally prescribed by the user.
@@ -332,7 +308,7 @@ namespace viennashe
      * @tparam dim              Topological dimension of the elements on which the quantity is defined (0: vertices)
      * @tparam ValueType        Value type of the quantity (usually double or bool)
      */
-    template <typename DeviceType, typename ElementTagT, typename ValueType = double>
+    template <typename DeviceType, typename ValueType = double>
     class spatial_quantity
     {
         typedef spatial_quantity self_type;
@@ -340,21 +316,28 @@ namespace viennashe
         typedef typename DeviceType::mesh_type       MeshType;
 
       public:
-        typedef typename viennagrid::result_of::element<MeshType, ElementTagT>::type       element_type;
         typedef ValueType      value_type;
 
         /** @brief Copy over all values from the accessors so that this object can be easily passed around */
-        spatial_quantity(DeviceType const & device, ValueType default_value = ValueType()) : values_(viennagrid::cells(device.mesh()).size(), default_value) {}
-
-        /** @brief The functor interface. */
-        value_type operator()(element_type const & t) const
+        spatial_quantity(DeviceType const & device, ValueType default_value = ValueType())
         {
-          return values_.at(t.id());
+          viennagrid_dimension cell_dim;
+          viennagrid_mesh_cell_dimension_get(device.mesh(), &cell_dim);
+
+          viennagrid_int cell_count;
+          viennagrid_mesh_element_count(device.mesh(), cell_dim, &cell_count);
+          values_.resize(cell_count);
         }
 
-        void set(element_type const & t, ValueType val)
+        /** @brief The functor interface. */
+        value_type operator()(viennagrid_element_id const & t) const
         {
-          values_.at(t.id()) = val;
+          return values_.at(viennagrid_index_from_element_id(t));
+        }
+
+        void set(viennagrid_element_id const & t, ValueType val)
+        {
+          values_.at(viennagrid_index_from_element_id(t)) = val;
         }
 
       private:

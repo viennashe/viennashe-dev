@@ -23,9 +23,7 @@
 #include <vector>
 
 // viennagrid
-#include "viennagrid/forwards.hpp"
-#include "viennagrid/mesh/mesh.hpp"
-#include "viennagrid/io/vtk_writer.hpp"
+#include "viennagrid/viennagrid.h"
 
 // viennashe
 #include "viennashe/forwards.h"
@@ -55,72 +53,32 @@ namespace viennashe
   namespace io
   {
 
-    /** @brief Auxiliary namespace with metafunctions */
-    namespace result_of
+    inline int viennagrid_to_vtk_type(viennagrid_element_type type)
     {
-      /** @brief Meta function which translates element tags to VTK type identifiers (taking extra energy coordinate into account)
-        *
-        * see http://www.vtk.org/VTK/img/file-formats.pdf, Figure 2, for an overview
-        *
-        */
-      template <typename T>
-      struct she_vtk_type
+      switch (type)
       {
-        //enum{ value = -1 };   //force invalid value...
-        typedef typename T::ERROR_NO_SHE_VTK_WRITER_FOR_THIS_ELEMENT_TYPE_AVAILABLE  error_type;
-      };
-
-      /** @brief VTK type for a line embedded into (x, H)-space -> quadrilateral */
-      template <>
-      struct she_vtk_type<viennagrid::simplex_tag<1> >
-      {
-        enum{ value = 9 };  //VTK_quad
-      };
-
-      /** @brief VTK type for a line embedded into (x, H)-space -> quadrilateral */
-      template <>
-      struct she_vtk_type<viennagrid::hypercube_tag<1> >
-      {
-        enum{ value = 9 };  //VTK_quad
-      };
-
-      /** @brief VTK type for a quadrilateral embedded into (x, H)-space -> hexahedron */
-      template <>
-      struct she_vtk_type<viennagrid::quadrilateral_tag>
-      {
-        enum{ value = 12 };  //VTK_hexahedron
-      };
-
-      /** @brief VTK type for a triangle embedded into (x, H)-space -> wedge */
-      template <>
-      struct she_vtk_type<viennagrid::triangle_tag>
-      {
-        enum{ value = 13 };  //VTK_wedge
-      };
-
+      case VIENNAGRID_ELEMENT_TYPE_LINE:          return  9; // quadrilateral
+      case VIENNAGRID_ELEMENT_TYPE_TRIANGLE:      return 13; // wedge
+      case VIENNAGRID_ELEMENT_TYPE_QUADRILATERAL: return 12; // hexahedron
+      default:
+        throw std::runtime_error("ViennaGrid element type not recognized.");
+      }
     }
 
 
     /////////////////// VTK export ////////////////////////////
 
     /** @brief VTK writer class */
-    template < typename SHEDeviceType,
-               typename CoordSystem = typename viennagrid::result_of::coordinate_system<typename viennagrid::result_of::point<typename SHEDeviceType::mesh_type>::type>::type >
+    template<typename SHEDeviceType>
     class she_vtk_writer
     {
-      protected:
+    protected:
 
       typedef typename SHEDeviceType::mesh_type                      MeshType;
 
-      typedef typename viennagrid::result_of::cell_tag<MeshType>::type  CellTag;
-
-      typedef typename viennagrid::result_of::point<MeshType>::type     PointType;
-      typedef typename viennagrid::result_of::vertex<MeshType>::type    VertexType;
-      typedef typename viennagrid::result_of::cell<MeshType>::type      CellType;
-
       /** @brief Checks whether a certain cell in x-space is inside the conduction band or the valence band at total energy index index_H */
-      template <typename DeviceType, typename SHEQuantity, typename CellType>
-      bool is_valid(DeviceType const & device, SHEQuantity const & quan, CellType const & cell, std::size_t index_H)
+      template <typename DeviceType, typename SHEQuantity>
+      bool is_valid(DeviceType const & device, SHEQuantity const & quan, viennagrid_element_type cell, std::size_t index_H)
       {
         if ( quan.get_unknown_index(cell, index_H) >= 0 && viennashe::materials::is_semiconductor(device.get_material(cell)) )
           return true;
@@ -132,43 +90,45 @@ namespace viennashe
       }
 
       /** @brief Determines the number of cells in the output mesh in (x, H)-space. */
-      template <typename DeviceType, typename SegmentType, typename SHEQuantity>
-      long get_cell_num(DeviceType const & device, SegmentType const & segment, SHEQuantity const & quan)
+      template <typename DeviceType, typename SHEQuantity>
+      long get_cell_num(DeviceType const & device, SHEQuantity const & quan)
       {
-        typedef typename viennagrid::result_of::const_vertex_range<SegmentType>::type   VertexContainer;
-        typedef typename viennagrid::result_of::iterator<VertexContainer>::type         VertexIterator;
-
-        typedef typename viennagrid::result_of::const_cell_range<SegmentType>::type     CellContainer;
-        typedef typename viennagrid::result_of::iterator<CellContainer>::type           CellIterator;
-
-        typedef typename viennagrid::result_of::const_vertex_range<CellType>::type      VertexOnCellContainer;
-        typedef typename viennagrid::result_of::iterator<VertexOnCellContainer>::type   VertexOnCellIterator;
 
         long total_cell_num = 0;
 
         //
         // Step 1: init write flag on vertices:
         //
-        VertexContainer vertices(segment);
-        vertex_write_mask_.resize(viennagrid::vertices(device.mesh()).size());
-        for (VertexIterator vit = vertices.begin();
-            vit != vertices.end();
-            ++vit)
+        viennagrid_element_id *vertices_begin, *vertices_end;
+        viennagrid_mesh_elements_get(device.mesh(), 0, &vertices_begin, &vertices_end);
+
+        vertex_write_mask_.resize(vertices_end - vertices_begin);
+
+        for (viennagrid_element_id *vit  = vertices_begin;
+                                    vit != vertices_end;
+                                  ++vit)
         {
-          vertex_write_mask_[static_cast<std::size_t>(vit->id().get())].resize(quan.get_value_H_size());
+          std::size_t index(viennagrid_index_from_element_id(*vit));
+
+          vertex_write_mask_[index].resize(quan.get_value_H_size());
           for (std::size_t index_H = 0; index_H < quan.get_value_H_size(); ++index_H)
           {
-            vertex_write_mask_[static_cast<std::size_t>(vit->id().get())].at(index_H) = -1;
+            vertex_write_mask_[index].at(index_H) = -1;
           }
         }
 
         //
         // Step 2: Now tag all cells where all vertices are in the conduction or valence band
         //
-        CellContainer cells(segment);
-        for (CellIterator cit = cells.begin();
-             cit != cells.end();
-            ++cit)
+        viennagrid_dimension cell_dim;
+        viennagrid_mesh_cell_dimension_get(device.mesh(), &cell_dim);
+
+        viennagrid_element_id *cells_begin, *cells_end;
+        viennagrid_mesh_elements_get(device.mesh(), cell_dim, &cells_begin, &cells_end);
+
+        for (viennagrid_element_id *cit  = cells_begin;
+                                    cit != cells_end;
+                                  ++cit)
         {
 
           for (std::size_t index_H = 0; index_H < quan.get_value_H_size()-1; ++index_H)
@@ -178,13 +138,17 @@ namespace viennashe
               ++total_cell_num;
 
               //tag all vertices:
-              VertexOnCellContainer vertices_on_cell(*cit);
-              for (VertexOnCellIterator vocit = vertices_on_cell.begin();
-                  vocit != vertices_on_cell.end();
-                  ++vocit)
+              viennagrid_element_id *vertices_on_cell_begin, *vertices_on_cell_end;
+              viennagrid_element_boundary_elements(device.mesh(), *cit, 0, &vertices_on_cell_begin, &vertices_on_cell_end);
+
+              for (viennagrid_element_id *vocit  = vertices_on_cell_begin;
+                                          vocit != vertices_on_cell_end;
+                                        ++vocit)
               {
-                vertex_write_mask_[static_cast<std::size_t>(vocit->id().get())].at(index_H) = 0;
-                vertex_write_mask_[static_cast<std::size_t>(vocit->id().get())].at(index_H+1) = 0;
+                std::size_t index(viennagrid_index_from_element_id(*vocit));
+
+                vertex_write_mask_[index].at(index_H) = 0;
+                vertex_write_mask_[index].at(index_H+1) = 0;
               }
             }
           }
@@ -194,25 +158,25 @@ namespace viennashe
       }
 
       /** @brief Determines the number of vertices of the output mesh in (x, H)-space */
-      template <typename DeviceType, typename SegmentType, typename SHEQuantity>
-      long get_point_num(DeviceType const & device, SegmentType const & segment, SHEQuantity const & quan)
+      template <typename DeviceType, typename SHEQuantity>
+      long get_point_num(DeviceType const & device, SHEQuantity const & quan)
       {
-        typedef typename viennagrid::result_of::const_vertex_range<SegmentType>::type   VertexContainer;
-        typedef typename viennagrid::result_of::iterator<VertexContainer>::type         VertexIterator;
-
-        (void)device;
         long point_num = 0;
 
-        VertexContainer vertices(segment);
-        for (VertexIterator vit = vertices.begin();
-            vit != vertices.end();
-            ++vit)
+        viennagrid_element_id *vertices_begin, *vertices_end;
+        viennagrid_mesh_elements_get(device.mesh(), 0, &vertices_begin, &vertices_end);
+
+        for (viennagrid_element_id *vit  = vertices_begin;
+                                    vit != vertices_end;
+                                  ++vit)
         {
+          std::size_t index(viennagrid_index_from_element_id(*vit));
+
           for (std::size_t index_H = 0; index_H < quan.get_value_H_size(); ++index_H)
           {
-            if (vertex_write_mask_[static_cast<std::size_t>(vit->id().get())].at(index_H) >= 0)
+            if (vertex_write_mask_[index].at(index_H) >= 0)
             {
-              vertex_write_mask_[static_cast<std::size_t>(vit->id().get())].at(index_H) = point_num;
+              vertex_write_mask_[index].at(index_H) = point_num;
               ++point_num;
             }
           }
@@ -232,30 +196,34 @@ namespace viennashe
       }
 
       /** @brief Implementation for writing the vertex coordinates in (x, H)-space */
-      template <typename DeviceType, typename SegmentType, typename SHEQuantity>
-      void writePoints(DeviceType const & device, SegmentType const & segment, SHEQuantity const & quan, std::ofstream & writer)
+      template <typename DeviceType, typename SHEQuantity>
+      void writePoints(DeviceType const & device, SHEQuantity const & quan, std::ofstream & writer)
       {
-        typedef typename viennagrid::result_of::const_vertex_range<SegmentType>::type   VertexContainer;
-        typedef typename viennagrid::result_of::iterator<VertexContainer>::type         VertexIterator;
-
-        (void)device;
         writer << "   <Points>" << std::endl;
         writer << "    <DataArray type=\"Float32\" NumberOfComponents=\"3\" format=\"ascii\">" << std::endl;
 
-        VertexContainer vertices(segment);
-        for (VertexIterator vit = vertices.begin();
-            vit != vertices.end();
-            ++vit)
+        viennagrid_element_id *vertices_begin, *vertices_end;
+        viennagrid_mesh_elements_get(device.mesh(), 0, &vertices_begin, &vertices_end);
+
+        for (viennagrid_element_id *vit  = vertices_begin;
+                                    vit != vertices_end;
+                                  ++vit)
         {
+          viennagrid_numeric *coords;
+          viennagrid_mesh_vertex_coords_get(device.mesh(), *vit, &coords);
+
+          viennagrid_dimension geo_dim;
+          viennagrid_mesh_geometric_dimension_get(device.mesh(), &geo_dim);
+
           for (std::size_t index_H = 0; index_H < quan.get_value_H_size(); ++index_H)
           {
-            if (vertex_write_mask_[static_cast<std::size_t>(vit->id().get())].at(index_H) >= 0)
+            if (vertex_write_mask_[std::size_t(viennagrid_index_from_element_id(*vit))].at(index_H) >= 0)
             {
-              writer << viennagrid::point(*vit)[0] << " ";
-              if (viennagrid::point(*vit).size() == 1)
+              writer << coords[0] << " ";
+              if (geo_dim == 1)
                 writer << "0 ";
               else
-                writer << viennagrid::point(*vit)[1] << " ";
+                writer << coords[1] << " ";
               writer << quan.get_value_H(index_H) << " ";
             }
           }
@@ -267,18 +235,20 @@ namespace viennashe
       } //writePoints()
 
       /** @brief Implementation for writing the cells in (x, H)-space (derived from a mesh in x-space) */
-      template <typename DeviceType, typename SegmentType, typename SHEQuantity>
-      void writeCells(DeviceType const & device, SegmentType const & segment, SHEQuantity const & quan, std::ofstream & writer)
+      template <typename DeviceType, typename SHEQuantity>
+      void writeCells(DeviceType const & device, SHEQuantity const & quan, std::ofstream & writer)
       {
-        typedef typename viennagrid::result_of::const_cell_range<SegmentType>::type     CellContainer;
-        typedef typename viennagrid::result_of::iterator<CellContainer>::type           CellIterator;
-
-        typedef typename viennagrid::result_of::const_vertex_range<CellType>::type      VertexOnCellContainer;
-        typedef typename viennagrid::result_of::iterator<VertexOnCellContainer>::type   VertexOnCellIterator;
-
         writer << "   <Cells> " << std::endl;
         writer << "    <DataArray type=\"Int32\" Name=\"connectivity\" format=\"ascii\">" << std::endl;
-        CellContainer cells(segment);
+
+        viennagrid_dimension cell_dim;
+        viennagrid_mesh_cell_dimension_get(device.mesh(), &cell_dim);
+
+        viennagrid_element_id *cells_begin, *cells_end;
+        viennagrid_mesh_elements_get(device.mesh(), cell_dim, &cells_begin, &cells_end);
+
+        std::vector<std::size_t> offsets(1);
+        std::vector<std::size_t> types;
 
         //write prisms:
         std::size_t num_cells = 0;
@@ -286,51 +256,58 @@ namespace viennashe
         {
           std::size_t index_H_other = index_H + 1;
 
-          for (CellIterator cit = cells.begin();
-              cit != cells.end();
-              ++cit)
+          for (viennagrid_element_id *cit  = cells_begin;
+                                      cit != cells_end;
+                                    ++cit)
           {
             if (!is_valid(device, quan, *cit, index_H))
               continue;
 
-            VertexOnCellContainer vertices_on_cell(*cit);
+            viennagrid_element_id *vertices_on_cell_begin, *vertices_on_cell_end;
+            viennagrid_element_boundary_elements(device.mesh(), *cit, 0, &vertices_on_cell_begin, &vertices_on_cell_end);
 
-            if (vertices_on_cell.size() == 2) //line segments need special treatment
+            offsets.push_back(offsets.back() + 2 * (vertices_on_cell_end - vertices_on_cell_begin));
+
+            viennagrid_element_type element_type;
+            viennagrid_element_type_get(device.mesh(), *cit, &element_type);
+            types.push_back(viennagrid_to_vtk_type(element_type));
+
+            if (vertices_on_cell_end - vertices_on_cell_begin == 2) //line segments need special treatment
             {
-              writer << vertex_write_mask_[static_cast<std::size_t>(vertices_on_cell[0].id().get())].at(index_H) << " ";
-              writer << vertex_write_mask_[static_cast<std::size_t>(vertices_on_cell[1].id().get())].at(index_H) << " ";
+              writer << vertex_write_mask_[std::size_t(viennagrid_index_from_element_id(vertices_on_cell_begin[0]))].at(index_H) << " ";
+              writer << vertex_write_mask_[std::size_t(viennagrid_index_from_element_id(vertices_on_cell_begin[1]))].at(index_H) << " ";
 
-              writer << vertex_write_mask_[static_cast<std::size_t>(vertices_on_cell[1].id().get())].at(index_H_other) << " ";
-              writer << vertex_write_mask_[static_cast<std::size_t>(vertices_on_cell[0].id().get())].at(index_H_other) << " ";
+              writer << vertex_write_mask_[std::size_t(viennagrid_index_from_element_id(vertices_on_cell_begin[1]))].at(index_H_other) << " ";
+              writer << vertex_write_mask_[std::size_t(viennagrid_index_from_element_id(vertices_on_cell_begin[0]))].at(index_H_other) << " ";
               ++num_cells;
             }
-            else if (vertices_on_cell.size() == 4) //quadrilaterals need special treatment
+            else if (vertices_on_cell_end - vertices_on_cell_begin == 4) //quadrilaterals need special treatment
             {
-              writer << vertex_write_mask_[static_cast<std::size_t>(vertices_on_cell[0].id().get())].at(index_H) << " ";
-              writer << vertex_write_mask_[static_cast<std::size_t>(vertices_on_cell[1].id().get())].at(index_H) << " ";
-              writer << vertex_write_mask_[static_cast<std::size_t>(vertices_on_cell[3].id().get())].at(index_H) << " ";
-              writer << vertex_write_mask_[static_cast<std::size_t>(vertices_on_cell[2].id().get())].at(index_H) << " ";
+              writer << vertex_write_mask_[std::size_t(viennagrid_index_from_element_id(vertices_on_cell_begin[0]))].at(index_H) << " ";
+              writer << vertex_write_mask_[std::size_t(viennagrid_index_from_element_id(vertices_on_cell_begin[1]))].at(index_H) << " ";
+              writer << vertex_write_mask_[std::size_t(viennagrid_index_from_element_id(vertices_on_cell_begin[3]))].at(index_H) << " ";
+              writer << vertex_write_mask_[std::size_t(viennagrid_index_from_element_id(vertices_on_cell_begin[2]))].at(index_H) << " ";
 
-              writer << vertex_write_mask_[static_cast<std::size_t>(vertices_on_cell[0].id().get())].at(index_H_other) << " ";
-              writer << vertex_write_mask_[static_cast<std::size_t>(vertices_on_cell[1].id().get())].at(index_H_other) << " ";
-              writer << vertex_write_mask_[static_cast<std::size_t>(vertices_on_cell[3].id().get())].at(index_H_other) << " ";
-              writer << vertex_write_mask_[static_cast<std::size_t>(vertices_on_cell[2].id().get())].at(index_H_other) << " ";
+              writer << vertex_write_mask_[std::size_t(viennagrid_index_from_element_id(vertices_on_cell_begin[0]))].at(index_H_other) << " ";
+              writer << vertex_write_mask_[std::size_t(viennagrid_index_from_element_id(vertices_on_cell_begin[1]))].at(index_H_other) << " ";
+              writer << vertex_write_mask_[std::size_t(viennagrid_index_from_element_id(vertices_on_cell_begin[3]))].at(index_H_other) << " ";
+              writer << vertex_write_mask_[std::size_t(viennagrid_index_from_element_id(vertices_on_cell_begin[2]))].at(index_H_other) << " ";
               ++num_cells;
             }
             else
             {
-              for (VertexOnCellIterator vocit = vertices_on_cell.begin();
-                  vocit != vertices_on_cell.end();
-                  ++vocit)
+              for (viennagrid_element_id *vocit  = vertices_on_cell_begin;
+                                          vocit != vertices_on_cell_end;
+                                        ++vocit)
               {
-                writer << vertex_write_mask_[static_cast<std::size_t>(vocit->id().get())].at(index_H) << " ";
+                writer << vertex_write_mask_[std::size_t(viennagrid_index_from_element_id(*vocit))].at(index_H) << " ";
               }
 
-              for (VertexOnCellIterator vocit = vertices_on_cell.begin();
-                  vocit != vertices_on_cell.end();
-                  ++vocit)
+              for (viennagrid_element_id *vocit  = vertices_on_cell_begin;
+                                          vocit != vertices_on_cell_end;
+                                        ++vocit)
               {
-                writer << vertex_write_mask_[static_cast<std::size_t>(vocit->id().get())].at(index_H_other) << " ";
+                writer << vertex_write_mask_[std::size_t(viennagrid_index_from_element_id(*vocit))].at(index_H_other) << " ";
               }
 
               ++num_cells;
@@ -343,49 +320,40 @@ namespace viennashe
           writer << "    </DataArray>" << std::endl;
 
           writer << "    <DataArray type=\"Int32\" Name=\"offsets\" format=\"ascii\">" << std::endl;
-          for (std::size_t offsets = 1;
-               offsets <= num_cells;
-               ++offsets)
-          {
-            writer << (offsets * viennagrid::boundary_elements<CellTag, viennagrid::vertex_tag>::num * 2) << " ";
-          }
+          for (std::size_t i = 1; i < offsets.size(); ++i)
+            writer << offsets[i] << " ";
+
           writer << std::endl;
           writer << "    </DataArray>" << std::endl;
 
           writer << "    <DataArray type=\"UInt8\" Name=\"types\" format=\"ascii\">" << std::endl;
-          for (std::size_t offsets = 1;
-                offsets <= num_cells;
-                ++offsets)
-          {
-            writer << result_of::she_vtk_type<CellTag>::value << " ";
-          }
+          for (std::size_t i = 0; i < types.size(); ++i)
+            writer << types[i] << " ";
+
           writer << std::endl;
           writer << "    </DataArray>" << std::endl;
           writer << "   </Cells>" << std::endl;
       }
 
       /** @brief Implementation for writing the data (that is usually the energy distribution function) to the vertices in (x, H)-space */
-      template <typename DeviceType, typename SegmentType, typename SHEQuantity>
+      template <typename DeviceType, typename SHEQuantity>
       void writePointData(DeviceType const & device,
-                          SegmentType const & segment,
                           SHEQuantity const & quan,
                           std::ofstream & writer, std::string name_in_file = "result")
       {
-        typedef typename viennagrid::result_of::const_vertex_range<SegmentType>::type   VertexContainer;
-        typedef typename viennagrid::result_of::iterator<VertexContainer>::type         VertexIterator;
-
-        (void)device;
         writer << "   <PointData Scalars=\"scalars\">" << std::endl;
         writer << "    <DataArray type=\"Float64\" Name=\"" << name_in_file << "\" format=\"ascii\">" << std::endl;
 
-        VertexContainer vertices(segment);
-        for (VertexIterator vit = vertices.begin();
-            vit != vertices.end();
-            ++vit)
+        viennagrid_element_id *vertices_begin, *vertices_end;
+        viennagrid_mesh_elements_get(device.mesh(), 0, &vertices_begin, &vertices_end);
+
+        for (viennagrid_element_id *vit  = vertices_begin;
+                                    vit != vertices_end;
+                                  ++vit)
         {
           for (size_t index_H = 0; index_H < quan.get_value_H_size(); ++index_H)
           {
-            if (vertex_write_mask_[vit->id().get()].at(index_H) >= 0)
+            if (vertex_write_mask_[viennagrid_index_from_element_id(*vit)].at(index_H) >= 0)
             {
               writer << quan.get_values(*vit, index_H)[0] << " ";
             }
@@ -412,17 +380,13 @@ namespace viennashe
       };
 
       /** @brief Writes data defined on cells to file */
-      template <typename DeviceType, typename SegmentType, typename SHEQuantity>
+      template <typename DeviceType, typename SHEQuantity>
       void writeCellDataArray(DeviceType const & device,
-                              SegmentType const & segment,
                               viennashe::config const & conf,
                               SHEQuantity const & quan,
                               std::ofstream & writer,
                               quantity_ids quan_id)
       {
-        typedef typename viennagrid::result_of::const_cell_range<SegmentType>::type     CellContainer;
-        typedef typename viennagrid::result_of::iterator<CellContainer>::type           CellIterator;
-
         std::string quantity_name = quan.get_name();
         switch (quan_id)
         {
@@ -442,7 +406,11 @@ namespace viennashe
 
         writer << "    <DataArray type=\"Float64\" Name=\"Generalized " << quantity_name << "\" format=\"ascii\">" << std::endl;
 
-        CellContainer cells(segment);
+        viennagrid_dimension cell_dim;
+        viennagrid_mesh_cell_dimension_get(device.mesh(), &cell_dim);
+
+        viennagrid_element_id *cells_begin, *cells_end;
+        viennagrid_mesh_elements_get(device.mesh(), cell_dim, &cells_begin, &cells_end);
 
         //write prisms:
         for (std::size_t index_H = 0; index_H < quan.get_value_H_size() - 1; ++index_H)
@@ -450,9 +418,9 @@ namespace viennashe
           double value = 0;
           double dos;
 
-          for (CellIterator cit = cells.begin();
-              cit != cells.end();
-              ++cit)
+          for (viennagrid_element_id *cit  = cells_begin;
+                                      cit != cells_end;
+                                    ++cit)
           {
             if (!is_valid(device, quan, *cit, index_H))
               continue;
@@ -502,26 +470,25 @@ namespace viennashe
       } //writeCellDataArray
 
       /** @brief Writes data defined on cells to file */
-      template <typename DeviceType, typename SegmentType, typename SHEQuantity>
+      template <typename DeviceType, typename SHEQuantity>
       void writeCellData(DeviceType const & device,
-                         SegmentType const & segment,
                          viennashe::config const & conf,
                          SHEQuantity const & quan,
                          std::ofstream & writer)
       {
         writer << "   <CellData Scalars=\"scalars\">" << std::endl;
 
-        writeCellDataArray(device, segment, conf, quan, writer, VIENNASHE_SHE_VTK_QUAN_GENERALIZED_DISTRIBUTION_FUNCTION);
-        writeCellDataArray(device, segment, conf, quan, writer, VIENNASHE_SHE_VTK_QUAN_DISTRIBUTION_FUNCTION);
-        writeCellDataArray(device, segment, conf, quan, writer, VIENNASHE_SHE_VTK_QUAN_DENSITY_OF_STATES);
-        writeCellDataArray(device, segment, conf, quan, writer, VIENNASHE_SHE_VTK_QUAN_GROUP_VELOCITY);
-        writeCellDataArray(device, segment, conf, quan, writer, VIENNASHE_SHE_VTK_QUAN_KINETIC_ENERGY);
-        writeCellDataArray(device, segment, conf, quan, writer, VIENNASHE_SHE_VTK_QUAN_EXPANSION_ORDER);
+        writeCellDataArray(device, conf, quan, writer, VIENNASHE_SHE_VTK_QUAN_GENERALIZED_DISTRIBUTION_FUNCTION);
+        writeCellDataArray(device, conf, quan, writer, VIENNASHE_SHE_VTK_QUAN_DISTRIBUTION_FUNCTION);
+        writeCellDataArray(device, conf, quan, writer, VIENNASHE_SHE_VTK_QUAN_DENSITY_OF_STATES);
+        writeCellDataArray(device, conf, quan, writer, VIENNASHE_SHE_VTK_QUAN_GROUP_VELOCITY);
+        writeCellDataArray(device, conf, quan, writer, VIENNASHE_SHE_VTK_QUAN_KINETIC_ENERGY);
+        writeCellDataArray(device, conf, quan, writer, VIENNASHE_SHE_VTK_QUAN_EXPANSION_ORDER);
         if (with_debug_quantities())
         {
-          writeCellDataArray(device, segment, conf, quan, writer, VIENNASHE_SHE_VTK_QUAN_UNKNOWN_INDEX);
-          writeCellDataArray(device, segment, conf, quan, writer, VIENNASHE_SHE_VTK_QUAN_UNKNOWN_MASK);
-          writeCellDataArray(device, segment, conf, quan, writer, VIENNASHE_SHE_VTK_QUAN_UNKNOWN_NUM);
+          writeCellDataArray(device, conf, quan, writer, VIENNASHE_SHE_VTK_QUAN_UNKNOWN_INDEX);
+          writeCellDataArray(device, conf, quan, writer, VIENNASHE_SHE_VTK_QUAN_UNKNOWN_MASK);
+          writeCellDataArray(device, conf, quan, writer, VIENNASHE_SHE_VTK_QUAN_UNKNOWN_NUM);
         }
 
         writer << "   </CellData>"  << std::endl;
@@ -531,23 +498,6 @@ namespace viennashe
       {
         writer << " </UnstructuredGrid>" << std::endl;
         writer << "</VTKFile>" << std::endl;
-      }
-
-      template <typename DeviceType, typename SegmentType>
-      bool segment_is_semiconductor_only(DeviceType const & device, SegmentType const & segment)
-      {
-        typedef typename viennagrid::result_of::const_cell_range<SegmentType>::type    CellSegmentContainer;
-        typedef typename viennagrid::result_of::iterator<CellSegmentContainer>::type   CellSegmentIterator;
-
-        CellSegmentContainer cells(segment);
-        for (CellSegmentIterator cit  = cells.begin();
-                                 cit != cells.end();
-                               ++cit)
-        {
-          if (!viennashe::materials::is_semiconductor(device.get_material(*cit)))
-            return false;
-        }
-        return true;
       }
 
       template <typename DeviceType, typename SegmentType, typename SHEQuantityT>
@@ -564,8 +514,8 @@ namespace viennashe
 
         writeHeader(writer);
 
-        long cell_num = get_cell_num(device, segment, quan); //important: get_cell_num() prior to get_point_num()!!
-        long point_num = get_point_num(device, segment, quan);
+        long cell_num = get_cell_num(device, quan); //important: get_cell_num() prior to get_point_num()!!
+        long point_num = get_point_num(device, quan);
 
         writer << "  <Piece NumberOfPoints=\""
               << point_num
@@ -574,10 +524,10 @@ namespace viennashe
               << "\">" << std::endl;
 
 
-        writePoints(device, segment, quan, writer);
-        if ( (write_segments_ && segment_is_semiconductor_only(device, segment)) || !write_segments_)
-          writeCellData(device, segment, conf, quan, writer);
-        writeCells(device, segment, quan, writer);
+        writePoints(device, quan, writer);
+        //if ( (write_segments_ && segment_is_semiconductor_only(device, segment)) || !write_segments_)
+          writeCellData(device, conf, quan, writer);
+        writeCells(device, quan, writer);
 
         writer << "  </Piece>" << std::endl;
 
@@ -602,10 +552,8 @@ namespace viennashe
                       SHEQuantityT const & quan,
                       std::string const & filename)
       {
-        typedef typename viennagrid::result_of::segmentation<MeshType>::type    SegmentationType;
-        typedef typename SegmentationType::segment_handle_type                  SegmentHandleType;
 
-        if (write_segments_)
+        /*if (write_segments_)
         {
           //
           // Step 1: Write meta information (pvd file)
@@ -649,12 +597,12 @@ namespace viennashe
           }
         }
         else
-        {
+        {*/
           //
           // Write full mesh to a single .vtu file:
           //
           write_segment(device, device.mesh(), conf, quan, filename + ".vtu");
-        }
+        //}
 
       }
 
@@ -675,20 +623,6 @@ namespace viennashe
     ///////////////////// Convenience routines /////////////////////////////
 
 
-    /** @brief Compatibility overload in order to enable compilation for three-dimensional devices. No action if called. */
-    template < typename DeviceType >
-    class she_vtk_writer<DeviceType, viennagrid::cartesian_cs<3> >
-    {
-      public:
-        template <typename DataType>
-        void operator()(DeviceType const & device,
-                        DataType const & data,
-                        std::string const & filename, std::string name_in_file = "result")
-        {
-          (void)device; (void)data; (void)filename; (void)name_in_file;
-          log::warning() << "* she_vtk_writer::operator(): Cannot write distribution function for 3d devices. Skipping..." << std::endl;
-        }
-    };
 
     /** @brief Convenience routine for writing a single macroscopic quantity to a VTK file.
      *
@@ -697,6 +631,7 @@ namespace viennashe
      * @param filename     Name of the file to be written to
      * @param name_in_file   The quantity name to be used in the VTK file
      */
+    /* TODO: Migrate to ViennaGrid 3.0
     template <typename QuantityType,
               typename DeviceType>
     void write_vertex_quantity_to_VTK_file(QuantityType const & quantity,
@@ -728,7 +663,7 @@ namespace viennashe
       viennagrid::io::vtk_writer<MeshType> my_vtk_writer;
       my_vtk_writer.add_scalar_data_on_vertices(viennagrid::make_accessor<VertexType>(vtk_data), name_in_file);
       my_vtk_writer(mesh, device.segmentation(), filename);
-    }
+    } */
 
 
     /** @brief Convenience routine for writing a single macroscopic quantity to a VTK file.
@@ -738,6 +673,7 @@ namespace viennashe
      * @param filename     Name of the file to be written to
      * @param name_in_file   The quantity name to be used in the VTK file
      */
+    /* TODO: Migrate to ViennaGrid 3.0
     template <typename QuantityType,
               typename DeviceType>
     void write_cell_quantity_to_VTK_file(QuantityType const & quantity,
@@ -769,27 +705,11 @@ namespace viennashe
       viennagrid::io::vtk_writer<MeshType> my_vtk_writer;
       my_vtk_writer.add_scalar_data_on_cells(viennagrid::make_accessor<CellType>(vtk_data), name_in_file);
       my_vtk_writer(mesh, device.segmentation(), filename);
-    }
+    }*/
 
-    namespace result_of
-    {
-      /** @brief Helper routine for extracting the ViennaGrid topology tag from a quantity wrapper. Works well with viennashe::util::spatial_quantity_wrapper. Custom wrappers should add template specializations of this helper metafunction */
-      template <typename T>
-      struct topology_tag //by default, every quantity is assumed to write to a vertex.
-      {
-        typedef viennagrid::vertex_tag type;
-      };
-
-      template <typename DeviceType, typename TagT>
-      struct topology_tag< viennashe::util::spatial_quantity_wrapper<DeviceType, TagT> >
-      {
-        typedef TagT type;
-      };
-
-    }
 
     /** @brief Namespace for implementation details within viennashe::io. Typically not of interest for a library user. */
-    namespace detail
+    /*namespace detail
     {
       template <typename QuantityType,
                 typename DeviceType>
@@ -813,12 +733,13 @@ namespace viennashe
       {
         write_cell_quantity_to_VTK_file(quantity, device, filename, name_in_file);
       }
-    }
+    }*/
 
     /** @brief Generic interface function for writing a quantity to a VTK file. Automatically dispatches between vertex and cell quantity.
      *
      *    Custom functors may need to overload detail::extract_topology_tag if writing cell quantities (by default, unidentified quantities are assumed to be vertex-quantities)
      */
+    /*
     template <typename QuantityType,
               typename DeviceType>
     void write_quantity_to_VTK_file(QuantityType const & quantity,
@@ -827,10 +748,10 @@ namespace viennashe
                                     std::string name_in_file = "viennashe_quantity")
     {
       write_cell_quantity_to_VTK_file(quantity, device, filename, name_in_file);
-    }
+    } */
 
 
-
+/*
     namespace detail
     {
       template <typename ContainerType, typename KeyType, typename ValueType>
@@ -846,9 +767,6 @@ namespace viennashe
         value_type const &         at(KeyType const & key) const { cached_value_ = container_.at(static_cast<std::size_t>(key.id().get())); return cached_value_; }
 
         value_type const * find(KeyType const &) const { return NULL; }
-        /*{
-          return &(container_[key.id().get()]);
-        }*/
 
       private:
         ContainerType const & container_;
@@ -862,8 +780,9 @@ namespace viennashe
       }
 
     } // namespace detail
-
+*/
     /** @brief Generic interface function for writing simulated quantities to a VTK file. */
+    /* TODO: Migrate to ViennaGrid 3.0
     template <typename DeviceType>
     void write_quantities_to_VTK_file(viennashe::simulator<DeviceType> const & simulator_obj,
                                       std::string filename,
@@ -1041,7 +960,7 @@ namespace viennashe
 
       my_vtk_writer(device.mesh(), device.segmentation(), filename);
 
-    }
+    } */
 
   } //namespace io
 } //namespace viennashe

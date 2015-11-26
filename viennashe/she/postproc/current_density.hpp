@@ -20,7 +20,7 @@
 #include <math.h>
 #include <vector>
 
-#include "viennagrid/mesh/mesh.hpp"
+#include "viennagrid/viennagrid.h"
 
 #include "viennashe/forwards.h"
 #include "viennashe/materials/all.hpp"
@@ -62,9 +62,10 @@ namespace viennashe
                                    1);
           }
 
-          template <typename FacetType>
-          double operator()(FacetType const & facet) const
+          double operator()(viennagrid_element_id facet) const
           {
+
+            /*
             typedef typename DeviceT::mesh_type                              MeshType;
             typedef typename viennagrid::result_of::point<FacetType>::type   PointType;
             typedef typename viennagrid::result_of::cell<MeshType>::type     CellType;
@@ -129,6 +130,11 @@ namespace viennashe
             }
 
             return -polarity * viennashe::physics::constants::q * velocity_in_normal / Y_00(0,0);
+            */
+
+            throw std::runtime_error("current_on_facet_by_ref_calculator::operator(): TODO: implement");
+
+            return 0;
           }
 
 
@@ -173,14 +179,8 @@ namespace viennashe
               typename SHEQuantity>
     class current_density_wrapper
     {
-      protected:
-        typedef typename DeviceType::mesh_type  MeshType;
-        typedef typename viennagrid::result_of::point<MeshType>::type PointType;
-
       public:
         typedef std::vector<double>       value_type;
-        typedef typename viennagrid::result_of::cell<MeshType>::type     cell_type;
-        typedef typename viennagrid::result_of::facet<MeshType>::type    facet_type;
 
         current_density_wrapper(DeviceType const & device,
                                 viennashe::config const & conf,
@@ -192,13 +192,13 @@ namespace viennashe
           : device_(o.device_), quan_(o.quan_), facet_evaluator_(o.facet_evaluator_) {}
 
         /** @brief Functor interface returning the current density magnitude on the facet */
-        double operator()(facet_type const & facet) const
+        double operator()(viennagrid_element_id facet) const
         {
           return facet_evaluator_(facet);
         }
 
         /** @brief Functor interface returning the current density at the provided cell */
-        value_type operator()(cell_type const & cell) const
+        /*value_type operator()(cell_type const & cell) const
         {
           typedef typename viennagrid::result_of::const_facet_range<cell_type>::type   FacetOnCellContainer;
 
@@ -213,7 +213,7 @@ namespace viennashe
                                                  cell, facets_on_cell,
                                                  result, facet_evaluator_);
           return result();
-        }
+        }*/
 
       private:
         DeviceType const & device_;

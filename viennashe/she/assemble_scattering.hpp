@@ -18,8 +18,7 @@
 #include <cmath>
 
 // viennagrid
-#include "viennagrid/mesh/mesh.hpp"
-#include "viennagrid/algorithm/voronoi.hpp"
+#include "viennagrid/viennagrid.h"
 
 // viennashe
 #include "viennashe/math/constants.hpp"
@@ -122,8 +121,6 @@ namespace viennashe
                                              CouplingMatrix const & coupling_in_scatter,
                                              CouplingMatrix const & coupling_out_scatter)
     {
-      typedef typename viennagrid::result_of::point<typename DeviceType::mesh_type>::type   PointType;
-
       typedef scattering_base<DeviceType>    ScatterProcessType;
 
       //
@@ -144,11 +141,13 @@ namespace viennashe
 
       const long expansion_order_mid = static_cast<long>(quan.get_expansion_order(elem, index_H));
 
-      bool odd_assembly = detail::is_odd_assembly(elem, viennagrid::cells(device.mesh())[0]);
+      bool odd_assembly = detail::is_odd_assembly(elem, elem);
 
-      double box_volume = viennagrid::volume(elem);
-      if (odd_assembly)
-        box_volume *= detail::cell_connection_length(device.mesh(), elem, viennagrid::cells(device.mesh())[0]) / static_cast<double>(PointType::dim);
+      double box_volume;
+      viennagrid_element_volume(device.mesh(), elem, &box_volume);
+      // TODO: Check two lines below
+      //if (odd_assembly)
+      //  box_volume *= detail::cell_connection_length(device.mesh(), elem, viennagrid::cells(device.mesh())[0]) / static_cast<double>(PointType::dim);
 
       //
       // Now iterate over all scattering operators

@@ -19,8 +19,7 @@
 #include <iostream>
 #include <limits>
 
-#include "viennagrid/mesh/mesh.hpp"
-#include "viennagrid/config/default_configs.hpp"
+#include "viennagrid/viennagrid.h"
 
 #include "viennashe/util/misc.hpp"
 #include "viennashe/forwards.h"
@@ -64,20 +63,7 @@ namespace viennashe
                         viennashe::unknown_quantity<VertexT> const & potential,
                         viennashe::unknown_quantity<VertexT> const & quantum_correction)
     {
-      typedef typename DeviceT::mesh_type              MeshType;
-
-      typedef typename viennagrid::result_of::facet<MeshType>::type        FacetType;
-      typedef typename viennagrid::result_of::cell<MeshType>::type         CellType;
-
-      typedef typename viennagrid::result_of::const_facet_range<MeshType>::type        FacetContainer;
-      typedef typename viennagrid::result_of::iterator<FacetContainer>::type           FacetIterator;
-
-      typedef typename viennagrid::result_of::const_cell_range<MeshType>::type         CellContainer;
-      typedef typename viennagrid::result_of::iterator<CellContainer>::type            CellIterator;
-
-      typedef typename viennagrid::result_of::const_coboundary_range<MeshType, FacetType, CellType>::type     CellOnFacetContainer;
-
-      MeshType const & mesh = device.mesh();
+      viennagrid_mesh mesh = device.mesh();
 
       double max_potential = -1.0 * std::numeric_limits<double>::max();
       double min_potential =        std::numeric_limits<double>::max();
@@ -87,10 +73,14 @@ namespace viennashe
       //         Only consider vertices which are attached to semiconductor cells.
       //
 
-      CellContainer cells(mesh);
-      for (CellIterator cit  = cells.begin();
-                        cit != cells.end();
-                      ++cit)
+      viennagrid_dimension cell_dim;
+      viennagrid_mesh_cell_dimension_get(mesh, &cell_dim);
+
+      viennagrid_element_id *cells_begin, *cells_end;
+      viennagrid_mesh_elements_get(mesh, cell_dim, &cells_begin, &cells_end);
+      for (viennagrid_element_id *cit  = cells_begin;
+                                  cit != cells_end;
+                                ++cit)
       {
         if (!viennashe::materials::is_semiconductor(device.get_material(*cit)))
           continue;
@@ -117,8 +107,10 @@ namespace viennashe
       }
 
       // Set total energy
+      viennagrid_int facet_count;
+      viennagrid_mesh_element_count(mesh, cell_dim - 1, &facet_count);
       std::size_t num_energies = static_cast<std::size_t>(total_energy_range / conf.energy_spacing()) + 1;
-      quan.resize(viennagrid::cells(mesh).size(), viennagrid::facets(mesh).size(), num_energies);
+      quan.resize(cells_end - cells_begin, facet_count, num_energies);
       for (std::size_t index_H = 0; index_H < quan.get_value_H_size(); ++index_H)
       {
         quan.set_value_H(index_H, total_energy_bandedge + index_H * total_energy_increment);
@@ -127,9 +119,9 @@ namespace viennashe
       // Set bandedge shift on vertices and edges (only when using H-transform):
       if (conf.use_h_transformation())
       {
-        for (CellIterator cit  = cells.begin();
-                          cit != cells.end();
-                        ++cit)
+        for (viennagrid_element_id *cit  = cells_begin;
+                                    cit != cells_end;
+                                  ++cit)
         {
           if (quan.get_carrier_type_id() == ELECTRON_TYPE_ID)
             quan.set_bandedge_shift(*cit, -viennashe::physics::constants::q * potential.get_value(*cit) + viennashe::materials::si::band_gap() / 2.0);
@@ -137,16 +129,19 @@ namespace viennashe
             quan.set_bandedge_shift(*cit, -viennashe::physics::constants::q * potential.get_value(*cit) - viennashe::materials::si::band_gap() / 2.0);
         }
 
-        FacetContainer facets(mesh);
-        for (FacetIterator fit  = facets.begin();
-                           fit != facets.end();
-                         ++fit)
+        viennagrid_element_id *facets_begin, *facets_end;
+        viennagrid_mesh_elements_get(mesh, cell_dim - 1, &facets_begin, &facets_end);
+        for (viennagrid_element_id *fit = facets_begin;
+                                    fit != facets_end;
+                                  ++fit)
         {
-          CellOnFacetContainer cells_on_facet(mesh, fit.handle());
-          if (cells_on_facet.size() == 2)
-            quan.set_bandedge_shift(*fit, (quan.get_bandedge_shift(cells_on_facet[0]) + quan.get_bandedge_shift(cells_on_facet[1])) / 2.0);
+          viennagrid_element_id *cells_on_facet_begin, *cells_on_facet_end;
+          viennagrid_element_coboundary_elements(mesh, *fit, cell_dim, &cells_on_facet_begin, &cells_on_facet_end);
+
+          if (cells_on_facet_begin + 1 == cells_on_facet_end)
+            quan.set_bandedge_shift(*fit, quan.get_bandedge_shift(cells_on_facet_begin[0]));
           else
-            quan.set_bandedge_shift(*fit, quan.get_bandedge_shift(cells_on_facet[0]));
+            quan.set_bandedge_shift(*fit, (quan.get_bandedge_shift(cells_on_facet_begin[0]) + quan.get_bandedge_shift(cells_on_facet_begin[1])) / 2.0);
         }
       }
 

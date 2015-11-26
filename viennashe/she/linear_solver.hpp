@@ -46,23 +46,23 @@ namespace viennashe
                             std::size_t system_size,
                             std::vector<std::pair<std::size_t, std::size_t> > & indices)
     {
-      typedef typename DeviceType::mesh_type              MeshType;
-
-      typedef typename viennagrid::result_of::const_cell_range<MeshType>::type        CellContainer;
-      typedef typename viennagrid::result_of::iterator<CellContainer>::type           CellIterator;
-
       indices.resize(quan.get_value_H_size());
 
       std::size_t last_found = 0;
 
-      CellContainer cells(device.mesh());
+      viennagrid_dimension cell_dim;
+      viennagrid_mesh_cell_dimension_get(device.mesh(), &cell_dim);
+
+      viennagrid_element_id *cells_begin, *cells_end;
+      viennagrid_mesh_elements_get(device.mesh(), cell_dim, &cells_begin, &cells_end);
+
       for (std::size_t index_H = 0; index_H < indices.size(); ++index_H)
       {
         indices[index_H].first = last_found;
 
-        for (CellIterator cit = cells.begin();
-            cit != cells.end();
-            ++cit)
+        for (viennagrid_element_id *cit  = cells_begin;
+                                    cit != cells_end;
+                                  ++cit)
         {
           if (quan.get_unknown_index(*cit, index_H) > -1)
           {

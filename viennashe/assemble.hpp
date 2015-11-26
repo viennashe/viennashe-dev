@@ -23,9 +23,7 @@
 #include <vector>
 
 // viennagrid
-#include "viennagrid/mesh/mesh.hpp"
-#include "viennagrid/mesh/coboundary_iteration.hpp"
-#include "viennagrid/algorithm/volume.hpp"
+#include "viennagrid/viennagrid.h"
 
 // viennashe
 #include "viennashe/forwards.h"
@@ -170,15 +168,6 @@ namespace viennashe
   {
     typedef typename DeviceType::mesh_type           MeshType;
 
-    typedef typename viennagrid::result_of::point<MeshType>::type                 PointType;
-    typedef typename viennagrid::result_of::cell<MeshType>::type                  CellType;
-
-    typedef typename viennagrid::result_of::const_cell_range<MeshType>::type      CellContainer;
-    typedef typename viennagrid::result_of::iterator<CellContainer>::type         CellIterator;
-
-    typedef typename viennagrid::result_of::const_facet_range<CellType>::type     FacetOnCellContainer;
-    typedef typename viennagrid::result_of::iterator<FacetOnCellContainer>::type  FacetOnCellIterator;
-
     typedef typename viennashe::she::timestep_quantities<DeviceType>::unknown_quantity_type      SpatialUnknownType;
     typedef typename viennashe::she::timestep_quantities<DeviceType>::unknown_she_quantity_type  SHEUnknownType;
 
@@ -203,10 +192,14 @@ namespace viennashe
     SHEUnknownType     const & f_n       = quantities.electron_distribution_function();
     SHEUnknownType     const & f_p       = quantities.hole_distribution_function();
 
-    CellContainer cells(mesh);
-    for (CellIterator cit = cells.begin();
-        cit != cells.end();
-        ++cit)
+    viennagrid_dimension cell_dim;
+    viennagrid_mesh_cell_dimension_get(mesh, &cell_dim);
+
+    viennagrid_element_id *cells_begin, *cells_end;
+    viennagrid_mesh_elements_get(mesh, cell_dim, &cells_begin, &cells_end);
+    for (viennagrid_element_id *cit  = cells_begin;
+                                cit != cells_end;
+                              ++cit)
     {
 
       const long row_index2 = potential.get_unknown_index(*cit);
@@ -214,7 +207,8 @@ namespace viennashe
         continue;
       const std::size_t row_index = std::size_t(row_index2);
 
-      PointType centroid_cell = viennagrid::centroid(*cit);
+      std::vector<double> centroid_cell(3);
+      viennagrid_element_centroid(mesh, *cit, &(centroid_cell[0]));
 
       const double potential_center = potential.get_value(*cit);
       const double permittivity_center = permittivity(*cit);
@@ -226,31 +220,47 @@ namespace viennashe
       //
       //   eps * laplace psi
       //
-      FacetOnCellContainer facets(*cit);
-      for (FacetOnCellIterator focit = facets.begin();
-          focit != facets.end();
-          ++focit)
+
+      viennagrid_element_id *facets_on_cell_begin, *facets_on_cell_end;
+      viennagrid_element_boundary_elements(mesh, *cit, cell_dim - 1, &facets_on_cell_begin, &facets_on_cell_end);
+      for (viennagrid_element_id *focit  = facets_on_cell_begin;
+                                  focit != facets_on_cell_end;
+                                ++focit)
       {
-        CellType const *other_cell_ptr = util::get_other_cell_of_facet(mesh, *focit, *cit);
+        viennagrid_element_id *other_cell_ptr;
+        util::get_other_cell_of_facet(mesh, *focit, *cit, &other_cell_ptr);
 
         if (!other_cell_ptr) continue;  //Facet is on the boundary of the simulation domain -> homogeneous Neumann conditions
 
-        PointType centroid_other_cell = viennagrid::centroid(*other_cell_ptr);
-        PointType cell_connection = centroid_other_cell - centroid_cell;
-        PointType cell_connection_normalized = cell_connection / viennagrid::norm(cell_connection);
-        PointType facet_unit_normal = viennashe::util::outer_cell_normal_at_facet(*cit, *focit);
+        std::vector<double> centroid_other_cell(3);
+        viennagrid_element_centroid(mesh, *other_cell_ptr, &(centroid_other_cell[0]));
+        std::vector<double> cell_connection(3);
+        for (std::size_t i=0; i<cell_connection.size(); ++i)
+          cell_connection[i] = centroid_other_cell[i] - centroid_cell[i];
+        double connection_len;
+        viennagrid_norm_2(3, &(cell_connection[0]), &connection_len);
+        std::vector<double> cell_connection_normalized(3);
+        for (std::size_t i=0; i<cell_connection.size(); ++i)
+          cell_connection_normalized[i] = cell_connection[i] / connection_len;
+        std::vector<double> facet_unit_normal = viennashe::util::outer_cell_normal_at_facet(mesh, *cit, *focit);
 
-        const long col_index        = potential.get_unknown_index(*other_cell_ptr);
-        const double connection_len = viennagrid::norm_2(cell_connection);
-        const double weighted_interface_area = viennagrid::volume(*focit) * viennagrid::inner_prod(facet_unit_normal, cell_connection_normalized);
+        const long col_index = potential.get_unknown_index(*other_cell_ptr);
+        double facet_area;
+        viennagrid_element_volume(mesh, *focit, &facet_area);
+        double facet_contribution;
+        viennagrid_inner_prod(3, &(facet_unit_normal[0]), &(cell_connection_normalized[0]), &facet_contribution);
+        const double weighted_interface_area = facet_area * viennagrid::inner_prod(facet_unit_normal, cell_connection_normalized);
         const double potential_outer = potential.get_value(*other_cell_ptr);
 
         // off-diagonal contribution
         if (col_index >= 0)
         {
-          PointType facet_center = viennagrid::centroid(*focit);  //TODO: Use intersection of facet plane with connection
-          double connection_in_cell = viennagrid::norm(facet_center - centroid_cell);
-          double connection_in_other_cell = viennagrid::norm(facet_center - centroid_other_cell);
+          std::vector<double> facet_centroid(3);
+          viennagrid_element_centroid(mesh, *focit, &(facet_centroid[0]));
+          double connection_in_cell;
+          viennagrid_distance_2(3, &(facet_centroid[0]), &(centroid_cell[0]), &connection_in_cell);
+          double connection_in_other_cell;
+          viennagrid_distance_2(3, &(facet_centroid[0]), &(centroid_other_cell[0]), &connection_in_other_cell);
           const double permittivity_mean = (connection_in_cell + connection_in_other_cell) /
                                            (connection_in_cell/permittivity_center + connection_in_other_cell/permittivity(*other_cell_ptr));
 
@@ -265,7 +275,8 @@ namespace viennashe
         }
       } //for facets
 
-      const double cell_volume = viennagrid::volume(*cit);
+      double cell_volume;
+      viennagrid_element_volume(mesh, *cit, &cell_volume);
 
       const double value_n = detail::get_carrier_density_for_poisson<DeviceType>(conf, *cit, n_density, f_n);
       const double value_p = detail::get_carrier_density_for_poisson<DeviceType>(conf, *cit, p_density, f_p);
@@ -357,21 +368,10 @@ namespace viennashe
                    MatrixType & A,
                    VectorType & b)
   {
-    typedef typename DeviceType::mesh_type           MeshType;
-
-    typedef typename viennagrid::result_of::point<MeshType>::type                 PointType;
-    typedef typename viennagrid::result_of::cell<MeshType>::type                  CellType;
-
-    typedef typename viennagrid::result_of::const_cell_range<MeshType>::type      CellContainer;
-    typedef typename viennagrid::result_of::iterator<CellContainer>::type         CellIterator;
-
-    typedef typename viennagrid::result_of::const_facet_range<CellType>::type     FacetOnCellContainer;
-    typedef typename viennagrid::result_of::iterator<FacetOnCellContainer>::type  FacetOnCellIterator;
-
     typedef typename viennashe::she::timestep_quantities<DeviceType>::unknown_quantity_type      SpatialUnknownType;
     typedef typename viennashe::contact_carrier_density_accessor<DeviceType> bnd_carrier_accessor;
 
-    MeshType const & mesh = device.mesh();
+    viennagrid_mesh mesh = device.mesh();
 
     bnd_carrier_accessor bnd_carrier_density(device, ctype);
 
@@ -390,10 +390,14 @@ namespace viennashe
     scharfetter_gummel_dVi flux_approximator_dVi(ctype);
     scharfetter_gummel_dVj flux_approximator_dVj(ctype);
 
-    CellContainer cells(mesh);
-    for (CellIterator cit = cells.begin();
-        cit != cells.end();
-        ++cit)
+    viennagrid_dimension cell_dim;
+    viennagrid_mesh_cell_dimension_get(mesh, &cell_dim);
+
+    viennagrid_element_id *cells_begin, *cells_end;
+    viennagrid_mesh_elements_get(mesh, cell_dim, &cells_begin, &cells_end);
+    for (viennagrid_element_id *cit  = cells_begin;
+                                cit != cells_end;
+                              ++cit)
     {
       //log::debug<log_continuity_solver>() << "* electron_solver::assemble(): Iterating over vertex: " << vit->id() << std::endl;
 
@@ -411,17 +415,20 @@ namespace viennashe
 
       const double carrier_center = carrier_density.get_value(*cit);
 
-      PointType centroid_cell = viennagrid::centroid(*cit);
+      std::vector<double> centroid_cell(3);
+      viennagrid_element_centroid(mesh, *cit, &(centroid_cell[0]));
 
       A(row_index, row_index) = 0.0; //make sure that there is no bogus in the diagonal
       b[row_index]            = 0.0;
 
-      FacetOnCellContainer facets(*cit);
-      for (FacetOnCellIterator focit = facets.begin();
-          focit != facets.end();
-          ++focit)
+      viennagrid_element_id *facets_on_cell_begin, *facets_on_cell_end;
+      viennagrid_element_boundary_elements(mesh, *cit, cell_dim - 1, &facets_on_cell_begin, &facets_on_cell_end);
+      for (viennagrid_element_id *focit  = facets_on_cell_begin;
+                                  focit != facets_on_cell_end;
+                                ++focit)
       {
-        CellType const *other_cell_ptr = util::get_other_cell_of_facet(mesh, *focit, *cit);
+        viennagrid_element_id *other_cell_ptr;
+        util::get_other_cell_of_facet(mesh, *focit, *cit, &other_cell_ptr);
 
         if (!other_cell_ptr) continue;
 
@@ -429,13 +436,24 @@ namespace viennashe
 
         if ( (carrier_density.get_unknown_mask(*other_cell_ptr) || carrier_density.get_boundary_type(*other_cell_ptr) == BOUNDARY_DIRICHLET) )
         {
-          PointType centroid_other_cell = viennagrid::centroid(*other_cell_ptr);
-          PointType cell_connection = centroid_other_cell - centroid_cell;
-          PointType cell_connection_normalized = cell_connection / viennagrid::norm(cell_connection);
-          PointType facet_unit_normal = viennashe::util::outer_cell_normal_at_facet(*cit, *focit);
+          std::vector<double> centroid_other_cell(3);
+          viennagrid_element_centroid(mesh, *other_cell_ptr, &(centroid_other_cell[0]));
+          std::vector<double> cell_connection(3);
+          for (std::size_t i=0; i<cell_connection.size(); ++i)
+            cell_connection[i] = centroid_other_cell[i] - centroid_cell[i];
+          double connection_len;
+          viennagrid_norm_2(3, &(cell_connection[0]), &connection_len);
+          std::vector<double> cell_connection_normalized(3);
+          for (std::size_t i=0; i<cell_connection.size(); ++i)
+            cell_connection_normalized[i] = cell_connection[i] / connection_len;
+          std::vector<double> facet_unit_normal = viennashe::util::outer_cell_normal_at_facet(mesh, *cit, *focit);
 
-          const double connection_len = viennagrid::norm_2(centroid_cell - centroid_other_cell);
-          const double weighted_interface_area = viennagrid::volume(*focit) * viennagrid::inner_prod(facet_unit_normal, cell_connection_normalized);
+          double facet_area;
+          viennagrid_element_volume(mesh, *focit, &facet_area);
+          double facet_contribution;
+          viennagrid_inner_prod(3, &(facet_unit_normal[0]), &(cell_connection_normalized[0]), &facet_contribution);
+          const double weighted_interface_area = facet_area * viennagrid::inner_prod(facet_unit_normal, cell_connection_normalized);
+
           double potential_outer = potential.get_value(*other_cell_ptr);
           if (conf.with_quantum_correction())
             potential_outer += quantum_corr.get_value(*other_cell_ptr);
@@ -563,6 +581,9 @@ namespace viennashe
                                  MatrixType & A,
                                  VectorType & b)
   {
+    throw std::runtime_error("assemble_density_gradient(): TODO: implement!");
+
+    /*
     typedef typename DeviceType::mesh_type           MeshType;
 
     typedef typename viennagrid::result_of::point<MeshType>::type                 PointType;
@@ -690,7 +711,7 @@ namespace viennashe
       b[row_index] -= box_volume * gamma_center;
 
     } //for vertices
-
+    */
   }
 
   /**
@@ -708,6 +729,8 @@ namespace viennashe
                      MatrixType & A,
                      VectorType & b)
   {
+    throw std::runtime_error("assemble_heat(): TODO: implement!");
+    /*
     typedef typename viennashe::she::timestep_quantities<DeviceType> QuantitiesType;
     typedef typename DeviceType::mesh_type           MeshType;
 
@@ -807,7 +830,7 @@ namespace viennashe
       b[row_index] += volume * quan_power_density(*cit); // / kappa_center
 
     } //for vertices
-
+    */
   } //assemble_poisson
 
   /**

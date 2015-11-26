@@ -27,10 +27,7 @@
 #include "viennashe/models/exception.hpp"
 
 // viennagrid
-#include "viennagrid/mesh/mesh.hpp"
-#include "viennagrid/algorithm/norm.hpp"
-#include "viennagrid/algorithm/centroid.hpp"
-#include "viennagrid/mesh/coboundary_iteration.hpp"
+#include "viennagrid/viennagrid.h"
 
 
 /** @file viennashe/models/mobility_model.hpp
@@ -213,12 +210,6 @@ namespace viennashe
       template < typename DeviceType >
       class mobility
       {
-      private:
-          typedef typename DeviceType::mesh_type    MeshType;
-          typedef typename viennagrid::result_of::point<MeshType>::type    PointType;
-          typedef typename viennagrid::result_of::facet<MeshType>::type    FacetType;
-          typedef typename viennagrid::result_of::cell<MeshType>::type     CellType;
-
       public:
         typedef double value_type;
 
@@ -232,7 +223,7 @@ namespace viennashe
          * @param potential An accessor (for cells) to the electrostatic potential
          * @return A mobility in SI units
          */
-        template < typename PotentialAccessor >
+        /*template < typename PotentialAccessor >
         value_type operator()(const FacetType & facet, PotentialAccessor const & potential) const
         {
           typedef typename viennagrid::result_of::const_coboundary_range<MeshType, FacetType, CellType>::type     CellOnFacetContainer;
@@ -246,7 +237,7 @@ namespace viennashe
           CellType const & c2 = *cofit;
 
           return this->operator ()(c1, c2, potential);
-        }
+        }*/
 
         /**
          * @brief Returns the mobility from a vertex to another vertex. Usage of the other, edge related, operator() is recommended.
@@ -256,7 +247,7 @@ namespace viennashe
          * @return A mobility in SI units
          */
         template < typename PotentialAccessor >
-        value_type operator()(const CellType & c1, const CellType & c2, PotentialAccessor const & potential) const
+        value_type operator()(viennagrid_element_id c1, viennagrid_element_id c2, PotentialAccessor const & potential) const
         {
           mobility_detail::mobility_lattice_scattering  lattice(_params.lattice);
           mobility_detail::mobility_impurity_scattering impurity(_params.impurity);
@@ -265,7 +256,13 @@ namespace viennashe
 
           const double TL = _device.get_lattice_temperature(c1);
           const double total_doping_on_cell = (_device.get_doping_n(c1) + _device.get_doping_p(c1));
-          const double edge_len  = viennagrid::norm_2( viennagrid::centroid(c2) - viennagrid::centroid(c1) );
+
+          std::vector<double> centroid_1(3), centroid_2(3);
+          viennagrid_element_centroid(_device.mesh(), c1, &(centroid_1[0]));
+          viennagrid_element_centroid(_device.mesh(), c2, &(centroid_2[0]));
+          double edge_len;
+          viennagrid_distance_2(3, &(centroid_1[0]), &(centroid_2[0]), &edge_len);
+
           const double    Emag   = ( -(potential(c2) - potential(c1)) / edge_len);
 
           double mu = _params.mu0;

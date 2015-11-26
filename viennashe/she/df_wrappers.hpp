@@ -21,8 +21,7 @@
 #include "viennashe/physics/constants.hpp"
 #include "viennashe/math/spherical_harmonics.hpp"
 
-#include "viennagrid/forwards.hpp"
-#include "viennagrid/mesh/mesh.hpp"
+#include "viennagrid/viennagrid.h"
 
 #include "viennashe/config.hpp"
 #include "viennashe/she/exception.hpp"
@@ -42,8 +41,8 @@ namespace viennashe
     namespace detail
     {
       /** @brief Returns the best total energy in order to match the supplied kinetic energy */
-      template <typename UnknownSHEType, typename ElementType>
-      std::size_t find_best_H(UnknownSHEType const & she_quantity, ElementType const & el, double kin_energy, std::size_t index_H_guess)
+      template <typename UnknownSHEType>
+      std::size_t find_best_H(UnknownSHEType const & she_quantity, viennagrid_element_id el, double kin_energy, std::size_t index_H_guess)
       {
         long carrier_sign = (she_quantity.get_carrier_type_id() == viennashe::ELECTRON_TYPE_ID) ? -1 : 1;
 
@@ -109,12 +108,6 @@ namespace viennashe
       private:
         typedef she_df_wrapper self_type;
 
-        typedef typename DeviceType::mesh_type           MeshType;
-
-        typedef typename viennagrid::result_of::vertex<MeshType>::type       VertexType;
-        typedef typename viennagrid::result_of::facet<MeshType>::type        FacetType;
-        typedef typename viennagrid::result_of::cell<MeshType>::type         CellType;
-
       public:
 
         typedef typename viennashe::config::dispersion_relation_type      dispersion_relation_type;
@@ -140,7 +133,7 @@ namespace viennashe
          *  @param m               Minor spherical harmonics index
          *  @param index_H_guess   The total energy index for starting the search for the best total energy index available. Allows to speed-up evaluation considerably.
          */
-        double operator()(CellType const & cell,
+        double operator()(viennagrid_element_id cell,
                           double kinetic_energy,
                           std::size_t l,
                           long m,
@@ -163,7 +156,7 @@ namespace viennashe
          *  @param m               Minor spherical harmonics index
          *  @param index_H_guess   Initial guess for the lookup of index_H (optimization purposes...)
          */
-        double operator()(FacetType const & facet,
+        /*double operator()(FacetType const & facet,
                           double kinetic_energy,
                           std::size_t l,
                           long m,
@@ -175,12 +168,12 @@ namespace viennashe
           return evaluate(facet,
                           detail::find_best_H(she_unknown_, facet, kinetic_energy, index_H_guess),
                           l, m);
-        }
+        }*/
 
 
         /** @brief Batch-evaluation: Returns the expansion coefficents computed at the particular vertex for the particular kinetic energy */
         template <typename FoldVectorType>
-        void fill(CellType const & cell,
+        void fill(viennagrid_element_id cell,
                   double kin_energy,
                   std::size_t index_H_guess,
                   FoldVectorType & vec)  const
@@ -198,7 +191,7 @@ namespace viennashe
 
 
         /** @brief Batch-evaluation: Returns the expansion coefficents computed at the particular edge for the particular kinetic energy */
-        template <typename FoldVectorType>
+        /*template <typename FoldVectorType>
         void fill(FacetType const & facet,
                   double kin_energy,
                   std::size_t index_H_guess,
@@ -213,7 +206,7 @@ namespace viennashe
           std::size_t num_values = she_unknown_.get_unknown_num(facet, index_H);
           for (std::size_t i=0; i < num_values; ++i)
             vec[i] = pValues[i];
-        }
+        }*/
 
         viennashe::config const & config() const { return conf_; }
         SHEQuantityT const & quan() const { return this->she_unknown_; }
@@ -257,8 +250,8 @@ namespace viennashe
           return 0.0;
         }
 
-        std::size_t parity_for_element(CellType  const &) const { return 0; }
-        std::size_t parity_for_element(FacetType const &) const { return 1; }
+        std::size_t parity_for_element(viennagrid_element_id) const { return 0; }
+        //std::size_t parity_for_element(FacetType const &) const { return 1; }
 
         viennashe::config conf_;
         SHEQuantityT she_unknown_;
@@ -278,12 +271,6 @@ namespace viennashe
     template <typename DeviceType, typename SHEQuantityT>
     class interpolated_she_df_wrapper
     {
-      private:
-        typedef typename DeviceType::mesh_type           MeshType;
-
-        typedef typename viennagrid::result_of::facet<MeshType>::type      FacetType;
-        typedef typename viennagrid::result_of::cell<MeshType>::type       CellType;
-
       public:
 
         typedef interpolated_she_df_wrapper self_type;
@@ -305,7 +292,7 @@ namespace viennashe
          *  @param m               Minor spherical harmonics index
          *  @param index_H_guess   The total energy index for starting the search for the best total energy index available. Allows to speed-up evaluation considerably.
          */
-        double operator()(CellType const & cell,
+        double operator()(viennagrid_element_id cell,
                           double kinetic_energy,
                           std::size_t l,
                           long m,
@@ -324,13 +311,13 @@ namespace viennashe
 
       private:
 
-        double interpolated_odd_coefficient(CellType const & cell,
+        double interpolated_odd_coefficient(viennagrid_element_id cell,
                                             double kinetic_energy,
                                             std::size_t l,
                                             long m,
                                             std::size_t index_H_guess) const
         {
-          typedef typename viennagrid::result_of::const_facet_range<CellType>::type     FacetOnCellContainer;
+          /*typedef typename viennagrid::result_of::const_facet_range<CellType>::type     FacetOnCellContainer;
           typedef typename viennagrid::result_of::iterator<FacetOnCellContainer>::type  FacetOnCellIterator;
 
           // Interpolation strategy: Due to the Galerkin approach for the odd-order coefficients, the weighted arithmetic mean is returned. Dual box interpolator does not make sense here, because this is an interpolation from scalar to scalar.
@@ -355,7 +342,11 @@ namespace viennashe
           if (summed_volume > 0)
             result /= summed_volume;
 
-          return result;
+          return result; */
+
+          throw std::runtime_error("interpolated_odd_coefficient(): Not implemented!");
+
+          return 0;
         }
 
         DeviceType const & device_;
@@ -377,13 +368,6 @@ namespace viennashe
       private:
         typedef df_wrapper self_type;
 
-        typedef typename DeviceType::mesh_type           MeshType;
-
-        typedef typename viennagrid::result_of::facet<MeshType>::type      FacetType;
-        typedef typename viennagrid::result_of::cell<MeshType>::type       CellType;
-
-        typedef unknown_she_quantity<CellType, FacetType>   UnknownSHEType;
-
       public:
 
         typedef typename viennashe::config::dispersion_relation_type      dispersion_relation_type;
@@ -392,7 +376,7 @@ namespace viennashe
         df_wrapper(DeviceType const & device,
                    viennashe::config const & conf,
                    SHEQuantityT const & quan)
-        : she_unknown_(quan),
+        : //she_unknown_(quan),
           interpolated_she_df_(device, conf, quan) {}
 
         /** @brief Returns the energy distribution function for electrons in one valley on a vertex:
@@ -403,7 +387,7 @@ namespace viennashe
          *  @param phi             Azimuthal angle
          *  @param index_H_guess   The total energy index for starting the search for the best total energy index available. Allows to speed-up evaluation considerably.
          */
-        double operator()(CellType const & cell,
+        double operator()(viennagrid_element_id cell,
                           double kinetic_energy,
                           double theta,
                           double phi,
@@ -418,14 +402,14 @@ namespace viennashe
 
       private:
 
-        double evaluate(CellType const & cell,
+        double evaluate(viennagrid_element_id cell,
                         double kinetic_energy,
                         double theta,
                         double phi,
                         std::size_t index_H_guess) const
         {
-          std::size_t index_H = detail::find_best_H(she_unknown_, cell, kinetic_energy, index_H_guess);
-          std::size_t L = she_unknown_.get_expansion_order(cell, index_H);
+          std::size_t index_H = 0;//detail::find_best_H(she_unknown_, cell, kinetic_energy, index_H_guess); // TODO: fix
+          std::size_t L = 0;//she_unknown_.get_expansion_order(cell, index_H); // TODO: fix
 
           double result = 0;
           for (std::size_t l=0; l <= L; ++l)
@@ -440,7 +424,7 @@ namespace viennashe
           return result;
         }
 
-        UnknownSHEType she_unknown_;
+        //UnknownSHEType she_unknown_; // TODO: fix
         interpolated_she_df_wrapper<DeviceType, SHEQuantityT>  interpolated_she_df_;
     };
 
@@ -457,11 +441,6 @@ namespace viennashe
     {
       private:
         typedef generalized_df_wrapper                 self_type;
-
-        typedef typename DeviceType::mesh_type       MeshType;
-
-        typedef typename viennagrid::result_of::facet<MeshType>::type      FacetType;
-        typedef typename viennagrid::result_of::cell<MeshType>::type       CellType;
 
       public:
 
@@ -480,7 +459,7 @@ namespace viennashe
          *  @param phi             Azimuthal angle
          *  @param index_H_guess   The total energy index for starting the search for the best total energy index available. Allows to speed-up evaluation considerably.
          */
-        double operator()(CellType const & cell,
+        double operator()(viennagrid_element_id cell,
                           double kinetic_energy,
                           double theta,
                           double phi,
@@ -519,10 +498,6 @@ namespace viennashe
       private:
         typedef edf_wrapper                           self_type;
 
-        typedef typename DeviceType::mesh_type      MeshType;
-
-        typedef typename viennagrid::result_of::cell<MeshType>::type       CellType;
-
       public:
 
         typedef typename viennashe::config::dispersion_relation_type      dispersion_relation_type;
@@ -544,7 +519,7 @@ namespace viennashe
          *  @param kinetic_energy  Kinetic energy
          *  @param index_H_guess   The total energy index for starting the search for the best total energy index available. Allows to speed-up evaluation considerably.
          */
-        double operator()(CellType const & cell,
+        double operator()(viennagrid_element_id cell,
                           double kinetic_energy,
                           std::size_t index_H_guess = 0) const
         {
@@ -573,10 +548,6 @@ namespace viennashe
       private:
         typedef generalized_edf_wrapper                    self_type;
 
-        typedef typename DeviceType::mesh_type           MeshType;
-
-        typedef typename viennagrid::result_of::cell<MeshType>::type       CellType;
-
       public:
 
         typedef typename viennashe::config::dispersion_relation_type      dispersion_relation_type;
@@ -598,7 +569,7 @@ namespace viennashe
          *  @param kinetic_energy  Kinetic energy
          *  @param index_H_guess   The total energy index for starting the search for the best total energy index available. Allows to speed-up evaluation considerably.
          */
-        double operator()(CellType const & cell,
+        double operator()(viennagrid_element_id cell,
                           double kinetic_energy,
                           std::size_t index_H_guess = 0) const
         {

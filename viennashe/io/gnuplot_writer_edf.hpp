@@ -22,8 +22,7 @@
 #include <iostream>
 
 // viennagrid
-#include "viennagrid/mesh/mesh.hpp"
-#include "viennagrid/algorithm/centroid.hpp"
+#include "viennagrid/viennagrid.h"
 
 // viennashe
 #include "viennashe/forwards.h"
@@ -57,9 +56,6 @@ namespace viennashe
                       const double coordinate_x,
                       const std::string filename) const
       {
-        typedef typename DeviceType::mesh_type            MeshType;
-        typedef typename viennagrid::result_of::const_cell_range<MeshType> ::type    CellContainer;
-        typedef typename viennagrid::result_of::iterator<CellContainer>::type        CellIterator;
         typedef typename EDFWrapperT::she_quantity_type         she_quantity_type;
 
         she_quantity_type        const & quan       = edf.quan();
@@ -72,12 +68,19 @@ namespace viennashe
           throw cannot_open_file_exception(filename);
 
         //iterate over edges:
-        CellContainer cells(device.mesh());
-        for ( CellIterator cit = cells.begin();
-              cit != cells.end();
-              ++cit )
+        viennagrid_dimension cell_dim;
+        viennagrid_mesh_cell_dimension_get(device.mesh(), &cell_dim);
+
+        viennagrid_element_id *cells_begin, *cells_end;
+        viennagrid_mesh_elements_get(device.mesh(), cell_dim, &cells_begin, &cells_end);
+        for (viennagrid_element_id *cit  = cells_begin;
+                                    cit != cells_end;
+                                  ++cit)
         {
-          if ( viennagrid::centroid(*cit)[0] != coordinate_x )
+          std::vector<double> p(3);
+          viennagrid_element_centroid(device.mesh(), *cit, &(p[0]));
+
+          if ( p[0] != coordinate_x )
             continue;
 
           for ( std::size_t index_H = 1; index_H < quan.get_value_H_size() - 1; ++index_H )
@@ -85,7 +88,7 @@ namespace viennashe
             const long index = quan.get_unknown_index(*cit, index_H);
             const double eps = quan.get_kinetic_energy(*cit, index_H);
             if ( index > -1 )
-              values[std::make_pair(viennagrid::centroid(*cit)[1], eps)] = edf(*cit, eps, index_H);
+              values[std::make_pair(p[1], eps)] = edf(*cit, eps, index_H);
           }
         }
 
@@ -122,12 +125,6 @@ namespace viennashe
                       EDFWrapperT const & edf,
                       const std::string filename)
       {
-        typedef typename DeviceType::mesh_type   MeshType;
-
-        typedef typename viennagrid::result_of::point<MeshType>::type   PointType;
-        typedef typename viennagrid::result_of::const_cell_range<MeshType> ::type    CellContainer;
-        typedef typename viennagrid::result_of::iterator<CellContainer>::type        CellIterator;
-
         typedef typename EDFWrapperT::dispersion_relation_type  dispersion_relation_type;
         typedef typename EDFWrapperT::she_quantity_type         she_quantity_type;
 
@@ -141,13 +138,23 @@ namespace viennashe
           throw viennashe::io::cannot_open_file_exception(filename);
         }
 
-        CellContainer cells(device.mesh());
-        for ( CellIterator cit = cells.begin();
-              cit != cells.end();
-              ++cit )
+        viennagrid_dimension geo_dim;
+        viennagrid_mesh_geometric_dimension_get(device.mesh(), &geo_dim);
+
+        viennagrid_dimension cell_dim;
+        viennagrid_mesh_cell_dimension_get(device.mesh(), &cell_dim);
+
+        viennagrid_element_id *cells_begin, *cells_end;
+        viennagrid_mesh_elements_get(device.mesh(), cell_dim, &cells_begin, &cells_end);
+        for (viennagrid_element_id *cit  = cells_begin;
+                                    cit != cells_end;
+                                  ++cit)
         {
           // filter vertices
           if ( !cell_filter(*cit) ) continue;
+
+          std::vector<double> p(3);
+          viennagrid_element_centroid(device.mesh(), *cit, &(p[0]));
 
           //write values at point
           for ( std::size_t index_H = 1;
@@ -159,7 +166,7 @@ namespace viennashe
             const double energy = quan.get_kinetic_energy(*cit, index_H);
             if ( index > -1 && energy > 0 )
             {
-              for (std::size_t i = 0; i < static_cast<std::size_t>(PointType::dim); ++i) writer << viennagrid::centroid(*cit)[i] << " ";
+              for (std::size_t i = 0; i < std::size_t(geo_dim); ++i) writer << p[i] << " ";
               writer << (energy / viennashe::physics::constants::q) << " "
                      << edf(*cit, energy, index_H) << " "
                      << dispersion.density_of_states(energy)

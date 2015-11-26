@@ -80,10 +80,7 @@ namespace viennashe
    template <typename DeviceType, typename QuantitiesListType>
    class power_density_accessor
    {
-      typedef typename DeviceType::mesh_type       MeshType;
-
     public:
-      typedef typename viennagrid::result_of::cell<MeshType>::type              cell_type;
       typedef typename QuantitiesListType::unknown_quantity_type                quantity_type;
       typedef typename QuantitiesListType::unknown_she_quantity_type            she_quantity_type;
 
@@ -108,7 +105,7 @@ namespace viennashe
        * @param cell A cell
        * @return Power density on vertex
        */
-      value_type operator()(cell_type const & cell) const
+      value_type operator()(viennagrid_element_id cell) const
       {
         // PURE DD
         if ( conf_.get_electron_equation() == viennashe::EQUATION_CONTINUITY &&

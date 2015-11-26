@@ -17,10 +17,7 @@
 
 
 // viennagrid
-#include "viennagrid/mesh/mesh.hpp"
-#include "viennagrid/algorithm/norm.hpp"
-#include "viennagrid/algorithm/volume.hpp"
-#include "viennagrid/algorithm/voronoi.hpp"
+#include "viennagrid/viennagrid.h"
 
 // viennashe
 #include "viennashe/math/spherical_harmonics.hpp"
@@ -64,14 +61,13 @@ namespace viennashe
               typename SHEQuantity,
               typename MatrixType,
               typename VectorType,
-              typename CellType,
               typename CouplingMatrixType>
     void assemble_boundary_on_box(DeviceType const & device,
                                   viennashe::config const & conf,
                                   SHEQuantity const & quan,
                                   MatrixType & A,
                                   VectorType & b,
-                                  CellType const & cell, std::size_t index_H,
+                                  viennagrid_element_id cell, std::size_t index_H,
                                   CouplingMatrixType const & coupling_identity)
     {
       const bool with_full_newton = (conf.nonlinear_solver().id() == viennashe::solvers::nonlinear_solver_ids::newton_nonlinear_solver);
@@ -127,7 +123,8 @@ namespace viennashe
           double tau    = conf.she_boundary_conditions().generation_recombination_rate();
           double height = box_height(quan, cell, index_H);
           double bnd_value  = quan.get_boundary_value(cell, index_H);
-          double box_volume = viennagrid::volume(cell);
+          double box_volume;
+          viennagrid_element_volume(device.mesh(), cell, &box_volume);
 
           double coefficient = 0;
           switch (conf.she_discretization_type())

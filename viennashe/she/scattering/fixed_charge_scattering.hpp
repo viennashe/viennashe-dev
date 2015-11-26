@@ -17,7 +17,7 @@
 
 #include <limits>
 
-#include "viennagrid/mesh/coboundary_iteration.hpp"
+#include "viennagrid/viennagrid.h"
 
 // viennashe
 #include "viennashe/math/constants.hpp"
@@ -48,8 +48,6 @@ namespace viennashe
     class fixed_charge_scattering : public scattering_base<DeviceType>
     {
         typedef scattering_base<DeviceType>                     base_type;
-        typedef typename base_type::FacetType                   FacetType;
-        typedef typename base_type::CellType                    CellType;
 
       public:
         typedef typename base_type::scatter_processes_type      scatter_processes_type;
@@ -60,14 +58,7 @@ namespace viennashe
         : base_type(device, conf), params_(conf.scattering().fixed_charge())
         { }
 
-        scatter_processes_type operator()(CellType const & elem,
-                                          double kinetic_energy,
-                                          viennashe::carrier_type_id ctype) const
-        {
-          return get(elem, kinetic_energy, ctype);
-        }
-
-        scatter_processes_type operator()(FacetType const & elem,
+        scatter_processes_type operator()(viennagrid_element_id elem,
                                           double kinetic_energy,
                                           viennashe::carrier_type_id ctype) const
         {
@@ -84,8 +75,7 @@ namespace viennashe
          *
          * @return A vector describing all possible states. Ee use the approximation 'incoming energy equal final energy'.
          */
-        template <typename ElementType>
-        scatter_processes_type get(ElementType const & elem,
+        scatter_processes_type get(viennagrid_element_id elem,
                                    double kinetic_energy,
                                    viennashe::carrier_type_id ctype) const
         {
@@ -100,8 +90,7 @@ namespace viennashe
         }
 
 
-        template <typename ElementType>
-        double getScatteringRate(ElementType const & elem,
+        double getScatteringRate(viennagrid_element_id elem,
                                  double kinetic_energy,
                                  viennashe::carrier_type_id ctype) const
         {
@@ -117,7 +106,7 @@ namespace viennashe
         }
 
 
-        double get_charged_trap_density(CellType const & vt,
+        double get_charged_trap_density(viennagrid_element_id vt,
                                         viennashe::carrier_type_id) const
         {
           const fixed_charge_accessor<DeviceType> fixed_charge(base_type::device_);
@@ -125,7 +114,7 @@ namespace viennashe
         }
 
 
-        double get_charged_trap_density(FacetType const & facet,
+        /*double get_charged_trap_density(viennagrid_element_id facet,
                                         viennashe::carrier_type_id ctype) const
         {
           typedef typename viennagrid::result_of::const_coboundary_range<typename base_type::MeshType, FacetType, CellType>::type     CellOnFacetContainer;
@@ -140,7 +129,7 @@ namespace viennashe
 
           return std::sqrt(this->get_charged_trap_density(c1, ctype) *
                            this->get_charged_trap_density(*other_cell_ptr, ctype));
-        }
+        }*/
 
 
         double getScatteringRate(double NI, double kinetic_energy, double T, viennashe::carrier_type_id ctype) const

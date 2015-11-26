@@ -73,15 +73,14 @@ namespace viennashe
     template<typename DeviceT, typename QuantityT>
     void set_unknown_for_material(DeviceT const & device, QuantityT & quan, materials::checker const & material_check)
     {
-      typedef typename DeviceT::mesh_type    MeshType;
+      viennagrid_dimension cell_dim;
+      viennagrid_mesh_cell_dimension_get(device.mesh(), &cell_dim);
 
-      typedef typename viennagrid::result_of::const_cell_range<MeshType>::type    CellContainer;
-      typedef typename viennagrid::result_of::iterator<CellContainer>::type       CellIterator;
-
-      CellContainer cells(device.mesh());
-      for (CellIterator cit  = cells.begin();
-                        cit != cells.end();
-                      ++cit)
+      viennagrid_element_id *cells_begin, *cells_end;
+      viennagrid_mesh_elements_get(device.mesh(), cell_dim, &cells_begin, &cells_end);
+      for (viennagrid_element_id *cit  = cells_begin;
+                                  cit != cells_end;
+                                ++cit)
       {
         if (!material_check(device.get_material(*cit)))
           continue;
@@ -93,17 +92,14 @@ namespace viennashe
     template<typename DeviceT, typename QuantityT>
     void set_she_unknown(DeviceT const & device, QuantityT & quan)
     {
-      typedef typename DeviceT::mesh_type    MeshType;
+      viennagrid_dimension cell_dim;
+      viennagrid_mesh_cell_dimension_get(device.mesh(), &cell_dim);
 
-      typedef typename viennagrid::result_of::cell<MeshType>::type         CellType;
-
-      typedef typename viennagrid::result_of::const_cell_range<MeshType>::type    CellContainer;
-      typedef typename viennagrid::result_of::iterator<CellContainer>::type       CellIterator;
-
-      CellContainer cells(device.mesh());
-      for (CellIterator cit  = cells.begin();
-                        cit != cells.end();
-                      ++cit)
+      viennagrid_element_id *cells_begin, *cells_end;
+      viennagrid_mesh_elements_get(device.mesh(), cell_dim, &cells_begin, &cells_end);
+      for (viennagrid_element_id *cit  = cells_begin;
+                                  cit != cells_end;
+                                ++cit)
       {
         quan.set_unknown_mask(*cit, false); //initialize
 
@@ -111,7 +107,7 @@ namespace viennashe
           quan.set_unknown_mask(*cit, true);
         else if (viennashe::materials::is_conductor(device.get_material(*cit))) // Conductor: Set unknown if connected to semiconductor
         {
-          CellType const * semi_cell = viennashe::util::get_connected_semiconductor_cell(device, *cit);
+          viennagrid_element_id *semi_cell = viennashe::util::get_connected_semiconductor_cell(device, *cit);
 
           if (semi_cell)
             quan.set_unknown_mask(*cit, true);
@@ -137,15 +133,14 @@ namespace viennashe
                                    BoundaryValueAccessorT boundary_value_accessor,
                                    boundary_type_id bnd_id)
     {
-      typedef typename DeviceT::mesh_type     MeshType;
+      viennagrid_dimension cell_dim;
+      viennagrid_mesh_cell_dimension_get(device.mesh(), &cell_dim);
 
-      typedef typename viennagrid::result_of::const_cell_range<MeshType>::type    CellContainer;
-      typedef typename viennagrid::result_of::iterator<CellContainer>::type       CellIterator;
-
-      CellContainer cells(device.mesh());
-      for (CellIterator cit  = cells.begin();
-                        cit != cells.end();
-                      ++cit)
+      viennagrid_element_id *cells_begin, *cells_end;
+      viennagrid_mesh_elements_get(device.mesh(), cell_dim, &cells_begin, &cells_end);
+      for (viennagrid_element_id *cit  = cells_begin;
+                                  cit != cells_end;
+                                ++cit)
       {
         if (!material_check(device.get_material(*cit)))
           continue;
@@ -173,15 +168,14 @@ namespace viennashe
                                    materials::checker const & material_check,
                                    boundary_type_id bnd_id)
     {
-      typedef typename DeviceT::mesh_type     MeshType;
+      viennagrid_dimension cell_dim;
+      viennagrid_mesh_cell_dimension_get(device.mesh(), &cell_dim);
 
-      typedef typename viennagrid::result_of::const_cell_range<MeshType>::type    CellContainer;
-      typedef typename viennagrid::result_of::iterator<CellContainer>::type       CellIterator;
-
-      CellContainer cells(device.mesh());
-      for (CellIterator cit  = cells.begin();
-                        cit != cells.end();
-                      ++cit)
+      viennagrid_element_id *cells_begin, *cells_end;
+      viennagrid_mesh_elements_get(device.mesh(), cell_dim, &cells_begin, &cells_end);
+      for (viennagrid_element_id *cit  = cells_begin;
+                                  cit != cells_end;
+                                ++cit)
       {
         if (!material_check(device.get_material(*cit)))
           continue;
@@ -201,15 +195,14 @@ namespace viennashe
                            QuantityT & quan,
                            BoundaryValueAccessorT const & initial_guess_accessor)
     {
-      typedef typename DeviceT::mesh_type     MeshType;
+      viennagrid_dimension cell_dim;
+      viennagrid_mesh_cell_dimension_get(device.mesh(), &cell_dim);
 
-      typedef typename viennagrid::result_of::const_cell_range<MeshType>::type    CellContainer;
-      typedef typename viennagrid::result_of::iterator<CellContainer>::type       CellIterator;
-
-      CellContainer cells(device.mesh());
-      for (CellIterator cit  = cells.begin();
-                        cit != cells.end();
-                      ++cit)
+      viennagrid_element_id *cells_begin, *cells_end;
+      viennagrid_mesh_elements_get(device.mesh(), cell_dim, &cells_begin, &cells_end);
+      for (viennagrid_element_id *cit  = cells_begin;
+                                  cit != cells_end;
+                                ++cit)
       {
         quan.set_value(*cit, initial_guess_accessor(*cit));
       }
@@ -222,19 +215,18 @@ namespace viennashe
   template<typename DeviceT, typename UnknownQuantityListT>
   void transfer_quantity_to_device(DeviceT & device, UnknownQuantityListT const & quantities, viennashe::config const & conf)
   {
-    typedef typename DeviceT::mesh_type     MeshType;
-
-    typedef typename viennagrid::result_of::const_cell_range<MeshType>::type    CellContainer;
-    typedef typename viennagrid::result_of::iterator<CellContainer>::type       CellIterator;
+    viennagrid_dimension cell_dim;
+    viennagrid_mesh_cell_dimension_get(device.mesh(), &cell_dim);
 
     //
     // Transfer lattice temperature
     if (conf.with_hde())
     {
-      CellContainer cells(device.mesh());
-      for (CellIterator cit  = cells.begin();
-                        cit != cells.end();
-                      ++cit)
+      viennagrid_element_id *cells_begin, *cells_end;
+      viennagrid_mesh_elements_get(device.mesh(), cell_dim, &cells_begin, &cells_end);
+      for (viennagrid_element_id *cit  = cells_begin;
+                                  cit != cells_end;
+                                ++cit)
       {
         const double TL = quantities.get_unknown_quantity(viennashe::quantity::lattice_temperature()).get_value(*cit);
         device.set_lattice_temperature(TL, *cit);
@@ -288,11 +280,6 @@ namespace viennashe
                        viennashe::unknown_quantity<CellT> const & spatial_quan,
                        viennashe::config const & conf)
   {
-    typedef typename DeviceT::mesh_type              MeshType;
-
-    typedef typename viennagrid::result_of::const_cell_range<MeshType>::type    CellContainer;
-    typedef typename viennagrid::result_of::iterator<CellContainer>::type       CellIterator;
-
     typedef viennashe::she::unknown_she_quantity<CellT, FacetT>   SHEQuantityType;
 
     viennashe::she::carrier_density_wrapper<SHEQuantityType> density_wrapper(conf, quan);
@@ -300,10 +287,14 @@ namespace viennashe
     double norm = 0;
 
     // Set bandedge shift on vertices and edges:
-    CellContainer cells(device.mesh());
-    for (CellIterator cit  = cells.begin();
-                      cit != cells.end();
-                    ++cit)
+    viennagrid_dimension cell_dim;
+    viennagrid_mesh_cell_dimension_get(device.mesh(), &cell_dim);
+
+    viennagrid_element_id *cells_begin, *cells_end;
+    viennagrid_mesh_elements_get(device.mesh(), cell_dim, &cells_begin, &cells_end);
+    for (viennagrid_element_id *cit  = cells_begin;
+                                cit != cells_end;
+                              ++cit)
     {
       const double new_value = density_wrapper(*cit);
       const double old_value = spatial_quan.get_value(*cit);
@@ -332,15 +323,7 @@ namespace viennashe
                                           TimeStepQuantitiesT const & unknown_quantities,
                                           VectorT const & x)
   {
-    typedef typename DeviceT::mesh_type              MeshType;
-
-    typedef typename viennagrid::result_of::const_cell_range<MeshType>::type    CellContainer;
-    typedef typename viennagrid::result_of::iterator<CellContainer>::type       CellIterator;
-
     typedef typename TimeStepQuantitiesT::UnknownQuantityType   UnknownQuantityType;
-
-    MeshType const & mesh = device.mesh();
-    CellContainer cells(mesh);
 
     double potential_update_norm = 0;
 
@@ -351,9 +334,14 @@ namespace viennashe
       if (current_quan.get_name() != viennashe::quantity::potential())
         continue;
 
-      for (CellIterator cit  = cells.begin();
-                        cit != cells.end();
-                      ++cit)
+      viennagrid_dimension cell_dim;
+      viennagrid_mesh_cell_dimension_get(device.mesh(), &cell_dim);
+
+      viennagrid_element_id *cells_begin, *cells_end;
+      viennagrid_mesh_elements_get(device.mesh(), cell_dim, &cells_begin, &cells_end);
+      for (viennagrid_element_id *cit  = cells_begin;
+                                  cit != cells_end;
+                                ++cit)
       {
         long idx = current_quan.get_unknown_index(*cit);
         if (idx >= 0)
@@ -397,15 +385,7 @@ namespace viennashe
                          TimeStepQuantitiesT & unknown_quantities,
                          VectorType const & x)
   {
-    typedef typename DeviceT::mesh_type              MeshType;
-
-    typedef typename viennagrid::result_of::const_cell_range<MeshType>::type    CellContainer;
-    typedef typename viennagrid::result_of::iterator<CellContainer>::type       CellIterator;
-
     typedef typename TimeStepQuantitiesT::UnknownQuantityType   UnknownQuantityType;
-
-    MeshType const & mesh = device.mesh();
-    CellContainer cells(mesh);
 
     //
     // Step 1: Prepare update and current value arrays (split up into the various quantities)
@@ -417,9 +397,14 @@ namespace viennashe
       double norm_inf_update  = 0;
       double norm_inf_current = 0;
 
-      for (CellIterator cit  = cells.begin();
-                        cit != cells.end();
-                      ++cit)
+      viennagrid_dimension cell_dim;
+      viennagrid_mesh_cell_dimension_get(device.mesh(), &cell_dim);
+
+      viennagrid_element_id *cells_begin, *cells_end;
+      viennagrid_mesh_elements_get(device.mesh(), cell_dim, &cells_begin, &cells_end);
+      for (viennagrid_element_id *cit  = cells_begin;
+                                  cit != cells_end;
+                                ++cit)
       {
         long idx = current_quan.get_unknown_index(*cit);
         if (idx >= 0)
@@ -456,9 +441,9 @@ namespace viennashe
         bool do_reject = false;
 
         // Check to see whether new quantity makes sense:
-        for (CellIterator cit  = cells.begin();
-                          cit != cells.end();
-                        ++cit)
+        for (viennagrid_element_id *cit  = cells_begin;
+                                    cit != cells_end;
+                                  ++cit)
         {
           long index = current_quan.get_unknown_index(*cit);
           if (index >= 0)
@@ -490,9 +475,9 @@ namespace viennashe
         }
 
         // write new values:
-        for (CellIterator cit  = cells.begin();
-                          cit != cells.end();
-                        ++cit)
+        for (viennagrid_element_id *cit  = cells_begin;
+                                    cit != cells_end;
+                                  ++cit)
         {
           long index = current_quan.get_unknown_index(*cit);
           if (index >= 0)
@@ -527,14 +512,6 @@ namespace viennashe
                        viennashe::config const & conf,
                        VectorType const & x, bool force_no_damping = false)
   {
-    typedef typename DeviceT::mesh_type              MeshType;
-
-    typedef typename viennagrid::result_of::const_cell_range<MeshType>::type    CellContainer;
-    typedef typename viennagrid::result_of::iterator<CellContainer>::type       CellIterator;
-
-    typedef typename viennagrid::result_of::const_facet_range<MeshType>::type   FacetContainer;
-    typedef typename viennagrid::result_of::iterator<FacetContainer>::type      FacetIterator;
-
     typedef viennashe::she::unknown_she_quantity<CellT, FacetT>   SHEQuantityType;
 
     typedef viennashe::she::detail::carrier_density_wrapper_by_reference<SHEQuantityType> density_wrapper_type;
@@ -542,10 +519,14 @@ namespace viennashe
     density_wrapper_type density_wrapper(conf, quan);
 
     // Set bandedge shift on vertices and edges:
-    CellContainer cells(device.mesh());
-    for (CellIterator cit  = cells.begin();
-                      cit != cells.end();
-                    ++cit)
+    viennagrid_dimension cell_dim;
+    viennagrid_mesh_cell_dimension_get(device.mesh(), &cell_dim);
+
+    viennagrid_element_id *cells_begin, *cells_end;
+    viennagrid_mesh_elements_get(device.mesh(), cell_dim, &cells_begin, &cells_end);
+    for (viennagrid_element_id *cit  = cells_begin;
+                                cit != cells_end;
+                              ++cit)
     {
       for (std::size_t index_H = 0; index_H < quan.get_value_H_size(); ++index_H)
       {
@@ -581,10 +562,11 @@ namespace viennashe
       }
     } // for vertices
 
-    FacetContainer facets(device.mesh());
-    for (FacetIterator fit  = facets.begin();
-                      fit != facets.end();
-                    ++fit)
+    viennagrid_element_id *facets_begin, *facets_end;
+    viennagrid_mesh_elements_get(device.mesh(), cell_dim - 1, &facets_begin, &facets_end);
+    for (viennagrid_element_id *fit  = facets_begin;
+                                fit != facets_end;
+                              ++fit)
     {
       for (std::size_t index_H = 0; index_H < quan.get_value_H_size(); ++index_H)
       {
@@ -609,16 +591,16 @@ namespace viennashe
                        double alpha,
                        VectorType const & x)
   {
-    typedef typename DeviceT::mesh_type              MeshType;
-
-    typedef typename viennagrid::result_of::const_cell_range<MeshType>::type    CellContainer;
-    typedef typename viennagrid::result_of::iterator<CellContainer>::type       CellIterator;
-
     double update_norm = 0;
-    CellContainer cells(device.mesh());
-    for (CellIterator cit  = cells.begin();
-                      cit != cells.end();
-                    ++cit)
+
+    viennagrid_dimension cell_dim;
+    viennagrid_mesh_cell_dimension_get(device.mesh(), &cell_dim);
+
+    viennagrid_element_id *cells_begin, *cells_end;
+    viennagrid_mesh_elements_get(device.mesh(), cell_dim, &cells_begin, &cells_end);
+    for (viennagrid_element_id *cit  = cells_begin;
+                                cit != cells_end;
+                              ++cit)
     {
       double current_value = unknown_quantity.get_value(*cit);
       double new_value     = current_value;
@@ -681,13 +663,6 @@ namespace viennashe
 
       typedef typename DeviceType::mesh_type           MeshType;
 
-      typedef typename viennagrid::result_of::vertex<MeshType>::type       VertexType;
-      typedef typename viennagrid::result_of::edge<MeshType>::type         EdgeType;
-      typedef typename viennagrid::result_of::cell<MeshType>::type         CellType;
-
-      typedef typename viennagrid::result_of::const_cell_range<MeshType>::type    CellContainer;
-      typedef typename viennagrid::result_of::iterator<CellContainer>::type       CellIterator;
-
     public:
 
       typedef DeviceType device_type;
@@ -700,10 +675,10 @@ namespace viennashe
 
       typedef typename SHETimeStepQuantitiesT::UnknownSHEQuantityType      she_quantity_type;
 
-      typedef unknown_quantity<CellType>       UnknownQuantityType;
-      typedef UnknownQuantityType              unknown_quantity_type;
+      typedef unknown_quantity<viennagrid_element_id>       UnknownQuantityType;
+      typedef UnknownQuantityType                           unknown_quantity_type;
 
-      typedef const_quantity<CellType>         ResultQuantityType;
+      typedef const_quantity<viennagrid_element_id>         ResultQuantityType;
 
       typedef ResultQuantityType          potential_type;
       typedef ResultQuantityType   electron_density_type;
@@ -733,8 +708,13 @@ namespace viennashe
 
         // push quantities
         // (note that by default all values are 'known' default values, so one has to specify the unknown regions later):
-        std::size_t  cell_num = viennagrid::cells(device.mesh()).size();
-        std::size_t facet_num = viennagrid::facets(device.mesh()).size();
+        viennagrid_dimension cell_dim;
+        viennagrid_mesh_cell_dimension_get(device.mesh(), &cell_dim);
+
+        viennagrid_int  cell_num;
+        viennagrid_mesh_element_count(device.mesh(), cell_dim, &cell_num);
+        viennagrid_int facet_num;
+        viennagrid_mesh_element_count(device.mesh(), cell_dim - 1, &facet_num);
 
         // electrostatic potential:
         quantities().unknown_quantities().push_back(UnknownQuantityType(viennashe::quantity::potential(), EQUATION_POISSON_DD, cell_num));
@@ -865,9 +845,8 @@ namespace viennashe
       template <typename QuantityAccessorT>
       void set_initial_guess(std::string quan_name, QuantityAccessorT const & quan_acc)
       {
-        CellContainer cells(device().mesh());
-
-        transfer_provided_quantities(quan_acc, quantities().get_unknown_quantity(quan_name), cells);
+        throw std::runtime_error("set_initial_guess(): TODO: implement");
+        //transfer_provided_quantities(quan_acc, quantities().get_unknown_quantity(quan_name), cells);
       }
 
 
@@ -1306,8 +1285,14 @@ namespace viennashe
 
           if (is_newton)
           {
-            MeshType const & mesh = device().mesh();
-            CellContainer cells(mesh);
+
+            viennagrid_mesh mesh = device().mesh();
+
+            viennagrid_dimension cell_dim;
+            viennagrid_mesh_cell_dimension_get(mesh, &cell_dim);
+
+            viennagrid_element_id *cells_begin, *cells_end;
+            viennagrid_mesh_elements_get(mesh, cell_dim, &cells_begin, &cells_end);
 
             for (std::size_t i=0; i<quantities().unknown_quantities().size(); ++i)
             {
@@ -1319,9 +1304,9 @@ namespace viennashe
                 scaling_factor = 1e16;
 
 
-              for (CellIterator cit  = cells.begin();
-                                cit != cells.end();
-                              ++cit)
+              for (viennagrid_element_id *cit  = cells_begin;
+                                          cit != cells_end;
+                                        ++cit)
               {
                 long idx = current_quan.get_unknown_index(*cit);
                 if (idx >= 0)

@@ -21,7 +21,7 @@
 #include <limits>
 
 // viennagrid
-#include "viennagrid/mesh/mesh.hpp"
+#include "viennagrid/viennagrid.h"
 
 // viennashe
 #include "viennashe/util/misc.hpp"
@@ -58,22 +58,21 @@ namespace viennashe
                                    viennashe::she::unknown_she_quantity<VertexT, EdgeT> & quan,
                                    viennashe::config const & conf)
     {
-      typedef typename DeviceType::mesh_type           MeshType;
-
-      typedef typename viennagrid::result_of::const_cell_range<MeshType>::type      CellContainer;
-      typedef typename viennagrid::result_of::iterator<CellContainer>::type         CellIterator;
-
-      MeshType const & mesh = device.mesh();
+      viennagrid_mesh mesh = device.mesh();
 
       viennashe::contact_carrier_density_accessor<DeviceType> bnd_carrier_density(device, quan.get_carrier_type_id());
 
       const double kB = viennashe::physics::constants::kB;
       viennashe::config::dispersion_relation_type dispersion = conf.dispersion_relation(quan.get_carrier_type_id());
 
-      CellContainer cells(mesh);
-      for (CellIterator cit = cells.begin();
-          cit != cells.end();
-          ++cit)
+      viennagrid_dimension cell_dim;
+      viennagrid_mesh_cell_dimension_get(mesh, &cell_dim);
+
+      viennagrid_element_id *cells_begin, *cells_end;
+      viennagrid_mesh_elements_get(mesh, cell_dim, &cells_begin, &cells_end);
+      for (viennagrid_element_id *cit  = cells_begin;
+                                  cit != cells_end;
+                                ++cit)
       {
         const double T = device.get_lattice_temperature(*cit);
 

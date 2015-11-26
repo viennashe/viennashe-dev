@@ -24,9 +24,6 @@
 // ViennaSHE includes:
 #include "viennashe/core.hpp"
 
-// ViennaGrid default configurations:
-#include "viennagrid/config/default_configs.hpp"
-
 
 /** \example half-trigate.cpp
 
@@ -148,7 +145,7 @@ int main()
       Here we select a ViennaGrid mesh consisting of tetrahedra.
       See \ref manual-page-api or the ViennaGrid manual for other mesh types.
    **/
-  typedef viennashe::device<viennagrid::tetrahedral_3d_mesh> DeviceType;
+  typedef viennashe::device<viennagrid_mesh> DeviceType;
 
   std::cout << viennashe::preamble() << std::endl;
 
@@ -182,7 +179,8 @@ int main()
     Here we just need to call the initialization routine defined before:
    **/
   std::cout << "* main(): Initializing device..." << std::endl;
-  init_device(device);
+  throw std::runtime_error("Device initialization missing!");
+  //init_device(device);
 
   /** <h3>Drift-Diffusion Simulations</h3>
 
@@ -246,8 +244,8 @@ int main()
     is by writing the computed values to a VTK file, where
     it can then be inspected by e.g. ParaView.
   **/
-  viennashe::io::write_quantities_to_VTK_file(dd_simulator,            // simulator object
-                                              "half-trigate_dd_quan"); // file name
+  //viennashe::io::write_quantities_to_VTK_file(dd_simulator,            // simulator object
+  //                                            "half-trigate_dd_quan"); // file name
 
 
   /** <h3>A Single SHE Postprocessing Step</h3>
@@ -313,13 +311,13 @@ int main()
     As for the drift-diffusion case, all macroscopic output quantities can be written
     to one or more VTK files using write_quantities_to_VTK_file():
   **/
-  viennashe::io::write_quantities_to_VTK_file(she_simulator,            // simulator object
-                                              "half-trigate_she_quan"); // file name
+  //viennashe::io::write_quantities_to_VTK_file(she_simulator,            // simulator object
+  //                                            "half-trigate_she_quan"); // file name
 
   /** If desired, one may also write individual quantities to VTK,
       for example the electrostatic potential or the electron density: **/
-  viennashe::io::write_quantity_to_VTK_file(she_simulator.potential(),        device, "trigate_she_potential");
-  viennashe::io::write_quantity_to_VTK_file(she_simulator.electron_density(), device, "trigate_she_electrons");
+  //viennashe::io::write_quantity_to_VTK_file(she_simulator.potential(),        device, "trigate_she_potential");
+  //viennashe::io::write_quantity_to_VTK_file(she_simulator.electron_density(), device, "trigate_she_electrons");
 
   /** Finally, print a small message to let the user know that everything succeeded **/
   std::cout << "* main(): Results can now be viewed with your favorite VTK viewer (e.g. ParaView)." << std::endl;

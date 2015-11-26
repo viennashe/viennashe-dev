@@ -21,7 +21,7 @@
 #include <memory>
 
 //ViennaGrid includes:
-#include "viennagrid/mesh/mesh.hpp"
+#include "viennagrid/viennagrid.h"
 
 #include "viennashe/forwards.h"
 #include "viennashe/materials/all.hpp"
@@ -53,20 +53,19 @@ namespace viennashe
                       viennashe::unknown_quantity<VertexT> & quantity,
                       long start_index = 0)
   {
-    typedef typename DeviceType::mesh_type           MeshType;
-
-    typedef typename viennagrid::result_of::const_cell_range<MeshType>::type      CellContainer;
-    typedef typename viennagrid::result_of::iterator<CellContainer>::type         CellIterator;
-
     //
     // Run the mapping on allowed vertices
     //
     long mapping_index = start_index;
 
-    CellContainer cells(device.mesh());
-    for (CellIterator cit = cells.begin();
-        cit != cells.end();
-        ++cit)
+    viennagrid_dimension cell_dim;
+    viennagrid_mesh_cell_dimension_get(device.mesh(), &cell_dim);
+
+    viennagrid_element_id *cells_begin, *cells_end;
+    viennagrid_mesh_elements_get(device.mesh(), cell_dim, &cells_begin, &cells_end);
+    for (viennagrid_element_id *cit  = cells_begin;
+                                cit != cells_end;
+                              ++cit)
     {
       if ( quantity.get_boundary_type(*cit) != BOUNDARY_DIRICHLET && quantity.get_unknown_mask(*cit) )  // Dirichlet boundary condition
         quantity.set_unknown_index(*cit, mapping_index++);
@@ -135,35 +134,32 @@ namespace viennashe
      *  Preconditions:
      *   - Even unknowns on vertices already assigned
      */
-    template <typename DeviceType, typename SHEQuantity, typename FacetType>
+    template <typename DeviceType, typename SHEQuantity>
     void map_facet(DeviceType const & device,
                    SHEQuantity & quan,
                    viennashe::config const & conf,
-                   FacetType const & facet,
+                   viennagrid_element_id facet,
                    std::size_t index_H,
                    long & current_index)
     {
       typedef typename DeviceType::mesh_type           MeshType;
 
-      typedef typename viennagrid::result_of::cell<MeshType>::type            CellType;
-
-      typedef typename viennagrid::result_of::const_coboundary_range<MeshType, FacetType, CellType>::type     CellOnFacetContainer;
-      typedef typename viennagrid::result_of::iterator<CellOnFacetContainer>::type                            CellOnFacetIterator;
+      viennagrid_dimension cell_dim;
+      viennagrid_mesh_cell_dimension_get(device.mesh(), &cell_dim);
 
       // Get cells of the facet
-      CellOnFacetContainer cells_on_facet(device.mesh(), viennagrid::handle(device.mesh(), facet));
-      CellOnFacetIterator cofit = cells_on_facet.begin();
+      viennagrid_element_id *cells_on_facet_begin, *cells_on_facet_end;
+      viennagrid_element_coboundary_elements(device.mesh(), facet, cell_dim, &cells_on_facet_begin, &cells_on_facet_end);
 
-      CellType const & c1 = *cofit;
-      ++cofit;
-      if (cofit == cells_on_facet.end())
+      if (cells_on_facet_begin + 1 == cells_on_facet_end)
       {
         quan.set_unknown_index(facet, index_H, -1);
         quan.set_expansion_order(facet, index_H, 0);
       }
       else
       {
-        CellType const & c2 = *cofit;
+        viennagrid_element_id c1 = cells_on_facet_begin[0];
+        viennagrid_element_id c2 = cells_on_facet_begin[1];
 
         //
         // assign unknowns to facet if both cells carry unknowns:
@@ -204,15 +200,6 @@ namespace viennashe
                            viennashe::config const & conf,
                            long unknown_offset = 0)
   {
-    typedef typename DeviceType::mesh_type              MeshType;
-
-    typedef typename viennagrid::result_of::const_cell_range<MeshType>::type      CellContainer;
-    typedef typename viennagrid::result_of::iterator<CellContainer>::type         CellIterator;
-
-    MeshType const & mesh = device.mesh();
-
-    CellContainer cells(mesh);
-
     //
     // Distribute SHE unknown indices over the mesh.
     // This is NOT completely arbitrary:
@@ -230,11 +217,17 @@ namespace viennashe
 
     long unknown_index = unknown_offset;
 
+    viennagrid_dimension cell_dim;
+    viennagrid_mesh_cell_dimension_get(device.mesh(), &cell_dim);
+
+    viennagrid_element_id *cells_begin, *cells_end;
+    viennagrid_mesh_elements_get(device.mesh(), cell_dim, &cells_begin, &cells_end);
+
     for (std::size_t index_H = 0; index_H < quan.get_value_H_size(); ++index_H)
     {
-      for (CellIterator cit  = cells.begin();
-                        cit != cells.end();
-                        ++cit)
+      for (viennagrid_element_id *cit  = cells_begin;
+                                  cit != cells_end;
+                                ++cit)
       {
         if (quan.get_unknown_mask(*cit) == false )
         {
@@ -270,22 +263,20 @@ namespace viennashe
                           viennashe::config const & conf,
                           long unknown_offset = 0)  //nonzero value if e.g. the potential is also considered within Newton iteration
   {
-    typedef typename DeviceType::mesh_type              MeshType;
+    viennagrid_dimension cell_dim;
+    viennagrid_mesh_cell_dimension_get(device.mesh(), &cell_dim);
 
-    typedef typename viennagrid::result_of::const_facet_range<MeshType>::type         FacetContainer;
-    typedef typename viennagrid::result_of::iterator<FacetContainer>::type            FacetIterator;
+    viennagrid_element_id *facets_begin, *facets_end;
+    viennagrid_mesh_elements_get(device.mesh(), cell_dim - 1, &facets_begin, &facets_end);
 
-    MeshType const & mesh = device.mesh();
-
-    FacetContainer facets(mesh);
 
     long unknown_index = unknown_offset;
 
     for (std::size_t index_H = 0; index_H < quan.get_value_H_size(); ++index_H)
     {
-      for (FacetIterator fit = facets.begin();
-                         fit != facets.end();
-                       ++fit)
+      for (viennagrid_element_id *fit  = facets_begin;
+                                  fit != facets_end;
+                                ++fit)
       {
         detail::map_facet(device, quan, conf, *fit, index_H, unknown_index);
       }

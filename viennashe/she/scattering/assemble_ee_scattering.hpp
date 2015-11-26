@@ -99,31 +99,17 @@ namespace viennashe
                                 MatrixType & matrix, VectorType & rhs
                                )
     {
-      typedef typename DeviceType::mesh_type              MeshType;
-
-      typedef typename viennagrid::result_of::facet<MeshType>::type                 FacetType;
-      typedef typename viennagrid::result_of::cell<MeshType>::type                  CellType;
-
-      typedef typename viennagrid::result_of::const_facet_range<MeshType>::type     FacetContainer;
-      typedef typename viennagrid::result_of::iterator<FacetContainer>::type        FacetIterator;
-
-      typedef typename viennagrid::result_of::const_cell_range<MeshType>::type      CellContainer;
-      typedef typename viennagrid::result_of::iterator<CellContainer>::type         CellIterator;
-
-      typedef typename viennagrid::result_of::const_coboundary_range<MeshType, FacetType, CellType>::type     CellOnFacetContainer;
-      typedef typename viennagrid::result_of::iterator<CellOnFacetContainer>::type                            CellOnFacetIterator;
 
       typedef viennashe::math::sparse_matrix<double>   CouplingMatrixType;
 
+      throw std::runtime_error("assemble_ee_scattering(): TODO: implement");
 
+/*
       // We only assemble EE scattering for electrons
       if ( quan_old.get_carrier_type_id() != viennashe::ELECTRON_TYPE_ID)
         return;
 
-
       (void)rhs; // avoid unused parameter warnings
-
-      MeshType const & mesh = device.mesh();
 
       viennashe::physics::dispersion_proxy dispersion_relation = conf.dispersion_relation(viennashe::ELECTRON_TYPE_ID);
 
@@ -133,8 +119,7 @@ namespace viennashe
       // Create wrappers for quantities
       //
 
-      viennashe::she::detail::carrier_density_wrapper_by_reference<SHEQuantityT>
-          density_n(conf, quan_old);
+      viennashe::she::detail::carrier_density_wrapper_by_reference<SHEQuantityT> density_n(conf, quan_old);
 
       viennashe::she::carrier_energy_wrapper<SHEQuantityT>   energy_n(conf, quan_old);
 
@@ -442,7 +427,7 @@ namespace viennashe
         } //index_H
       } //for edges
 
-
+*/
 
     } // assemble_ee
 

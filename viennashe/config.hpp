@@ -19,6 +19,7 @@
 #include <iostream>
 #include <algorithm>
 #include <memory>
+#include <cassert>
 
 #include "viennashe/forwards.h"
 #include "viennashe/physics/constants.hpp"

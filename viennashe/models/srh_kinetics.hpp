@@ -52,6 +52,7 @@ namespace viennashe
                                          TimeStepQuantitiesT const & quantities,
                                          viennashe::carrier_type_id ctype)
         {
+          /*
           typedef typename DeviceType::mesh_type  mesh_type;
           typedef typename DeviceType::facet_type facet_type;
           typedef typename DeviceType::cell_type  cell_type;
@@ -76,6 +77,11 @@ namespace viennashe
             else
               return std::sqrt(quantities.hole_density().at(cells_on_facet[0]) * quantities.hole_density().at(cells_on_facet[1]));
           }
+          */
+
+          throw std::runtime_error("get_carrier_concentration(): TODO: implement");
+
+          return 0;
         }
 
         /**
@@ -284,7 +290,8 @@ namespace viennashe
           double hole_rec_rate = 0;
           double hole_gen_rate = 0;
 
-          const double box_volume = viennagrid::volume(el);
+          const double box_volume;
+          viennagrid_element_volume(device.mesh(), el, &box_volume);
 
           typedef typename viennashe::config::dispersion_relation_type  DispersionRelation;
 

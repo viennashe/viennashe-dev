@@ -23,9 +23,7 @@
 #include <queue>
 #include <vector>
 
-#include "viennagrid/forwards.hpp"
-#include "viennagrid/mesh/mesh.hpp"
-#include "viennagrid/mesh/neighbor_iteration.hpp"
+#include "viennagrid/viennagrid.h"
 
 #include "viennashe/device.hpp"
 #include "viennashe/materials/all.hpp"
@@ -41,20 +39,13 @@ namespace viennashe
     template <typename DeviceT>
     void smooth_doping_at_contacts(DeviceT & d)
     {
-      typedef typename DeviceT::mesh_type   MeshType;
+      viennagrid_mesh mesh = d.mesh();
 
-      typedef typename viennagrid::result_of::facet<MeshType>::type                 FacetType;
-      typedef typename viennagrid::result_of::cell<MeshType>::type                  CellType;
+      viennagrid_dimension cell_dim;
+      viennagrid_mesh_cell_dimension_get(mesh, &cell_dim);
 
-      typedef typename viennagrid::result_of::const_cell_range<MeshType>::type      CellContainer;
-      typedef typename viennagrid::result_of::iterator<CellContainer>::type         CellIterator;
-
-      typedef typename viennagrid::result_of::const_neighbor_range<MeshType, CellType, FacetType>::type    NeighborRange;
-      typedef typename viennagrid::result_of::iterator<NeighborRange>::type                                NeighborIterator;
-
-      MeshType const & mesh = d.mesh();
-
-      CellContainer cells(mesh);
+      viennagrid_element_id *cells_begin, *cells_end;
+      viennagrid_mesh_elements_get(mesh, cell_dim, &cells_begin, &cells_end);
 
       //
       // Step 1: Enumerate contacts (not relying on segments)
@@ -67,62 +58,61 @@ namespace viennashe
       // Same for other contacts.
       // Non-contact cells remain at a contact ID 0.
       //
-      std::vector<std::size_t> contact_id(cells.size());
-      std::set<std::size_t> cells_semiconductor;
+      std::vector<std::size_t> contact_id(cells_end - cells_begin);
+      std::set<viennagrid_element_id> cells_semiconductor;
 
       std::size_t current_contact_id = 1;
 
-      for (CellIterator cit  = cells.begin();
-                        cit != cells.end();
-                      ++cit)
+      for (viennagrid_element_id *cit  = cells_begin;
+                                  cit != cells_end;
+                                ++cit)
       {
         if (viennashe::materials::is_conductor(d.get_material(*cit)))
         {
+          std::size_t cell_index = std::size_t(viennagrid_index_from_element_id(*cit));
+
           // Only consider further if contact ID not yet assigned
-          if (contact_id[std::size_t(cit->id().get())] == 0)
+          if (contact_id[cell_index] == 0)
           {
-            contact_id[std::size_t(cit->id().get())] = current_contact_id;
+            contact_id[cell_index] = current_contact_id;
 
-            std::queue<std::size_t> cells_queue;
-            std::set<std::size_t> cells_discovered;
+            std::queue<viennagrid_element_id> cells_queue;
+            std::set<viennagrid_element_id> cells_discovered;
 
-            cells_queue.push(std::size_t(cit->id().get()));
-            cells_discovered.insert(std::size_t(cit->id().get()));
+            cells_queue.push(*cit);
+            cells_discovered.insert(*cit);
 
             //
             // Iteration over all conductor cells attached to this cell (breadth-first iteration)
             //
             while (!cells_queue.empty())
             {
-              std::size_t current_cell_id = cells_queue.front();
+              viennagrid_element_id current_cell = cells_queue.front();
               cells_queue.pop();
 
-              CellType const & current_cell = cells[current_cell_id];
-
-              NeighborRange neighbors(mesh, viennagrid::handle(mesh, current_cell));
-              for (NeighborIterator nit = neighbors.begin(); nit != neighbors.end(); ++nit)
+              viennagrid_element_id *neighbors_begin, *neighbors_end;
+              viennagrid_element_neighbor_elements(mesh, current_cell, cell_dim - 1, cell_dim, &neighbors_begin, &neighbors_end);
+              for (viennagrid_element_id *nit = neighbors_begin; nit != neighbors_end; ++nit)
               {
-                std::size_t neighbor_id = std::size_t(nit->id().get());
-
                 // conductor cells are added to the queue to be revisited later
                 if (viennashe::materials::is_conductor(d.get_material(*nit)))
                 {
-                  if (cells_discovered.find(neighbor_id) == cells_discovered.end())
+                  if (cells_discovered.find(*nit) == cells_discovered.end())
                   {
-                    cells_discovered.insert(neighbor_id);
-                    cells_queue.push(neighbor_id);
-                    contact_id[neighbor_id] = current_contact_id;
+                    cells_discovered.insert(*nit);
+                    cells_queue.push(*nit);
+                    contact_id[viennagrid_index_from_element_id(*nit)] = current_contact_id;
                   }
                 }
                 else if (viennashe::materials::is_semiconductor(d.get_material(*nit)))
                 {
                   // Remember this cell for later averaging of the doping
-                  cells_semiconductor.insert(neighbor_id);
+                  cells_semiconductor.insert(*nit);
 
-                  if (contact_id[neighbor_id] != 0 && contact_id[neighbor_id] != current_contact_id)
-                    log::warning() << "Warning: Cell " << neighbor_id << " is attached to at least two different contacts. Doping smoother might give inconsistent results!" << std::endl;
+                  if (contact_id[viennagrid_index_from_element_id(*nit)] != 0 && contact_id[viennagrid_index_from_element_id(*nit)] != current_contact_id)
+                    log::warning() << "Warning: Cell " << viennagrid_index_from_element_id(*nit) << " is attached to at least two different contacts. Doping smoother might give inconsistent results!" << std::endl;
 
-                  contact_id[neighbor_id] = current_contact_id;
+                  contact_id[viennagrid_index_from_element_id(*nit)] = current_contact_id;
                 }
 
               } //for
@@ -142,32 +132,26 @@ namespace viennashe
       std::vector<double> avg_doping_n_values(current_contact_id-1);
       std::vector<double> avg_doping_p_values(current_contact_id-1);
 
-      for (typename std::set<std::size_t>::const_iterator it  = cells_semiconductor.begin();
-                                                          it != cells_semiconductor.end();
-                                                        ++it)
+      for (typename std::set<viennagrid_element_id>::const_iterator it  = cells_semiconductor.begin();
+                                                                    it != cells_semiconductor.end();
+                                                                  ++it)
       {
-        std::size_t cell_id = *it;
-        CellType const & cell = cells[cell_id];
-
-        std::size_t corrected_contact_id = contact_id[cell_id] - 1;
-        avg_doping_n_values[corrected_contact_id] = std::max(d.get_doping_n(cell), avg_doping_n_values[corrected_contact_id]);
-        avg_doping_p_values[corrected_contact_id] = std::max(d.get_doping_p(cell), avg_doping_p_values[corrected_contact_id]);
+        std::size_t corrected_contact_id = contact_id[viennagrid_index_from_element_id(*it)] - 1;
+        avg_doping_n_values[corrected_contact_id] = std::max(d.get_doping_n(*it), avg_doping_n_values[corrected_contact_id]);
+        avg_doping_p_values[corrected_contact_id] = std::max(d.get_doping_p(*it), avg_doping_p_values[corrected_contact_id]);
       }
 
 
       //
       // Step 3: Set new doping:
       //
-      for (typename std::set<std::size_t>::const_iterator it  = cells_semiconductor.begin();
-                                                          it != cells_semiconductor.end();
-                                                        ++it)
+      for (typename std::set<viennagrid_element_id>::const_iterator it  = cells_semiconductor.begin();
+                                                                    it != cells_semiconductor.end();
+                                                                  ++it)
       {
-        std::size_t cell_id = *it;
-        CellType const & cell = cells[cell_id];
-
-        std::size_t corrected_contact_id = contact_id[cell_id] - 1;
-        d.set_doping_n(avg_doping_n_values[corrected_contact_id], cell);
-        d.set_doping_p(avg_doping_p_values[corrected_contact_id], cell);
+        std::size_t corrected_contact_id = contact_id[viennagrid_index_from_element_id(*it)] - 1;
+        d.set_doping_n(avg_doping_n_values[corrected_contact_id], *it);
+        d.set_doping_p(avg_doping_p_values[corrected_contact_id], *it);
       }
 
     }

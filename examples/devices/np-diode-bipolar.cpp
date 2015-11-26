@@ -25,8 +25,7 @@
 #include "viennashe/core.hpp"
 
 // ViennaGrid mesh configurations and centroid() algorithm:
-#include "viennagrid/config/default_configs.hpp"
-#include "viennagrid/algorithm/centroid.hpp"
+#include "viennagrid/viennagrid.h"
 
 /** \example np-diode-bipolar.cpp
 
@@ -127,8 +126,7 @@ int main()
       Here we select a ViennaGrid mesh consisting of quadrilaterals.
       See \ref manual-page-api or the ViennaGrid manual for other mesh types.
    **/
-  typedef viennagrid::quadrilateral_2d_mesh                     MeshType;
-  typedef viennashe::device<MeshType>                           DeviceType;
+  typedef viennashe::device<viennagrid_mesh>                    DeviceType;
 
   std::cout << viennashe::preamble() << std::endl;
 
@@ -173,7 +171,7 @@ int main()
       This is achieved by the function init_device() we defined above:
   **/
   std::cout << "* main(): Initializing device..." << std::endl;
-  init_device(device);
+  //init_device(device);
 
   /** <h3>Drift-Diffusion Simulations</h3>
 
@@ -212,7 +210,7 @@ int main()
     which is somewhat reasonable only for one-dimensional device simulations,
     we write all simulation results to a VTK file, where it can be inspected with e.g. ParaView:
   **/
-  viennashe::io::write_quantities_to_VTK_file(dd_simulator, "np-diode_dd_quan");
+  //viennashe::io::write_quantities_to_VTK_file(dd_simulator, "np-diode_dd_quan");
 
 
   /** <h3>Self-Consistent SHE Simulations including Traps</h3>
@@ -283,7 +281,7 @@ int main()
 
   /** Moreover, we write macroscopic quantities, in particular the average trap occupancy, to a another VTK file:
   **/
-  viennashe::io::write_quantities_to_VTK_file(she_simulator, "np-diode_she_quan");
+  //viennashe::io::write_quantities_to_VTK_file(she_simulator, "np-diode_she_quan");
 
   /** Finally, print a small message to let the user know that everything succeeded **/
   std::cout << "* main(): Results can now be viewed with your favorite VTK viewer (e.g. ParaView)." << std::endl;

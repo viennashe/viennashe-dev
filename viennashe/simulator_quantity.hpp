@@ -23,7 +23,7 @@
 #include <vector>
 #include <string>
 
-#include "viennagrid/mesh/mesh.hpp"
+#include "viennagrid/viennagrid.h"
 
 #include "viennashe/forwards.h"
 
@@ -71,7 +71,7 @@ namespace viennashe
       const_quantity(self_type const & o) : name_(o.name_), values_(o.values_) { }
       void operator=(self_type const & o) { name_(o.name_); values_(o.values_); }
 
-      ValueT get_value (associated_type const & elem) const { return values_.at(static_cast<std::size_t>(elem.id().get())); }
+      ValueT get_value (associated_type const & elem) const { return values_.at(std::size_t(viennagrid_index_from_element_id(elem))); }
       ValueT at        (associated_type const & elem) const { return this->get_value(elem); }
       ValueT operator()(associated_type const & elem) const { return this->get_value(elem); }
 
@@ -126,7 +126,7 @@ namespace viennashe
   template<typename AssociatedT, typename ValueT = double>
   class unknown_quantity
   {
-    std::size_t get_id(AssociatedT const & elem) const { return static_cast<std::size_t>(elem.id().get()); }
+    std::size_t get_id(AssociatedT const & elem) const { return std::size_t(viennagrid_index_from_element_id(elem)); }
 
     public:
       typedef unknown_quantity<AssociatedT, ValueT> self_type;

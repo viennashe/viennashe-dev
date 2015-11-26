@@ -25,7 +25,7 @@
 #include "viennashe/core.hpp"
 
 // ViennaGrid mesh configurations:
-#include "viennagrid/config/default_configs.hpp"
+#include "viennagrid/viennagrid.h"
 
 
 /** \example mosfet.cpp
@@ -134,8 +134,7 @@ int main()
       Here we select a ViennaGrid mesh consisting of triangles.
       See \ref manual-page-api or the ViennaGrid manual for other mesh types.
    **/
-  typedef viennashe::device<viennagrid::triangular_2d_mesh>     DeviceType;
-  typedef DeviceType::segment_type                                SegmentType;
+  typedef viennashe::device<viennagrid_mesh>     DeviceType;
 
   std::cout << viennashe::preamble() << std::endl;
 
@@ -155,7 +154,7 @@ int main()
     Here we just need to call the initialization routine defined before:
    **/
   std::cout << "* main(): Initializing device..." << std::endl;
-  init_device(device);
+  //init_device(device);
 
 
   /** <h3>Drift-Diffusion Simulations</h3>
@@ -205,13 +204,13 @@ int main()
     is by writing the computed values to a VTK file, where
     it can then be inspected by e.g. ParaView.
   **/
-  viennashe::io::write_quantities_to_VTK_file(dd_simulator, "mosfet_dd_quan");
+  //viennashe::io::write_quantities_to_VTK_file(dd_simulator, "mosfet_dd_quan");
 
   /** <h4>Calculate Terminal Currents</h4>
     Since the terminal currents are not directly visible in the VTK files, we compute them directly here.
     To simplify matters, we only output the electron and hole drain currents from the body segment into the drain contact:
   **/
-  SegmentType const & drain_contact  = device.segment(4);
+  /*SegmentType const & drain_contact  = device.segment(4);
   SegmentType const & body           = device.segment(6);
 
   std::cout << "* main(): Drain electron current Id_e = " << viennashe::get_terminal_current(device, viennashe::ELECTRON_TYPE_ID,
@@ -221,7 +220,7 @@ int main()
   std::cout << "* main(): Drain hole current Id_h = " << viennashe::get_terminal_current(device, viennashe::HOLE_TYPE_ID,
       dd_simulator.potential(), dd_simulator.hole_density(),
       viennashe::models::create_constant_mobility_model(device, 0.0460),
-      body, drain_contact ) * 1e-6 << std::endl;
+      body, drain_contact ) * 1e-6 << std::endl;*/
 
 
 
@@ -296,20 +295,20 @@ int main()
                                               "mosfet_she_edf");
 
   /** Here we also write the potential and electron density to separate VTK files: **/
-  viennashe::io::write_quantity_to_VTK_file(she_simulator.potential(), device, "mosfet_she_potential");
-  viennashe::io::write_quantity_to_VTK_file(she_simulator.electron_density(), device, "mosfet_she_electrons");
+  //viennashe::io::write_quantity_to_VTK_file(she_simulator.potential(), device, "mosfet_she_potential");
+  //viennashe::io::write_quantity_to_VTK_file(she_simulator.electron_density(), device, "mosfet_she_electrons");
 
   /** Write all macroscopic result quantities (carrier concentrations, density gradient corrections, etc.) to a single VTK file:
   **/
-  viennashe::io::write_quantities_to_VTK_file(she_simulator, "mosfet_she_quan");
+  //viennashe::io::write_quantities_to_VTK_file(she_simulator, "mosfet_she_quan");
 
   /** <h4>Calculate Terminal Currents</h4>
     Since the terminal currents are not directly visible in the VTK files, we compute them directly here.
     To simplify matters, we only compute the electron current from the body segment into the drain contact based on the solution of the SHE equations:
   **/
-  std::cout << "* main(): Drain hole current Id_e = " << viennashe::get_terminal_current(
+  /*std::cout << "* main(): Drain hole current Id_e = " << viennashe::get_terminal_current(
       device, config, she_simulator.quantities().electron_distribution_function(), body, drain_contact ) * 1e-6
-      << std::endl;
+      << std::endl;*/
 //  std::cout << "Id_h = " << viennashe::get_terminal_current(
 //      device, config, she_simulator.quantities().hole_distribution_function(), body, drain_contact ) * 1e-6
 //      << std::endl;

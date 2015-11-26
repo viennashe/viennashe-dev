@@ -34,15 +34,15 @@ namespace viennashe
                                                   QuantityPotential    const & new_potential,
                                                   QuantityPotentialOld const & old_potential)
       {
-        return   0.5*(new_potential.get_value(viennagrid::vertices(elem)[0]) + new_potential.get_value(viennagrid::vertices(elem)[1]))
-               - 0.5*(old_potential.get_value(viennagrid::vertices(elem)[0]) + old_potential.get_value(viennagrid::vertices(elem)[1]));
+        return 0.0;//   0.5*(new_potential.get_value(viennagrid::vertices(elem)[0]) + new_potential.get_value(viennagrid::vertices(elem)[1]))
+               //- 0.5*(old_potential.get_value(viennagrid::vertices(elem)[0]) + old_potential.get_value(viennagrid::vertices(elem)[1]));
       }
 
       /** @brief Obtain the potential difference from a vertex */
       template <typename ConfigType, typename QuantityPotential, typename QuantityPotentialOld>
-      double potential_difference_to_old_timestep(viennagrid::element<viennagrid::vertex_tag, ConfigType>  const & elem,
-                                                  QuantityPotential                                        const & new_potential,
-                                                  QuantityPotentialOld                                     const & old_potential)
+      double potential_difference_to_old_timestep(viennagrid_element_id        elem,
+                                                  QuantityPotential    const & new_potential,
+                                                  QuantityPotentialOld const & old_potential)
       {
         return new_potential.get_value(elem) - old_potential.get_value(elem);
       }
@@ -71,8 +71,6 @@ namespace viennashe
     {
       (void)quan_pot; (void)quan_pot_old; //avoid unused parameter warnings
 
-      typedef typename viennagrid::result_of::point<typename DeviceType::mesh_type>::type   PointType;
-
       const double rtime = (conf.time_step_size() > 0.0) ? 1.0 / conf.time_step_size() : 0.0;
       const bool with_full_newton = (conf.nonlinear_solver().id() == viennashe::solvers::nonlinear_solver_ids::newton_nonlinear_solver);
 
@@ -84,7 +82,7 @@ namespace viennashe
       if (row_index < 0)
         return; //no unknown here
 
-      bool odd_assembly = detail::is_odd_assembly(elem, viennagrid::cells(device.mesh())[0]);
+      bool odd_assembly = detail::is_odd_assembly(elem, elem);
 
       //if (odd_assembly)
       //  return;
@@ -94,9 +92,10 @@ namespace viennashe
       if (! with_full_newton )
       {
         const long expansion_order = static_cast<long>(quan.get_expansion_order(elem, index_H));
-        double box_volume = viennagrid::volume(elem);
-        if (odd_assembly)
-          box_volume *= detail::cell_connection_length(device.mesh(), elem, viennagrid::cells(device.mesh())[0]) / PointType::dim;
+        double box_volume;
+        viennagrid_element_volume(device.mesh(), elem, &box_volume);
+        //if (odd_assembly)
+        //  box_volume *= detail::cell_connection_length(device.mesh(), elem, viennagrid::cells(device.mesh())[0]) / PointType::dim;
 
         //const double Z               = averaged_density_of_states(quan, conf.dispersion_relation(quan.get_carrier_type_id()), elem, index_H);
 

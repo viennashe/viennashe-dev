@@ -29,9 +29,7 @@
 #include "viennashe/she/scattering/common.hpp"
 
 // viennagrid
-#include "viennagrid/forwards.hpp"
-#include "viennagrid/algorithm/inner_prod.hpp"
-#include "viennagrid/algorithm/norm.hpp"
+#include "viennagrid/viennagrid.h"
 
 /** @file viennashe/she/scattering/surface_scattering.hpp
     @brief Implements the surface scattering processes using a phenomenological description (Lombardi).
@@ -50,8 +48,6 @@ namespace viennashe
     class surface_scattering : public scattering_base<DeviceType>
     {
         typedef scattering_base<DeviceType>                     base_type;
-        typedef typename base_type::FacetType                   FacetType;
-        typedef typename base_type::CellType                    CellType;
 
       public:
         typedef typename base_type::scatter_processes_type      scatter_processes_type;
@@ -62,14 +58,7 @@ namespace viennashe
                                   ElectricFieldAccessor const & Efield)
        : base_type(device, conf), params_(conf.scattering().surface()), _Efield(Efield) { }
 
-        scatter_processes_type operator()(CellType const & elem,
-                                          double kinetic_energy,
-                                          viennashe::carrier_type_id ctype) const
-        {
-          return get(elem, kinetic_energy, ctype);
-        }
-
-        scatter_processes_type operator()(FacetType const & elem,
+        scatter_processes_type operator()(viennagrid_element_id elem,
                                           double kinetic_energy,
                                           viennashe::carrier_type_id ctype) const
         {
@@ -123,7 +112,7 @@ namespace viennashe
         return rate;
       }
 
-      double get_electric_field_n(CellType const &) const
+      double get_electric_field_n(viennagrid_element_id) const
       {
         throw std::runtime_error("get_charged_trap_density(): TODO");
         /*
@@ -144,6 +133,7 @@ namespace viennashe
         */
       }
 
+      template<typename FacetType>
       double get_electric_field_n(FacetType const & /*edge*/) const
       {
         throw std::runtime_error("get_charged_trap_density(): TODO");

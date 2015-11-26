@@ -34,14 +34,7 @@
 #include "viennashe/util/checks.hpp"
 #include "viennashe/log/log.hpp"
 
-#include "viennagrid/algorithm/norm.hpp"
-#include "viennagrid/algorithm/quantity_transfer.hpp"
-#include "viennagrid/algorithm/closest_points.hpp"
-#include "viennagrid/algorithm/distance.hpp"
-
-#include "viennagrid/mesh/segmentation.hpp"
-#include "viennagrid/mesh/mesh_operations.hpp"
-
+#include "viennagrid/viennagrid.h"
 
 
 /** @file  viennashe/simulator_setup.hpp
@@ -61,29 +54,29 @@ namespace viennashe
      * @tparam CheckerType    Type of the checker functor, which checks for a valid range
      * @tparam FilterType     A filter for the n-cells to actually consider
      */
-    template <typename ElementTagT, typename DeviceType, typename AccessorType, typename FilterType, typename CheckerType>
+    template<typename DeviceType, typename AccessorType, typename FilterType, typename CheckerType>
     bool check_quantity_on_ncell(DeviceType const & device,
+                                 viennagrid_dimension topo_dim,
                                  AccessorType const & accessor,
                                  FilterType const & filter,
                                  CheckerType const & checker)
     {
       typedef typename DeviceType::mesh_type           MeshType;
-      typedef typename viennagrid::result_of::const_element_range<MeshType, ElementTagT>::type    NCellContainer;
-      typedef typename viennagrid::result_of::iterator<NCellContainer>::type                      NCellIterator;
 
-      NCellContainer cells(device.mesh());
+      viennagrid_element_id *elements_begin, *elements_end;
+      viennagrid_mesh_elements_get(device.mesh(), topo_dim, &elements_begin, &elements_end);
 
       bool quantity_okay = true;
 
       // Check whether quantities are okay:
-      for (NCellIterator nit  = cells.begin();
-                         nit != cells.end();
-                       ++nit)
+      for (viennagrid_element_id *it  = elements_begin;
+                                  it != elements_end;
+                                ++it)
       {
-        if (!filter(*nit))
+        if (!filter(*it))
           continue;
 
-        if (!checker(accessor(*nit)))
+        if (!checker(accessor(*it)))
         {
           quantity_okay = false;
           break;
@@ -129,14 +122,16 @@ namespace viennashe
       if (!quantity_okay)
       {
         // transfer quantity
-        viennagrid::quantity_transfer<FallbackTagT, TagT>(device.mesh(),
+        /*viennagrid::quantity_transfer<FallbackTagT, TagT>(device.mesh(),
                                                           fallback_accessor, fallback_setter, // Accessor (in) and Setter (out)
                                                           fallback_averager,           // Averaging
                                                           fallback_filter, filter);    // Filters (in, out)
 
         //check again:
         check_quantity_on_ncell<TagT>(device, accessor, filter, fallback_checker);
-        return true;
+        return true;*/
+
+        throw std::runtime_error("setup_and_check_quantity_on_ncell_with_fallback(): Fallback not implemented!");
       }
 
       return false;
@@ -168,6 +163,7 @@ namespace viennashe
   template <typename DeviceType>
   void setup_doping_on_vertices(DeviceType & device, viennashe::carrier_type_id ctype)
   {
+    /*
     typedef typename viennagrid::result_of::cell_tag<typename DeviceType::mesh_type>::type  CellTag;
 
     // fallback functors:
@@ -194,7 +190,9 @@ namespace viennashe
     else
     {
       log::info() << "* setup_doping_on_vertices(): Doping defined on vertices passes consistency check." << std::endl;
-    }
+    } */
+
+    throw std::runtime_error("setup_doping_on_vertices(): Not implemented!");
 
   }
 

@@ -22,9 +22,7 @@
 #include <vector>
 
 // viennagrid
-#include "viennagrid/mesh/mesh.hpp"
-#include "viennagrid/algorithm/volume.hpp"
-#include "viennagrid/algorithm/inner_prod.hpp"
+#include "viennagrid/viennagrid.h"
 
 // viennashe
 #include "viennashe/forwards.h"
@@ -49,6 +47,7 @@ namespace viennashe
     /**
      * @brief Simple accessor to get the electric flux density along an edge
      */
+    /* TODO: Migrate to ViennaGrid 3.0
     template < typename DeviceType, typename PotentialAccessorType >
     struct electric_flux_on_facet
     {
@@ -107,7 +106,7 @@ namespace viennashe
         PotentialAccessorType const & potential_;
 
 
-    }; // electric_flux_on_facet
+    }; */ // electric_flux_on_facet
 
   } // namespace detail
 
@@ -118,30 +117,23 @@ namespace viennashe
   template < typename DeviceType, typename PotentialAccessorType >
   struct electric_flux_wrapper
   {
-  private:
-    typedef typename DeviceType::mesh_type   MeshType;
-    typedef typename MeshType::config_type   ConfigType;
-
-    typedef typename viennagrid::result_of::point<MeshType>::type PointType;
-
   public:
-    typedef typename viennagrid::result_of::facet<MeshType>::type     FacetType;
-    typedef typename viennagrid::result_of::cell<MeshType>::type      CellType;
-
     typedef std::vector<double> value_type;
 
     electric_flux_wrapper(DeviceType const & device, PotentialAccessorType const & potential)
       : device_(device), potential_(potential)
     { }
 
-    double operator()(FacetType const & facet) const
+    double operator()(viennagrid_element_id facet) const
     {
-      viennashe::detail::electric_flux_on_facet<DeviceType, PotentialAccessorType> facet_eval(device_, potential_);
+      //viennashe::detail::electric_flux_on_facet<DeviceType, PotentialAccessorType> facet_eval(device_, potential_);
 
-      return facet_eval(facet);
+      throw std::runtime_error("electric_flux_wrapper::operator(): TODO: Port to ViennaGrid 3.0");
+      return 0; //facet_eval(facet);
     }
 
 
+    /*
     value_type operator()(CellType const & cell) const
     {
       typedef typename viennagrid::result_of::const_facet_range<CellType>::type   FacetOnCellContainer;
@@ -162,7 +154,7 @@ namespace viennashe
                                              cell, facets_on_cell,
                                              result, facet_evaluator);
       return result();
-    } // operator()
+    } // operator() */
 
     private:
       DeviceType            const & device_;

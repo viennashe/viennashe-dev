@@ -16,8 +16,7 @@
 =============================================================================== */
 
 // viennagrid
-#include "viennagrid/forwards.hpp"
-#include "viennagrid/mesh/mesh.hpp"
+#include "viennagrid/viennagrid.h"
 
 // viennashe
 #include "viennashe/forwards.h"

@@ -49,7 +49,7 @@
 
 #include "viennashe/version.hpp"
 
-#include "viennagrid/forwards.hpp"
+#include "viennagrid/viennagrid.h"
 
 
 /** @file viennashe/forwards.h
@@ -63,38 +63,13 @@
 /** @brief The main ViennaSHE namespace. All functionality resides inside this namespace. */
 namespace viennashe
 {
-  /** @brief Namespace for implementation details. Typically not of interest for the library user. */
-  namespace detail
-  {
-    /** @brief Metafunction for the determination of whether a mesh is 1d. */
-    template <typename MeshT, typename CellTag = typename viennagrid::result_of::cell_tag<MeshT>::type>
-    struct is_1d_mesh
-    {
-      enum { value = false };
-    };
-
-    /** @brief Metafunction for the determination of whether a mesh is 1d. Specialization for 1d. */
-    template <typename MeshT>
-    struct is_1d_mesh<MeshT, viennagrid::simplex_tag<1> >
-    {
-      enum { value = true };
-    };
-
-    /** @brief Metafunction for the determination of whether a mesh is 1d. Specialization for 1d. */
-    template <typename MeshT>
-    struct is_1d_mesh<MeshT, viennagrid::hypercube_tag<1> >
-    {
-      enum { value = true };
-    };
-  }
 
   /** @brief A helper class to raise compile time errors */
   template <typename T>
   struct error_indicator {};
 
 
-  template <typename MeshT,
-            bool edges_and_cells_different = detail::is_1d_mesh<MeshT>::value >
+  template <typename MeshT>
   class device;
 
   template <typename DeviceType>

@@ -26,7 +26,7 @@
 #include "viennashe/she/she_quantity.hpp"
 
 // viennagrid
-#include "viennagrid/mesh/mesh.hpp"
+#include "viennagrid/viennagrid.h"
 
 /** @file viennashe/she/rescaling.hpp
     @brief Rescales the linear system such that unknowns are approximately the same order of magnitude.
@@ -52,14 +52,15 @@ namespace viennashe
                                SHEQuantity & quan,
                                VectorType & scaling_vector)
     {
-      typedef typename DeviceType::mesh_type                                          MeshType;
-      typedef typename viennagrid::result_of::const_cell_range<MeshType>::type        CellContainer;
-      typedef typename viennagrid::result_of::iterator<CellContainer>::type           CellIterator;
 
-      CellContainer cells(device.mesh());
-      for (CellIterator cit = cells.begin();
-          cit != cells.end();
-          ++cit)
+      viennagrid_dimension cell_dim;
+      viennagrid_mesh_cell_dimension_get(device.mesh(), &cell_dim);
+
+      viennagrid_element_id *cells_begin, *cells_end;
+      viennagrid_mesh_elements_get(device.mesh(), cell_dim, &cells_begin, &cells_end);
+      for (viennagrid_element_id *cit  = cells_begin;
+                                  cit != cells_end;
+                                ++cit)
       {
         double T = device.get_lattice_temperature(*cit);
 

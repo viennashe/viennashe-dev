@@ -52,23 +52,6 @@ namespace viennashe
                    VectorType & b,
                    bool use_timedependence, bool quan_valid)
     {
-      typedef typename DeviceType::mesh_type              MeshType;
-
-      typedef typename viennagrid::result_of::facet<MeshType>::type                 FacetType;
-      typedef typename viennagrid::result_of::cell<MeshType>::type                  CellType;
-
-      typedef typename viennagrid::result_of::const_facet_range<MeshType>::type     FacetContainer;
-      typedef typename viennagrid::result_of::iterator<FacetContainer>::type        FacetIterator;
-
-      typedef typename viennagrid::result_of::const_cell_range<MeshType>::type      CellContainer;
-      typedef typename viennagrid::result_of::iterator<CellContainer>::type         CellIterator;
-
-      typedef typename viennagrid::result_of::const_facet_range<CellType>::type     FacetOnCellContainer;
-      typedef typename viennagrid::result_of::iterator<FacetOnCellContainer>::type  FacetOnCellIterator;
-
-      typedef typename viennagrid::result_of::const_coboundary_range<MeshType, FacetType, CellType>::type     CellOnFacetContainer;
-      typedef typename viennagrid::result_of::iterator<CellOnFacetContainer>::type                            CellOnFacetIterator;
-
       typedef viennashe::math::sparse_matrix<double>   CouplingMatrixType;
 
       typedef typename viennashe::she::timestep_quantities<DeviceType>::unknown_quantity_type      SpatialUnknownType;
@@ -87,7 +70,7 @@ namespace viennashe
 
 //      try
 //      {
-        MeshType const & mesh = device.mesh();
+        viennagrid_mesh mesh = device.mesh();
 
         SpatialUnknownType const &     potential =     quantities.get_unknown_quantity(viennashe::quantity::potential());
         SpatialUnknownType const & old_potential = old_quantities.get_unknown_quantity(viennashe::quantity::potential());  //TODO: Take old timestep
@@ -224,10 +207,14 @@ namespace viennashe
         //
         log::debug<log_assemble_all>() << "* assemble_all(): Even unknowns..." << std::endl;
 
-        CellContainer cells(mesh);
-        for (CellIterator cit = cells.begin();
-            cit != cells.end();
-            ++cit)
+        viennagrid_dimension cell_dim;
+        viennagrid_mesh_cell_dimension_get(mesh, &cell_dim);
+
+        viennagrid_element_id *cells_begin, *cells_end;
+        viennagrid_mesh_elements_get(mesh, cell_dim, &cells_begin, &cells_end);
+        for (viennagrid_element_id *cit  = cells_begin;
+                                    cit != cells_end;
+                                  ++cit)
         {
           log::debug<log_assemble_all>() << "* assemble_all(): Assembling on cell " << *cit << std::endl;
 
@@ -259,26 +246,29 @@ namespace viennashe
           //
 
           // iterate over neighbor cells holding the odd unknowns:
-          FacetOnCellContainer facets_on_cell(*cit);
-          for (FacetOnCellIterator focit = facets_on_cell.begin();
-              focit != facets_on_cell.end();
-              ++focit)
+          viennagrid_element_id *facets_on_cell_begin, *facets_on_cell_end;
+          viennagrid_element_boundary_elements(mesh, *cit, cell_dim - 1, &facets_on_cell_begin, &facets_on_cell_end);
+          for (viennagrid_element_id *focit  = facets_on_cell_begin;
+                                      focit != facets_on_cell_end;
+                                    ++focit)
           {
             if (log_assemble_all::enabled)
               log::debug<log_assemble_all>() << "* assemble_all(): Assembling coupling with facet " << *focit << std::endl;
 
-            CellType const *other_cell_ptr = util::get_other_cell_of_facet(mesh, *focit, *cit);
+            viennagrid_element_id *other_cell_ptr;
+            util::get_other_cell_of_facet(mesh, *focit, *cit, &other_cell_ptr);
             if (!other_cell_ptr) continue;  //Facet is on the boundary of the simulation domain -> homogeneous Neumann conditions
 
             CouplingMatrixType coupling_matrix_diffusion = coupling_matrix_in_direction(a_x, a_y, a_z,
-                                                                                        *cit,
-                                                                                        *other_cell_ptr,
+                                                                                        mesh, *cit, *other_cell_ptr,
                                                                                         quan.get_carrier_type_id());
 
             // note that the sign change due to MEDS is included in the choice of the normal vector direction (order of vertex vs. other_vertex):
             // - B \cdot n   for even unknowns,
             // + B \cdot n   for odd unknowns
-            CouplingMatrixType coupling_matrix_drift = coupling_matrix_in_direction(b_x, b_y, b_z, *other_cell_ptr, *cit, quan.get_carrier_type_id());
+            CouplingMatrixType coupling_matrix_drift = coupling_matrix_in_direction(b_x, b_y, b_z,
+                                                                                    mesh, *other_cell_ptr, *cit,
+                                                                                    quan.get_carrier_type_id());
 
             for (std::size_t index_H = 0; index_H < quan.get_value_H_size(); ++index_H)
             {
@@ -314,10 +304,12 @@ namespace viennashe
         //
         log::info<log_assemble_all>() << "* assemble_all(): Odd unknowns..." << std::endl;
 
-        FacetContainer facets(mesh);
-        for (FacetIterator fit = facets.begin();
-             fit != facets.end();
-             ++fit)
+        viennagrid_element_id *facets_begin, *facets_end;
+        viennagrid_mesh_elements_get(mesh, cell_dim-1, &facets_begin, &facets_end);
+
+        for (viennagrid_element_id *fit  = facets_begin;
+                                    fit != facets_end;
+                                  ++fit)
         {
           if (log_assemble_all::enabled)
             log::debug<log_assemble_all>() << "* assemble_all(): Assembling on facet " << *fit << std::endl;
@@ -342,26 +334,29 @@ namespace viennashe
           //
 
           // iterate over cells of facet
-          CellOnFacetContainer cells_on_facet(mesh, fit.handle());
-          for (CellOnFacetIterator cofit  = cells_on_facet.begin();
-                                   cofit != cells_on_facet.end();
-                                 ++cofit)
+          viennagrid_element_id *cells_on_facet_begin, *cells_on_facet_end;
+          viennagrid_element_coboundary_elements(mesh, *fit, cell_dim, &cells_on_facet_begin, &cells_on_facet_end);
+          for (viennagrid_element_id *cofit  = cells_on_facet_begin;
+                                      cofit != cells_on_facet_end;
+                                    ++cofit)
           {
             if (log_assemble_all::enabled)
               log::debug<log_assemble_all>() << "* assemble_all(): Assembling coupling with cell " << *cofit << std::endl;
 
-            CellType const *other_cell_ptr = util::get_other_cell_of_facet(mesh, *fit, *cofit);
+            viennagrid_element_id *other_cell_ptr;
+            util::get_other_cell_of_facet(mesh, *fit, *cofit, &other_cell_ptr);
             if (!other_cell_ptr) continue;  //Facet is on the boundary of the simulation domain -> homogeneous Neumann conditions
 
             CouplingMatrixType coupling_matrix_diffusion = coupling_matrix_in_direction(a_x_transposed, a_y_transposed, a_z_transposed,
-                                                                                        *other_cell_ptr,
-                                                                                        *cofit,
+                                                                                        mesh, *other_cell_ptr, *cofit,
                                                                                         quan.get_carrier_type_id());
 
             // note that the sign change due to MEDS is included in the choice of the normal vector direction (order of vertex vs. other_vertex):
             // - B \cdot n   for even unknowns,
             // + B \cdot n   for odd unknowns
-            CouplingMatrixType coupling_matrix_drift = coupling_matrix_in_direction(b_x_transposed, b_y_transposed, b_z_transposed, *other_cell_ptr, *cofit, quan.get_carrier_type_id());
+            CouplingMatrixType coupling_matrix_drift = coupling_matrix_in_direction(b_x_transposed, b_y_transposed, b_z_transposed,
+                                                                                    mesh, *other_cell_ptr, *cofit,
+                                                                                    quan.get_carrier_type_id());
 
             for (std::size_t index_H = 0; index_H < quan.get_value_H_size(); ++index_H)
             {

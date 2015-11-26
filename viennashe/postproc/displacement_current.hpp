@@ -22,9 +22,7 @@
 #include <vector>
 
 // viennagrid
-#include "viennagrid/mesh/mesh.hpp"
-#include "viennagrid/algorithm/volume.hpp"
-#include "viennagrid/algorithm/inner_prod.hpp"
+#include "viennagrid/viennagrid.h"
 
 // viennashe
 #include "viennashe/physics/constants.hpp"

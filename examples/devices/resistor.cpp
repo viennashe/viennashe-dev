@@ -25,7 +25,7 @@
 #include "viennashe/core.hpp"
 
 // ViennaGrid mesh configurations:
-#include "viennagrid/config/default_configs.hpp"
+#include "viennagrid/viennagrid.h"
 
 
 /** \example resistor.cpp
@@ -99,8 +99,7 @@ int main()
       In one dimension there is no other element type available, while in
       two and three spatial dimensions one can choose from triangles, quadrilaterals, etc.
   **/
-  typedef viennagrid::line_1d_mesh       MeshType;
-  typedef viennashe::device<MeshType>    DeviceType;
+  typedef viennashe::device<viennagrid_mesh>    DeviceType;
 
   std::cout << viennashe::preamble() << std::endl;
 
@@ -131,7 +130,7 @@ int main()
       This is achieved by the function init_device() we defined above:
   **/
   std::cout << "* main(): Initializing device..." << std::endl;
-  init_device(device, 1.0);
+  //init_device(device, 1.0);
 
 
   /** <h3>Drift-Diffusion Simulations</h3>
@@ -175,7 +174,7 @@ int main()
     which is somewhat reasonable for one-dimensional device simulations,
     we write all simulation results to a VTK file, where it can be inspected with e.g. ParaView:
   **/
-  viennashe::io::write_quantities_to_VTK_file(dd_simulator, "resistor_dd_quan");
+  //viennashe::io::write_quantities_to_VTK_file(dd_simulator, "resistor_dd_quan");
 
   /** <h3>Fixed-Field SHE Simulations</h3>
 
@@ -252,7 +251,7 @@ int main()
   viennashe::io::write_cell_quantity_for_gnuplot(she_simulator.electron_density(), device, "resistor_n.dat");
 
   /** Write all computed quantities to VTK for inspection with e.g. ParaView: **/
-  viennashe::io::write_quantities_to_VTK_file(she_simulator, "resistor_she_quan");
+  //viennashe::io::write_quantities_to_VTK_file(she_simulator, "resistor_she_quan");
 
 
   /** <h3>SHE Simulations including Electron-Electron Scattering</h3>

@@ -15,11 +15,8 @@
    License:      MIT (X11), see file LICENSE in the base directory
 =============================================================================== */
 
-#include "viennagrid/mesh/mesh.hpp"
-#include "viennagrid/algorithm/boundary.hpp"
-#include "viennagrid/algorithm/interface.hpp"
+#include "viennagrid/viennagrid.h"
 
-#include "viennagrid/algorithm/volume.hpp"
 #include "viennashe/util/filter.hpp"
 #include "viennashe/accessors.hpp"
 #include "viennashe/simulator_quantity.hpp"
@@ -50,22 +47,9 @@ namespace viennashe
                               SegmentT const & semiconductor,
                               SegmentT const & terminal)
   {
-    typedef typename DeviceT::mesh_type     MeshType;
-
-    typedef typename viennagrid::result_of::point<MeshType> ::type      PointType;
-    typedef typename viennagrid::result_of::facet<MeshType> ::type      FacetType;
-    typedef typename viennagrid::result_of::cell<MeshType> ::type       CellType;
-
-    typedef typename viennagrid::result_of::const_cell_range<SegmentT>::type      CellContainer;
-    typedef typename viennagrid::result_of::iterator<CellContainer>::type         CellIterator;
-
-    typedef typename viennagrid::result_of::const_facet_range<CellType>::type     FacetOnCellContainer;
-    typedef typename viennagrid::result_of::iterator<FacetOnCellContainer>::type  FacetOnCellIterator;
-
-    typedef typename viennagrid::result_of::const_coboundary_range<SegmentT, FacetType, CellType>::type     CellOnFacetContainer;
-
     double current = 0;
 
+    /*
     CellContainer cells(terminal);
     for (CellIterator cit = cells.begin(); cit != cells.end(); ++cit)
     {
@@ -99,7 +83,9 @@ namespace viennashe
           //log::info() << current_density_accessor( *eovit ) << " * " << effective_interface << " = " << current << std::endl;
         }// for edges
       }
-    } // for vertices
+    } */ // for vertices
+
+    throw std::runtime_error("get_terminal_current(): TODO: Port to ViennaGrid 3.0");
 
     return current;
   } // get_terminal_current

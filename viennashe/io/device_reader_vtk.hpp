@@ -21,9 +21,7 @@
 #include <iostream>
 
 // viennagrid
-#include "viennagrid/forwards.hpp"
-#include "viennagrid/topology/simplex.hpp"
-#include "viennagrid/io/vtk_reader.hpp"
+#include "viennagrid/viennagrid.h"
 
 // viennashe
 #include "viennashe/forwards.h"
@@ -42,23 +40,25 @@ namespace viennashe
     namespace detail
     {
 
-      template < typename MeshT >
       struct mesh_generator_vtk
       {
-        typedef typename viennagrid::io::vtk_reader<MeshT> vtk_reader_type;
-
-        mesh_generator_vtk(std::string filename) : filename_(filename) {}
-
-        template < typename SegT>
-        void operator()(MeshT & mesh, SegT & seg)
+        mesh_generator_vtk(std::string filename) : filename_(filename)
         {
-          this->mesh_reader_(mesh, seg, this->filename_);
+          viennagrid_mesh_io_create(&mesh_reader_);
         }
 
-        vtk_reader_type & reader() { return this->mesh_reader_; }
+        ~mesh_generator_vtk() { viennagrid_mesh_io_release(mesh_reader_); }
+
+        void operator()(viennagrid_mesh mesh)
+        {
+          viennagrid_mesh_io_mesh_set(mesh_reader_, mesh);
+          viennagrid_mesh_io_read(mesh_reader_, filename_.c_str());
+        }
+
+        viennagrid_mesh_io & reader() { return this->mesh_reader_; }
 
         private:
-          vtk_reader_type mesh_reader_;
+          viennagrid_mesh_io mesh_reader_;
           std::string filename_;
       };
 
@@ -80,37 +80,19 @@ namespace viennashe
                          std::string doping_p_key,
                          std::string material_key)
     {
-      typedef typename DeviceType::mesh_type MeshType;
-      typedef typename DeviceType::segment_type SegmentType;
-
-      typedef typename viennagrid::result_of::cell<MeshType>::type    CellType;
-      typedef typename viennagrid::result_of::vertex<MeshType>::type  VertexType;
-
-      //typedef typename viennagrid::result_of::const_vertex_range<SegmentType>::type VertexContainer;
-      //typedef typename viennagrid::result_of::iterator<VertexContainer>::type    VertexIterator;
-
-      typedef typename viennagrid::result_of::const_cell_range<SegmentType>::type CellContainer;
-      typedef typename viennagrid::result_of::iterator<CellContainer>::type  CellIterator;
-
-      typedef typename viennagrid::result_of::const_vertex_range<CellType>::type  VertexOnCellContainer;
-      typedef typename viennagrid::result_of::iterator<VertexOnCellContainer>::type    VertexOnCellIterator;
-
-
-      typedef typename viennagrid::result_of::field<const std::deque<double>, CellType >::type   scalar_cell_data;
-      typedef typename viennagrid::result_of::field<const std::deque<double>, VertexType >::type scalar_vertex_data;
-
       if (doping_n_key.empty() || doping_p_key.empty())
       {
         viennashe::log::error() << "* read_device(): One of the doping keys is empty! Unable to proceed." << std::endl;
         return false;
       }
 
-      detail::mesh_generator_vtk<MeshType> my_vtk_reader(filename);
+      detail::mesh_generator_vtk my_vtk_reader(filename);
 
       device.load_device(my_vtk_reader); // basic init of mesh and device
 
-      typename detail::mesh_generator_vtk<MeshType>::vtk_reader_type & mesh_reader = my_vtk_reader.reader();
+      /* TODO: Migrate code
 
+      viennagrid_mesh_io & mesh_reader = my_vtk_reader.reader();
 
       const std::size_t num_segments = device.segmentation().size();
       log::info() << "* read_device_vtk(): There are " << num_segments << " segments." << std::endl;
@@ -251,7 +233,7 @@ namespace viennashe
           viennashe::log::error() << "* read_device(): None or inconsistent (cells,vertices) donor doping found! " << std::endl;
           return false;
         }
-      }
+      } */
 
       return true;
     } // read_device
@@ -263,21 +245,8 @@ namespace viennashe
                                 std::string quantity_name,
                                 std::string vtk_quantity_key)
     {
-      typedef typename DeviceT::mesh_type    MeshType;
-      typedef typename DeviceT::segment_type SegmentType;
-
-      typedef typename viennagrid::result_of::cell<MeshType>::type    CellType;
-      typedef typename viennagrid::result_of::vertex<MeshType>::type  VertexType;
-
-      typedef typename viennagrid::result_of::const_cell_range<SegmentType>::type CellContainer;
-      typedef typename viennagrid::result_of::iterator<CellContainer>::type       CellIterator;
-
-      typedef typename viennagrid::result_of::const_vertex_range<CellType>::type       VertexOnCellContainer;
-      typedef typename viennagrid::result_of::iterator<VertexOnCellContainer>::type    VertexOnCellIterator;
-
-      typedef typename viennagrid::result_of::field<const std::deque<double>, CellType >::type   scalar_cell_data;
-      typedef typename viennagrid::result_of::field<const std::deque<double>, VertexType >::type scalar_vertex_data;
-
+      // TODO: migrate code
+      /*
       detail::mesh_generator_vtk<MeshType> my_vtk_reader(filename);
 
       typename detail::mesh_generator_vtk<MeshType>::vtk_reader_type & mesh_reader = my_vtk_reader.reader();
@@ -368,6 +337,7 @@ namespace viennashe
 
       typename viennagrid::result_of::accessor<std::deque<double>, CellType>::type cell_data_wrapper(cell_data);
       simulator.set_initial_guess(quantity_name, cell_data_wrapper);
+      */
 
       return true;
     } // read_device

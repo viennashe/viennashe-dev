@@ -22,8 +22,7 @@
 #include <iostream>
 
 // viennagrid
-#include "viennagrid/mesh/mesh.hpp"
-#include "viennagrid/algorithm/centroid.hpp"
+#include "viennagrid/viennagrid.h"
 
 // viennashe
 #include "viennashe/forwards.h"
@@ -55,13 +54,6 @@ namespace viennashe
                       QuantitiyAccessorType const & quan,
                       const std::string filename) const
       {
-        typedef typename DeviceType::mesh_type  MeshType;
-
-        typedef typename viennagrid::result_of::point<MeshType>::type     PointType;
-
-        typedef typename viennagrid::result_of::const_cell_range<MeshType>::type    CellContainer;
-        typedef typename viennagrid::result_of::iterator<CellContainer>::type       CellIterator;
-
         std::ofstream writer(filename.c_str());
 
         if ( !writer )
@@ -71,17 +63,22 @@ namespace viennashe
 
         writer << "## ViennaSHE - gnuplot output " << std::endl;
 
-        CellContainer cells(device.mesh());
-        for ( CellIterator cit = cells.begin();
-              cit != cells.end();
-              ++cit )
+        viennagrid_dimension cell_dim;
+        viennagrid_mesh_cell_dimension_get(device.mesh(), &cell_dim);
+
+        viennagrid_element_id *cells_begin, *cells_end;
+        viennagrid_mesh_elements_get(device.mesh(), cell_dim, &cells_begin, &cells_end);
+        for (viennagrid_element_id *cit  = cells_begin;
+                                    cit != cells_end;
+                                  ++cit)
         {
           // filter vertices
           if ( !cell_filter(*cit) ) continue;
 
           //write values at point
-          PointType p = viennagrid::centroid(*cit);
-          for (std::size_t i = 0; i < static_cast<std::size_t>(PointType::dim); ++i) writer << p[i] << " ";
+          std::vector<double> p(3);
+          viennagrid_element_centroid(device.mesh(), *cit, &(p[0]));
+          for (std::size_t i = 0; i < p.size(); ++i) writer << p[i] << " ";
           this->write_value(writer, quan(*cit));
           writer << std::endl;
         } // for vertices

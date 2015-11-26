@@ -20,7 +20,7 @@
 #include <fstream>
 #include <iostream>
 
-#include "viennagrid/mesh/mesh.hpp"
+#include "viennagrid/viennagrid.h"
 
 #include "viennashe/forwards.h"
 #include "viennashe/config.hpp"

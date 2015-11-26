@@ -31,9 +31,7 @@
 #include "viennashe/she/scattering/common.hpp"
 
 // viennagrid
-#include "viennagrid/forwards.hpp"
-#include "viennagrid/algorithm/inner_prod.hpp"
-#include "viennagrid/algorithm/norm.hpp"
+#include "viennagrid/viennagrid.h"
 
 /** @file viennashe/she/surface_acoustic_phonon_scattering.hpp
     @brief Implements the surface acoustic phonon scattering processes.

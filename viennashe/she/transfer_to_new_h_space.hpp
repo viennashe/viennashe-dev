@@ -18,8 +18,7 @@
 #include <cmath>
 
 // viennagrid
-#include "viennagrid/mesh/mesh.hpp"
-#include "viennagrid/algorithm/voronoi.hpp"
+#include "viennagrid/viennagrid.h"
 
 // viennashe
 #include "viennashe/math/constants.hpp"
@@ -124,6 +123,9 @@ namespace viennashe
                                  viennashe::she::timestep_quantities<DeviceType> & new_quantities,
                                  viennashe::config const & conf)
     {
+      throw std::runtime_error("transfer_to_new_h_space(): TODO: implement");
+
+      /*
       typedef typename DeviceType::mesh_type              MeshType;
 
       typedef typename viennagrid::result_of::cell<MeshType>::type                  CellType;
@@ -194,7 +196,7 @@ namespace viennashe
             detail::normalize_on_new_H_space(*fit, new_quan, current_old / current_new);
         }
       }
-
+      */
 
     } //transfer_to_new_H_space
 
