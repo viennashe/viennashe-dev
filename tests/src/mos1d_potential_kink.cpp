@@ -25,8 +25,7 @@
 #include "viennashe/core.hpp"
 
 // ViennaGrid default configuration and centroid() algorithm:
-#include "viennagrid/config/default_configs.hpp"
-#include "viennagrid/algorithm/centroid.hpp"
+#include "viennagrid/viennagrid.h"
 
 
 /** \file mos1d_potential_kink.cpp Contains tests to ensure that discont. permittivities are correctly accounted for in Poisson's equation
@@ -42,8 +41,8 @@ struct mos1d_mesh_generator
     : len_gate_(len_gate), cs_gate_(cs_gate), len_oxide_(len_oxide), cs_ox_(cs_ox), len_bulk_(len_bulk), cs_bulk_(cs_bulk)
   { }
 
-  template < typename MeshT, typename SegmentationT >
-  void operator()(MeshT & mesh, SegmentationT & seg) const
+  template<typename MeshT>
+  void operator()(MeshT & mesh) const
   {
     viennashe::util::device_generation_config gconf;
 
@@ -52,7 +51,7 @@ struct mos1d_mesh_generator
     gconf.add_segment(len_gate_+len_oxide_,           len_bulk_,  static_cast<unsigned long>(len_bulk_ /cs_bulk_ + 1.0) );
     gconf.add_segment(len_gate_+len_oxide_+len_bulk_, 1e-9, 10 );
 
-    viennashe::util::generate_device(mesh, seg, gconf);
+    viennashe::util::generate_device(mesh, gconf);
   }
 
 private:
@@ -104,9 +103,7 @@ void init_device(DeviceType & device, double Vg_init)
 
 int main()
 {
-  typedef viennagrid::line_1d_mesh                               MeshType;
-
-  typedef viennashe::device<MeshType>     DeviceType;
+  typedef viennashe::device<viennagrid_mesh>     DeviceType;
 
   //typedef viennagrid::result_of::const_cell_range<MeshType>::type     CellContainer;
   //typedef viennagrid::result_of::iterator<CellContainer>::type        CellIterator;
@@ -147,22 +144,34 @@ int main()
 
   dd_simulator.run();
 
-  double pot_gate_left  = dd_simulator.potential().at(viennagrid::cells(device.mesh())[12]);
-  double pot_gate_right = dd_simulator.potential().at(viennagrid::cells(device.mesh())[13]);
-  double dx_gate = viennagrid::norm(viennagrid::centroid(viennagrid::cells(device.mesh())[13]) - viennagrid::centroid(viennagrid::cells(device.mesh())[12]));
+  viennagrid_dimension cell_dim;
+  viennagrid_mesh_cell_dimension_get(device.mesh(), &cell_dim);
+
+  viennagrid_element_id *cells_begin, *cells_end;
+  viennagrid_mesh_elements_get(device.mesh(), cell_dim, &cells_begin, &cells_end);
+
+  double centroid13[3], centroid12[3];
+  viennagrid_element_centroid(device.mesh(), cells_begin[12], centroid12);
+  viennagrid_element_centroid(device.mesh(), cells_begin[13], centroid13);
+  double pot_gate_left  = dd_simulator.potential().at(cells_begin[12]);
+  double pot_gate_right = dd_simulator.potential().at(cells_begin[13]);
+  double dx_gate = std::fabs(centroid13[0] - centroid12[0]);
   double field_gate = (pot_gate_left - pot_gate_right) / dx_gate;
 
-  double pot_bulk_left  = dd_simulator.potential().at(viennagrid::cells(device.mesh())[22]);
-  double pot_bulk_right = dd_simulator.potential().at(viennagrid::cells(device.mesh())[23]);
-  double dx_bulk = viennagrid::norm(viennagrid::centroid(viennagrid::cells(device.mesh())[23]) - viennagrid::centroid(viennagrid::cells(device.mesh())[22]));
+  double centroid23[3], centroid22[3];
+  viennagrid_element_centroid(device.mesh(), cells_begin[22], centroid22);
+  viennagrid_element_centroid(device.mesh(), cells_begin[23], centroid23);
+  double pot_bulk_left  = dd_simulator.potential().at(cells_begin[22]);
+  double pot_bulk_right = dd_simulator.potential().at(cells_begin[23]);
+  double dx_bulk = std::fabs(centroid23[0] - centroid22[0]);
   double field_bulk = (pot_bulk_left - pot_bulk_right) / dx_bulk;
 
 
   std::cout << "Field in gate: " << field_gate << std::endl;
   std::cout << "Field in bulk: " << field_bulk << std::endl;
   std::cout << "Ratio of electric fields: " << field_gate / field_bulk << std::endl;
-  double permittivity_ox = viennashe::materials::permittivity(device.get_material(viennagrid::cells(device.mesh())[13]));
-  double permittivity_bulk = viennashe::materials::permittivity(device.get_material(viennagrid::cells(device.mesh())[23]));
+  double permittivity_ox = viennashe::materials::permittivity(device.get_material(cells_begin[13]));
+  double permittivity_bulk = viennashe::materials::permittivity(device.get_material(cells_begin[23]));
   std::cout << "Ratio of permittivities: " << permittivity_bulk / permittivity_ox  << std::endl;
 
   viennashe::io::gnuplot_writer gpwriter;

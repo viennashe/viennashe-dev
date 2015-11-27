@@ -26,9 +26,7 @@
 //#define VIENNASHE_HAVE_PARALLEL_SOLVER    //automatically set by the build system
 //#define VIENNASHE_HAVE_GPU_SOLVER         //automatically set by the build system
 
-#include "viennagrid/mesh/mesh.hpp"
-#include "viennagrid/io/vtk_writer.hpp"
-#include "viennagrid/config/default_configs.hpp"
+#include "viennagrid/viennagrid.h"
 
 #include "viennashe/core.hpp"
 
@@ -36,11 +34,13 @@ void other_func();
 
 void other_func()
 {
-  viennagrid::tetrahedral_3d_mesh  mesh;
+  /*viennagrid::tetrahedral_3d_mesh  mesh;
 
   std::cout << "--- Tetrahedral mesh, 3d ---" << std::endl;
   std::cout << "Size<0>: " << viennagrid::vertices(mesh).size() << std::endl;
   std::cout << "Size<1>: " << viennagrid::vertices(mesh).size() << std::endl;
   std::cout << "Size<2>: " << viennagrid::vertices(mesh).size() << std::endl;
-  std::cout << "Size<3>: " << viennagrid::vertices(mesh).size() << std::endl;
+  std::cout << "Size<3>: " << viennagrid::vertices(mesh).size() << std::endl; */
+
+  std::cout << "Hello World!" << std::endl;
 }

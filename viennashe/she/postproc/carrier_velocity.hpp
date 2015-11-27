@@ -59,11 +59,8 @@ namespace viennashe
             current_density_(device, conf, quan), carrier_density_(conf, quan) {}
 
         /** @brief Functor interface returning the average carrier drift velocity at the provided cell */
-        template <typename CellT>
-        value_type operator()(CellT const & cell) const
+        value_type operator()(viennagrid_element_id cell) const
         {
-          typedef typename viennagrid::result_of::point<CellT>::type          PointType;
-
           std::vector<double> carrier_velocity(3);
 
           if (!viennashe::materials::is_semiconductor(device_.get_material(cell)))
@@ -73,9 +70,9 @@ namespace viennashe
           double polarity = (quan_.get_carrier_type_id() == ELECTRON_TYPE_ID) ? -1.0 : 1.0;
 
           carrier_velocity = current_density_(cell);
-          double carrier_density = carrier_density_(cell);
+          double carrier_density = carrier_density_(cell)[0];
 
-          for (std::size_t i=0; i<static_cast<std::size_t>(PointType::dim); ++i)
+          for (std::size_t i=0; i<3; ++i)
             carrier_velocity[i] = -polarity * value_Y_00 * carrier_velocity[i] / carrier_density / viennashe::physics::constants::q;  //cf. current_density_wrapper on these additional prefactors
 
           return carrier_velocity;
@@ -98,17 +95,15 @@ namespace viennashe
      * @param quan             The SHE quantity (electron or hole distribution function) used for the calculation
      * @param container        The container the values should be written to
     */
-    template <typename DeviceType,
-              typename SHEQuantity,
-              typename ContainerType>
-    void write_carrier_velocity_to_container(DeviceType const & device,
-                                             viennashe::config const & conf,
-                                             SHEQuantity const & quan,
-                                             ContainerType & container)
+    template <typename DeviceType,typename SHEQuantity>
+    void write_carrier_velocity_to_quantity_field(DeviceType const & device,
+                                                  viennashe::config const & conf,
+                                                  SHEQuantity const & quan,
+                                                  viennagrid_quantity_field field)
     {
       carrier_velocity_wrapper<DeviceType, SHEQuantity> velocity_wrapper(device, conf, quan);
 
-      viennashe::write_macroscopic_quantity_to_container(device, velocity_wrapper, container);
+      viennashe::write_macroscopic_quantity_to_quantity_field(device, velocity_wrapper, field);
     }
 
 

@@ -124,12 +124,13 @@ namespace viennashe
       : device_(device), potential_(potential)
     { }
 
-    double operator()(viennagrid_element_id facet) const
+    std::vector<double> operator()(viennagrid_element_id facet) const
     {
       //viennashe::detail::electric_flux_on_facet<DeviceType, PotentialAccessorType> facet_eval(device_, potential_);
 
       throw std::runtime_error("electric_flux_wrapper::operator(): TODO: Port to ViennaGrid 3.0");
-      return 0; //facet_eval(facet);
+      std::vector<double> ret(3);
+      return ret; //facet_eval(facet);
     }
 
 

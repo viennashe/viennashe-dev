@@ -631,189 +631,186 @@ namespace viennashe
      * @param filename     Name of the file to be written to
      * @param name_in_file   The quantity name to be used in the VTK file
      */
-    /* TODO: Migrate to ViennaGrid 3.0
     template <typename QuantityType,
               typename DeviceType>
-    void write_vertex_quantity_to_VTK_file(QuantityType const & quantity,
-                                           DeviceType const & device,
-                                           std::string filename,
-                                           std::string name_in_file = "viennashe_quantity")
+    void write_quantity_to_VTK_file(QuantityType const & quantity,
+                                    DeviceType const & device,
+                                    viennagrid_dimension topologic_dimension,
+                                    std::string filename,
+                                    std::string name_in_file = "viennashe_quantity")
     {
-      typedef typename DeviceType::mesh_type              MeshType;
+      viennagrid_mesh mesh = device.mesh();
 
-      typedef typename viennagrid::result_of::vertex<MeshType>::type                 VertexType;
-      typedef typename viennagrid::result_of::const_vertex_range<MeshType>::type     VertexContainer;
-      typedef typename viennagrid::result_of::iterator<VertexContainer>::type        VertexIterator;
+      viennagrid_element_id *elements_begin, *elements_end;
+      viennagrid_mesh_elements_get(device.mesh(), topologic_dimension, &elements_begin, &elements_end);
 
-      MeshType const & mesh = device.mesh();
+      viennagrid_quantity_field field;
+      viennagrid_quantity_field_create(&field);
+      viennagrid_quantity_field_init(field, topologic_dimension, VIENNAGRID_QUANTITY_FIELD_TYPE_NUMERIC, 1, VIENNAGRID_QUANTITY_FIELD_STORAGE_DENSE);
+      viennagrid_quantity_field_resize(field, elements_end - elements_begin);
+      viennagrid_quantity_field_name_set(field, name_in_file.c_str());
 
-      VertexContainer vertices(mesh);
-      std::vector<double> vtk_data(vertices.size());
-      for (VertexIterator vit = vertices.begin();
-          vit != vertices.end();
-          ++vit)
+      for (viennagrid_element_id *eit  = elements_begin;
+                                  eit != elements_end;
+                                ++eit)
       {
-        vtk_data[vit->id().get()] = quantity(*vit);
+        viennagrid_numeric value = quantity(*eit);
+        viennagrid_quantity_field_value_set(field, *eit, &value);
       }
 
       log::info<log_she_vtk_writer>() << "* write_quantity_to_VTK_file(): Writing data to '"
                 << filename
                 << "' (can be viewed with e.g. ParaView)" << std::endl;
 
-      viennagrid::io::vtk_writer<MeshType> my_vtk_writer;
-      my_vtk_writer.add_scalar_data_on_vertices(viennagrid::make_accessor<VertexType>(vtk_data), name_in_file);
-      my_vtk_writer(mesh, device.segmentation(), filename);
-    } */
+      viennagrid_mesh_io mesh_io;
+      viennagrid_mesh_io_create(&mesh_io);
+      viennagrid_mesh_io_mesh_set(mesh_io, mesh);
+      viennagrid_mesh_io_quantity_field_set(mesh_io, field);
+      viennagrid_mesh_io_write(mesh_io, filename.c_str());
 
+      viennagrid_mesh_io_release(mesh_io);
+      viennagrid_quantity_field_release(field);
+    }
 
-    /** @brief Convenience routine for writing a single macroscopic quantity to a VTK file.
-     *
-     * @param quantity     An accessor for a macroscopic quantity
-     * @param device       The device (includes a ViennaGrid mesh) on which simulation is carried out
-     * @param filename     Name of the file to be written to
-     * @param name_in_file   The quantity name to be used in the VTK file
-     */
-    /* TODO: Migrate to ViennaGrid 3.0
-    template <typename QuantityType,
-              typename DeviceType>
-    void write_cell_quantity_to_VTK_file(QuantityType const & quantity,
-                                         DeviceType const & device,
-                                         std::string filename,
-                                         std::string name_in_file = "viennashe_quantity")
-    {
-      typedef typename DeviceType::mesh_type              MeshType;
-
-      typedef typename viennagrid::result_of::cell<MeshType>::type                 CellType;
-      typedef typename viennagrid::result_of::const_cell_range<MeshType>::type     CellContainer;
-      typedef typename viennagrid::result_of::iterator<CellContainer>::type        CellIterator;
-
-      MeshType const & mesh = device.mesh();
-
-      CellContainer cells(mesh);
-      std::vector<double> vtk_data(cells.size());
-      for (CellIterator cit = cells.begin();
-           cit != cells.end();
-           ++cit)
-      {
-        vtk_data[static_cast<std::size_t>(cit->id().get())] = quantity(*cit);
-      }
-
-      log::info<log_she_vtk_writer>() << "* write_quantity_to_VTK_file(): Writing data to '"
-                << filename
-                << "' (can be viewed with e.g. ParaView)" << std::endl;
-
-      viennagrid::io::vtk_writer<MeshType> my_vtk_writer;
-      my_vtk_writer.add_scalar_data_on_cells(viennagrid::make_accessor<CellType>(vtk_data), name_in_file);
-      my_vtk_writer(mesh, device.segmentation(), filename);
-    }*/
-
-
-    /** @brief Namespace for implementation details within viennashe::io. Typically not of interest for a library user. */
-    /*namespace detail
-    {
-      template <typename QuantityType,
-                typename DeviceType>
-      void write_quantity_to_VTK_file(QuantityType const & quantity,
-                                      DeviceType const & device,
-                                      std::string filename,
-                                      std::string name_in_file,
-                                      viennagrid::vertex_tag)
-      {
-        write_cell_quantity_to_VTK_file(quantity, device, filename, name_in_file);
-      }
-
-      template <typename QuantityType,
-                typename DeviceType,
-                typename Tag>
-      void write_quantity_to_VTK_file(QuantityType const & quantity,
-                                      DeviceType const & device,
-                                      std::string filename,
-                                      std::string name_in_file,
-                                      Tag)
-      {
-        write_cell_quantity_to_VTK_file(quantity, device, filename, name_in_file);
-      }
-    }*/
 
     /** @brief Generic interface function for writing a quantity to a VTK file. Automatically dispatches between vertex and cell quantity.
      *
      *    Custom functors may need to overload detail::extract_topology_tag if writing cell quantities (by default, unidentified quantities are assumed to be vertex-quantities)
      */
-    /*
-    template <typename QuantityType,
-              typename DeviceType>
+    template <typename QuantityType, typename DeviceType>
     void write_quantity_to_VTK_file(QuantityType const & quantity,
                                     DeviceType const & device,
                                     std::string filename,
                                     std::string name_in_file = "viennashe_quantity")
     {
-      write_cell_quantity_to_VTK_file(quantity, device, filename, name_in_file);
-    } */
+      viennagrid_dimension cell_dim;
+      viennagrid_mesh_cell_dimension_get(device.mesh(), &cell_dim);
+
+      write_quantity_to_VTK_file(quantity, device, cell_dim, filename, name_in_file);
+    }
 
 
-/*
-    namespace detail
-    {
-      template <typename ContainerType, typename KeyType, typename ValueType>
-      class container_accessor
-      {
-      public:
-        typedef ValueType  value_type;
-
-        container_accessor(ContainerType const & container) : container_(container) {}
-
-        value_type const & operator()(KeyType const & key) const { cached_value_ = container_.at(static_cast<std::size_t>(key.id().get())); return cached_value_; }
-        value_type const & operator[](KeyType const & key) const { cached_value_ = container_.at(static_cast<std::size_t>(key.id().get())); return cached_value_; }
-        value_type const &         at(KeyType const & key) const { cached_value_ = container_.at(static_cast<std::size_t>(key.id().get())); return cached_value_; }
-
-        value_type const * find(KeyType const &) const { return NULL; }
-
-      private:
-        ContainerType const & container_;
-        mutable value_type cached_value_;
-      };
-
-      template <typename KeyType, typename ValueType, typename ContainerType>
-      container_accessor<ContainerType, KeyType, ValueType> make_accessor(ContainerType const & c)
-      {
-        return container_accessor<ContainerType, KeyType, ValueType>(c);
-      }
-
-    } // namespace detail
-*/
     /** @brief Generic interface function for writing simulated quantities to a VTK file. */
-    /* TODO: Migrate to ViennaGrid 3.0
     template <typename DeviceType>
     void write_quantities_to_VTK_file(viennashe::simulator<DeviceType> const & simulator_obj,
-                                      std::string filename,
-                                      bool include_debug_information = false)
+                                      std::string filename)
     {
       typedef typename viennashe::simulator<DeviceType>               SimulatorType;
       typedef typename DeviceType::mesh_type                          MeshType;
-      typedef typename viennagrid::result_of::cell<MeshType>::type    CellType;
 
       typedef typename SimulatorType::unknown_quantity_type    UnknownQuantityType;
 
       DeviceType const & device = simulator_obj.device();
 
-      viennagrid::io::vtk_writer<MeshType> my_vtk_writer;
+      viennagrid_dimension cell_dim;
+      viennagrid_mesh_cell_dimension_get(device.mesh(), &cell_dim);
 
-      std::deque<std::vector<double> > electric_field(viennagrid::cells(device.mesh()).size(), std::vector<double>(3));
-      std::deque<std::vector<double> > current_n(viennagrid::cells(device.mesh()).size(), std::vector<double>(3));
-      std::deque<std::vector<double> > current_p(viennagrid::cells(device.mesh()).size(), std::vector<double>(3));
-      std::deque<std::vector<double> > carrier_velocity_n(viennagrid::cells(device.mesh()).size(), std::vector<double>(3));
-      std::deque<std::vector<double> > carrier_velocity_p(viennagrid::cells(device.mesh()).size(), std::vector<double>(3));
-      std::deque<double> pwr_density_container(viennagrid::cells(device.mesh()).size());
-      std::deque<double> avg_energy_n(viennagrid::cells(device.mesh()).size());
-      std::deque<double> avg_energy_p(viennagrid::cells(device.mesh()).size());
-      std::deque<double> avg_trap_occupancy(viennagrid::cells(device.mesh()).size());
+      viennagrid_int cell_count;
+      viennagrid_mesh_element_count(device.mesh(), cell_dim, &cell_count);
+
+      viennagrid_mesh_io mesh_io;
+      viennagrid_mesh_io_create(&mesh_io);
+      viennagrid_mesh_io_mesh_set(mesh_io, device.mesh());
+
+      viennagrid_quantity_field electric_field;
+      viennagrid_quantity_field_create(&electric_field);
+      viennagrid_quantity_field_init(electric_field, cell_dim, VIENNAGRID_QUANTITY_FIELD_TYPE_NUMERIC, 3, VIENNAGRID_QUANTITY_FIELD_STORAGE_DENSE);
+      viennagrid_quantity_field_name_set(electric_field, "Electric Field");
+
+      viennagrid_quantity_field current_n;
+      viennagrid_quantity_field_create(&current_n);
+      viennagrid_quantity_field_init(current_n, cell_dim, VIENNAGRID_QUANTITY_FIELD_TYPE_NUMERIC, 3, VIENNAGRID_QUANTITY_FIELD_STORAGE_DENSE);
+      viennagrid_quantity_field_name_set(electric_field, "Electron current density");
+
+      viennagrid_quantity_field current_p;
+      viennagrid_quantity_field_create(&current_p);
+      viennagrid_quantity_field_init(current_p, cell_dim, VIENNAGRID_QUANTITY_FIELD_TYPE_NUMERIC, 3, VIENNAGRID_QUANTITY_FIELD_STORAGE_DENSE);
+      viennagrid_quantity_field_name_set(electric_field, "Hole current density");
+
+      viennagrid_quantity_field carrier_velocity_n;
+      viennagrid_quantity_field_create(&carrier_velocity_n);
+      viennagrid_quantity_field_init(carrier_velocity_n, cell_dim, VIENNAGRID_QUANTITY_FIELD_TYPE_NUMERIC, 3, VIENNAGRID_QUANTITY_FIELD_STORAGE_DENSE);
+      viennagrid_quantity_field_name_set(electric_field, "Electron avg. carrier drift velocity");
+
+      viennagrid_quantity_field carrier_velocity_p;
+      viennagrid_quantity_field_create(&carrier_velocity_p);
+      viennagrid_quantity_field_init(carrier_velocity_p, cell_dim, VIENNAGRID_QUANTITY_FIELD_TYPE_NUMERIC, 3, VIENNAGRID_QUANTITY_FIELD_STORAGE_DENSE);
+      viennagrid_quantity_field_name_set(electric_field, "Hole avg. carrier drift velocity");
+
+      viennagrid_quantity_field pwr_density_container;
+      viennagrid_quantity_field_create(&pwr_density_container);
+      viennagrid_quantity_field_init(pwr_density_container, cell_dim, VIENNAGRID_QUANTITY_FIELD_TYPE_NUMERIC, 1, VIENNAGRID_QUANTITY_FIELD_STORAGE_DENSE);
+      viennagrid_quantity_field_name_set(electric_field, "Joule heating power density");
+
+      viennagrid_quantity_field avg_energy_n;
+      viennagrid_quantity_field_create(&avg_energy_n);
+      viennagrid_quantity_field_init(avg_energy_n, cell_dim, VIENNAGRID_QUANTITY_FIELD_TYPE_NUMERIC, 1, VIENNAGRID_QUANTITY_FIELD_STORAGE_DENSE);
+      viennagrid_quantity_field_name_set(electric_field, "Electron avg. energy");
+
+      viennagrid_quantity_field avg_energy_p;
+      viennagrid_quantity_field_create(&avg_energy_p);
+      viennagrid_quantity_field_init(avg_energy_p, cell_dim, VIENNAGRID_QUANTITY_FIELD_TYPE_NUMERIC, 1, VIENNAGRID_QUANTITY_FIELD_STORAGE_DENSE);
+      viennagrid_quantity_field_name_set(electric_field, "Hole avg. energy");
+
+      viennagrid_quantity_field avg_trap_occupancy;
+      viennagrid_quantity_field_create(&avg_trap_occupancy);
+      viennagrid_quantity_field_init(avg_trap_occupancy, cell_dim, VIENNAGRID_QUANTITY_FIELD_TYPE_NUMERIC, 1, VIENNAGRID_QUANTITY_FIELD_STORAGE_DENSE);
+      viennagrid_quantity_field_name_set(electric_field, "Average trap occupancy");
 
       //
       // Device data
       //
-      my_vtk_writer.add_scalar_data_on_cells(viennagrid::make_accessor<CellType>(device.doping_n()), "Donator Doping");
-      my_vtk_writer.add_scalar_data_on_cells(viennagrid::make_accessor<CellType>(device.doping_p()), "Acceptor Doping");
-      my_vtk_writer.add_scalar_data_on_cells(    detail::make_accessor<CellType, double>(device.material()), "Material IDs");
+
+      viennagrid_element_id *cells_begin, *cells_end;
+      viennagrid_mesh_elements_get(device.mesh(), cell_dim, &cells_begin, &cells_end);
+
+      {
+        viennagrid_quantity_field doping_n;
+        viennagrid_quantity_field_create(&doping_n);
+        viennagrid_quantity_field_init(doping_n, cell_dim, VIENNAGRID_QUANTITY_FIELD_TYPE_NUMERIC, 1, VIENNAGRID_QUANTITY_FIELD_STORAGE_DENSE);
+        viennagrid_quantity_field_name_set(doping_n, "Donator Doping");
+        for (viennagrid_element_id *cit  = cells_begin;
+                                    cit != cells_end;
+                                  ++cit)
+        {
+          viennagrid_numeric value = device.get_doping_n(*cit);
+          viennagrid_quantity_field_value_set(doping_n, *cit, &value);
+        }
+        viennagrid_mesh_io_quantity_field_set(mesh_io, doping_n);
+        viennagrid_quantity_field_release(doping_n);
+      }
+
+      {
+        viennagrid_quantity_field doping_p;
+        viennagrid_quantity_field_create(&doping_p);
+        viennagrid_quantity_field_init(doping_p, cell_dim, VIENNAGRID_QUANTITY_FIELD_TYPE_NUMERIC, 1, VIENNAGRID_QUANTITY_FIELD_STORAGE_DENSE);
+        viennagrid_quantity_field_name_set(doping_p, "Acceptor Doping");
+        for (viennagrid_element_id *cit  = cells_begin;
+                                    cit != cells_end;
+                                  ++cit)
+        {
+          viennagrid_numeric value = device.get_doping_p(*cit);
+          viennagrid_quantity_field_value_set(doping_p, *cit, &value);
+        }
+        viennagrid_mesh_io_quantity_field_set(mesh_io, doping_p);
+        viennagrid_quantity_field_release(doping_p);
+      }
+
+      {
+        viennagrid_quantity_field material;
+        viennagrid_quantity_field_create(&material);
+        viennagrid_quantity_field_init(material, cell_dim, VIENNAGRID_QUANTITY_FIELD_TYPE_NUMERIC, 1, VIENNAGRID_QUANTITY_FIELD_STORAGE_DENSE);
+        viennagrid_quantity_field_name_set(material, "Material IDs");
+        for (viennagrid_element_id *cit  = cells_begin;
+                                    cit != cells_end;
+                                  ++cit)
+        {
+          viennagrid_numeric value = device.get_material(*cit);
+          viennagrid_quantity_field_value_set(material, *cit, &value);
+        }
+        viennagrid_mesh_io_quantity_field_set(mesh_io, material);
+        viennagrid_quantity_field_release(material);
+      }
 
 
       //
@@ -825,15 +822,11 @@ namespace viennashe
       {
         UnknownQuantityType const & quan = unknown_quans.at(quan_index);
 
-        bool quantity_is_from_she = false;
-
         // electric field
         if (quan.get_name() == viennashe::quantity::potential())
         {
-          viennashe::write_electric_field_to_container(device,
-                                                       simulator_obj.quantities().potential(),
-                                                       electric_field);
-          my_vtk_writer.add_vector_data_on_cells(viennagrid::make_accessor<CellType>(electric_field), "Electric Field");
+          viennashe::write_electric_field_to_quantity_field(device, simulator_obj.quantities().potential(), electric_field);
+          viennagrid_mesh_io_quantity_field_set(mesh_io, electric_field);
         }
 
         // electron current
@@ -841,31 +834,20 @@ namespace viennashe
         {
           if (simulator_obj.config().get_electron_equation() == viennashe::EQUATION_SHE)
           {
-            quantity_is_from_she = true;
-            viennashe::she::write_current_density_to_container(device,
-                                                               simulator_obj.config(),
-                                                               simulator_obj.quantities().electron_distribution_function(),
-                                                               current_n);
-            viennashe::she::write_carrier_velocity_to_container(device,
-                                                               simulator_obj.config(),
-                                                               simulator_obj.quantities().electron_distribution_function(),
-                                                               carrier_velocity_n);
-            my_vtk_writer.add_vector_data_on_cells(viennagrid::make_accessor<CellType>(carrier_velocity_n), "Electron avg. carrier drift velocity");
-            viennashe::she::write_kinetic_carrier_energy_to_container(device,
-                                                                      simulator_obj.config(),
-                                                                      simulator_obj.quantities().electron_distribution_function(),
-                                                                      avg_energy_n);
-            my_vtk_writer.add_scalar_data_on_cells(viennagrid::make_accessor<CellType>(avg_energy_n), "Electron avg. energy");
+            viennashe::she::write_current_density_to_quantity_field(device, simulator_obj.config(), simulator_obj.quantities().electron_distribution_function(), current_n);
+            viennagrid_mesh_io_quantity_field_set(mesh_io, current_n);
+
+            viennashe::she::write_carrier_velocity_to_quantity_field(device, simulator_obj.config(), simulator_obj.quantities().electron_distribution_function(), carrier_velocity_n);
+            viennagrid_mesh_io_quantity_field_set(mesh_io, carrier_velocity_n);
+
+            viennashe::she::write_kinetic_carrier_energy_to_quantity_field(device, simulator_obj.config(), simulator_obj.quantities().electron_distribution_function(), avg_energy_n);
+            viennagrid_mesh_io_quantity_field_set(mesh_io, avg_energy_n);
           }
           else
           {
-            viennashe::write_current_density_to_container(device,
-                                                          simulator_obj.potential(),
-                                                          quan, viennashe::ELECTRON_TYPE_ID,
-                                                          viennashe::models::create_constant_mobility_model(device, 0.1430),
-                                                          current_n);
+            viennashe::write_current_density_to_quantity_field(device, simulator_obj.potential(), quan, viennashe::ELECTRON_TYPE_ID, viennashe::models::create_constant_mobility_model(device, 0.1430), current_n);
+            viennagrid_mesh_io_quantity_field_set(mesh_io, current_n);
           }
-          my_vtk_writer.add_vector_data_on_cells(viennagrid::make_accessor<CellType>(current_n), "Electron current density");
         }
 
         // hole current
@@ -873,31 +855,20 @@ namespace viennashe
         {
           if (simulator_obj.config().get_hole_equation() == viennashe::EQUATION_SHE)
           {
-            quantity_is_from_she = true;
-            viennashe::she::write_current_density_to_container(device,
-                                                               simulator_obj.config(),
-                                                               simulator_obj.quantities().hole_distribution_function(),
-                                                               current_p);
-            viennashe::she::write_carrier_velocity_to_container(device,
-                                                               simulator_obj.config(),
-                                                               simulator_obj.quantities().hole_distribution_function(),
-                                                               carrier_velocity_p);
-            my_vtk_writer.add_vector_data_on_cells(viennagrid::make_accessor<CellType>(carrier_velocity_p), "Hole avg. carrier drift velocity");
-            viennashe::she::write_kinetic_carrier_energy_to_container(device,
-                                                                      simulator_obj.config(),
-                                                                      simulator_obj.quantities().hole_distribution_function(),
-                                                                      avg_energy_p);
-            my_vtk_writer.add_scalar_data_on_cells(viennagrid::make_accessor<CellType>(avg_energy_p), "Hole avg. energy");
+            viennashe::she::write_current_density_to_quantity_field(device, simulator_obj.config(), simulator_obj.quantities().hole_distribution_function(), current_p);
+            viennagrid_mesh_io_quantity_field_set(mesh_io, current_p);
+
+            viennashe::she::write_carrier_velocity_to_quantity_field(device, simulator_obj.config(), simulator_obj.quantities().hole_distribution_function(), carrier_velocity_p);
+            viennagrid_mesh_io_quantity_field_set(mesh_io, carrier_velocity_p);
+
+            viennashe::she::write_kinetic_carrier_energy_to_quantity_field(device, simulator_obj.config(), simulator_obj.quantities().hole_distribution_function(), avg_energy_p);
+            viennagrid_mesh_io_quantity_field_set(mesh_io, avg_energy_p);
           }
           else
           {
-            viennashe::write_current_density_to_container(device,
-                                                          simulator_obj.potential(),
-                                                          quan, viennashe::HOLE_TYPE_ID,
-                                                          viennashe::models::create_constant_mobility_model(device, 0.0460),
-                                                          current_p);
+            viennashe::write_current_density_to_quantity_field(device, simulator_obj.potential(), quan, viennashe::HOLE_TYPE_ID, viennashe::models::create_constant_mobility_model(device, 0.0460), current_p);
+            viennagrid_mesh_io_quantity_field_set(mesh_io, current_p);
           }
-          my_vtk_writer.add_vector_data_on_cells(viennagrid::make_accessor<CellType>(current_p), "Hole current density");
         }
 
 
@@ -907,28 +878,16 @@ namespace viennashe
           typedef typename SimulatorType::SHETimeStepQuantitiesT QuantitiesType;
           typedef typename viennashe::hde::power_density_accessor<DeviceType, QuantitiesType> PowerDensityAccessorType;
 
-          PowerDensityAccessorType pdacc(device,
-                                         simulator_obj.quantities(),
-                                         simulator_obj.config());
+          PowerDensityAccessorType pdacc(device, simulator_obj.quantities(), simulator_obj.config());
 
-          viennashe::write_macroscopic_quantity_to_container(device, pdacc, pwr_density_container);
-
-          my_vtk_writer.add_scalar_data_on_cells(viennagrid::make_accessor<CellType>(pwr_density_container), "Joule heating power density");
+          viennashe::write_macroscopic_quantity_to_quantity_field(device, pdacc, pwr_density_container);
+          viennagrid_mesh_io_quantity_field_set(mesh_io, pwr_density_container);
         }
 
-
-        my_vtk_writer.add_scalar_data_on_cells(viennagrid::make_accessor<CellType>(quan.values()), quan.get_name());
-        if (!quantity_is_from_she && include_debug_information)
-        {
-          my_vtk_writer.add_scalar_data_on_cells(detail::make_accessor<CellType, double>(quan.boundary_types()), quan.get_name() + " boundary types");
-          my_vtk_writer.add_scalar_data_on_cells(viennagrid::make_accessor<CellType>(quan.boundary_values()), quan.get_name() + " boundary values");
-          my_vtk_writer.add_scalar_data_on_cells(detail::make_accessor<CellType, double>(quan.defined_but_unknown_mask()), quan.get_name() + " mask");
-          my_vtk_writer.add_scalar_data_on_cells(detail::make_accessor<CellType, double>(quan.unknowns_indices()), quan.get_name() + " indices");
-        }
-      } // for unkown quans
+      } // for unknown quans
 
 
-      if (simulator_obj.config().with_traps())
+      /*if (simulator_obj.config().with_traps())
       {
         typedef typename viennagrid::result_of::const_cell_range<MeshType>::type     CellContainer;
         typedef typename viennagrid::result_of::iterator<CellContainer>::type        CellIterator;
@@ -957,10 +916,22 @@ namespace viennashe
         }
         my_vtk_writer.add_scalar_data_on_cells(viennagrid::make_accessor<CellType>(avg_trap_occupancy), "Average trap occupancy");
       } // traps
+      */
 
-      my_vtk_writer(device.mesh(), device.segmentation(), filename);
+      viennagrid_mesh_io_write(mesh_io, filename.c_str());
+      viennagrid_mesh_io_release(mesh_io);
 
-    } */
+      viennagrid_quantity_field_release(electric_field);
+      viennagrid_quantity_field_release(current_n);
+      viennagrid_quantity_field_release(current_p);
+      viennagrid_quantity_field_release(carrier_velocity_n);
+      viennagrid_quantity_field_release(carrier_velocity_p);
+      viennagrid_quantity_field_release(pwr_density_container);
+      viennagrid_quantity_field_release(avg_energy_n);
+      viennagrid_quantity_field_release(avg_energy_p);
+      viennagrid_quantity_field_release(avg_trap_occupancy);
+
+    }
 
   } //namespace io
 } //namespace viennashe

@@ -51,12 +51,7 @@
 
 #include "viennashe/models/all.hpp"
 
-#include "viennagrid/mesh/mesh.hpp"
-#include "viennagrid/config/default_configs.hpp"
-#include "viennagrid/io/netgen_reader.hpp"
-#include "viennagrid/io/vtk_reader.hpp"
-#include "viennagrid/io/vtk_writer.hpp"
-#include "viennagrid/algorithm/centroid.hpp"
+#include "viennagrid/viennagrid.h"
 
 
 #ifndef __FUNCTION_NAME__
@@ -84,7 +79,17 @@
                                            }
 /* ============================================================================================================ */
 
+struct viennashe_device_impl
+{
+  viennashe::device<viennagrid_mesh> device_;
+};
 
+struct viennashe_simulator_impl
+{
+  viennashe_simulator_impl(viennashe::device<viennagrid_mesh> dev, viennashe::config conf) : sim_(dev, conf) {}
+
+  viennashe::simulator<viennashe::device<viennagrid_mesh> > sim_;
+};
 
 /**
  * @brief The internal C++ namespace of the library
@@ -98,166 +103,23 @@ namespace libviennashe
 
     array_to_accessor(double * vals) : values_(vals) { }
 
-    template < typename ElementT >
-    double operator()(ElementT const & elem) const
-    {
-      return this->get_value(elem);
-    }
+    double operator()(viennagrid_element_id elem) const { return get_value(elem); }
+    double         at(viennagrid_element_id elem) const { return get_value(elem); }
 
-    template < typename ElementT >
-    double get_value(ElementT const & elem) const
+    double get_value(viennagrid_element_id elem) const
     {
-      if ( values_ != 0)
-        return this->values_[elem.id().get()];
+      if (values_)
+        return this->values_[viennagrid_index_from_element_id(elem)];
       else
         throw viennashe::invalid_value_exception("array_to_accessor: values_ must not be NULL!");
     }
-
-    template < typename ElementT >
-    double at(ElementT const & elem) const
-    {
-      return get_value(elem);
-    }
-
 
   private:
     double * values_;
   }; // array_to_accessor
 
-  /**
-   * @brief The mesh types supported by libviennashe.
-   *
-   */
-  struct meshtype
-  {
-    enum
-    {
-      line_1d = 0,
-      triangular_2d,
-      quadrilateral_2d,
-      hexahedral_3d,
-      tetrahedral_3d
-    };
-  };
 }
 
-
-/** @brief Internal C++ to C wrapper for the device. Has typedefs and destructor. */
-struct viennashe_device_impl
-{
-  typedef viennashe::device<viennagrid::line_1d_mesh>          dev1d_type;
-  typedef viennashe::device<viennagrid::quadrilateral_2d_mesh> devq2d_type;
-  typedef viennashe::device<viennagrid::triangular_2d_mesh>    devt2d_type;
-  typedef viennashe::device<viennagrid::hexahedral_3d_mesh>    devh3d_type;
-  typedef viennashe::device<viennagrid::tetrahedral_3d_mesh>   devt3d_type;
-
-  viennashe_device_impl() : stype(-1), device_1d(NULL) {  }
-
-  ~viennashe_device_impl()
-  {
-    if (stype >= 0)
-    {
-      if (stype == libviennashe::meshtype::line_1d)
-        delete device_1d;
-      else if (stype == libviennashe::meshtype::quadrilateral_2d)
-        delete device_quad_2d;
-      else if (stype == libviennashe::meshtype::triangular_2d)
-        delete device_tri_2d;
-      else if (stype == libviennashe::meshtype::hexahedral_3d)
-        delete device_hex_3d;
-      else if (stype == libviennashe::meshtype::tetrahedral_3d)
-        delete device_tet_3d;
-
-      device_1d = NULL;
-    }
-    stype = -1;
-  }
-
-  bool is_valid() const { return (stype >= 0 && device_1d != NULL); }
-
-  int    stype;
-
-  union
-  {
-    dev1d_type  * device_1d;
-    devq2d_type * device_quad_2d;
-    devt2d_type * device_tri_2d;
-    devh3d_type * device_hex_3d;
-    devt3d_type * device_tet_3d;
-  };
-
-}; // viennashe_device_impl
-
-
-/** @brief Internal C++ to C wrapper for the simulator. Has typedefs and destructor. */
-  struct viennashe_simulator_impl
-{
-  //
-  // Mesh typedefs
-  //
-  typedef viennagrid::line_1d_mesh            mesh1d_type;
-  typedef viennagrid::quadrilateral_2d_mesh   meshq2d_type;
-  typedef viennagrid::triangular_2d_mesh      mesht2d_type;
-  typedef viennagrid::hexahedral_3d_mesh      meshh3d_type;
-  typedef viennagrid::tetrahedral_3d_mesh     mesht3d_type;
-
-  //
-  // Device typedefs
-  //
-  typedef viennashe::device<mesh1d_type>  dev1d_type;
-  typedef viennashe::device<meshq2d_type> devq2d_type;
-  typedef viennashe::device<mesht2d_type> devt2d_type;
-  typedef viennashe::device<meshh3d_type> devh3d_type;
-  typedef viennashe::device<mesht3d_type> devt3d_type;
-
-  //
-  // Simulator typedefs
-  //
-  typedef viennashe::simulator<dev1d_type>  sim1d_type;
-  typedef viennashe::simulator<devq2d_type> simq2d_type;
-  typedef viennashe::simulator<devt2d_type> simt2d_type;
-  typedef viennashe::simulator<devh3d_type> simh3d_type;
-  typedef viennashe::simulator<devt3d_type> simt3d_type;
-
-
-  viennashe_simulator_impl(int s, viennashe::config * c) : stype(s), conf(c), sim1d(0) {  }
-
-  ~viennashe_simulator_impl()
-  {
-    if (stype >= 0 && sim1d != NULL)
-    {
-      if (stype == libviennashe::meshtype::line_1d)
-        delete sim1d;
-      else if (stype == libviennashe::meshtype::quadrilateral_2d)
-        delete simq2d;
-      else if (stype == libviennashe::meshtype::triangular_2d)
-        delete simt2d;
-      else if (stype == libviennashe::meshtype::hexahedral_3d)
-        delete simh3d;
-      else if (stype == libviennashe::meshtype::tetrahedral_3d)
-        delete simt3d;
-
-      conf = NULL; // Not deleted by this wrapper !
-      simt3d  = NULL;
-    }
-    stype = -1;
-  }
-
-  bool is_valid() const { return (stype >= 0 && conf != NULL && sim1d != NULL); }
-
-  int     stype;
-  viennashe::config * conf; // Not deleted by this wrapper !
-
-  union
-  {
-    sim1d_type  * sim1d;
-    simq2d_type * simq2d;
-    simt2d_type * simt2d;
-    simh3d_type * simh3d;
-    simt3d_type * simt3d;
-  };
-
-};
 
 #endif	/* LIBVIENNASHE_VIENNASHE_ALL_HPP */
 

@@ -51,7 +51,7 @@ namespace viennashe
                                                              energy_end_(energy_end) {}
 
         template <typename CellType>
-        value_type operator()(CellType const & cell) const
+        std::vector<value_type> operator()(CellType const & cell) const
         {
           double sum_order = 0;   //summation of all expansion orders
           long num_energies = 0;  //no of energy points considered
@@ -67,7 +67,9 @@ namespace viennashe
             }
           }
 
-          return sum_order / num_energies;
+          std::vector<value_type> ret(3);
+          ret[0] = sum_order / num_energies;
+          return ret;
         }
 
       private:
@@ -84,18 +86,16 @@ namespace viennashe
      * @param energy_start   (Optional) Lower bound for the kinetic energy (in eV) range to be considered for the averaging the SHE order
      * @param energy_end     (Optional) Upper bound for the kinetic energy (in eV) range to be considered for the averaging the SHE order
      */
-    template <typename DeviceType,
-              typename SHEQuantity,
-              typename ContainerType>
+    template <typename DeviceType, typename SHEQuantity>
     void write_average_expansion_order_to_container(DeviceType const & device,
                                                     SHEQuantity const & quan,
-                                                    ContainerType & container,
+                                                    viennagrid_quantity_field field,
                                                     double energy_start = 0.0,
                                                     double energy_end = 1.0)
     {
       average_expansion_order_wrapper<DeviceType, SHEQuantity> wrapper(quan, energy_start, energy_end);
 
-      viennashe::write_macroscopic_quantity_to_container(device, wrapper, container);
+      viennashe::write_macroscopic_quantity_to_quantity_field(device, wrapper, field);
     }
 
   } //namespace she

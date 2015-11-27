@@ -28,7 +28,7 @@
 #include "viennashe/core.hpp"
 
 // ViennaGrid default mesh configuration:
-#include "viennagrid/config/default_configs.hpp"
+#include "viennagrid/viennagrid.h"
 
 
 /** \file simple_impurity_scattering.cpp Contains qulitative tests for impurity scattering.
@@ -54,28 +54,28 @@ void init_device(DeviceType & device, double voltage)
   device.set_doping_p(1e4);
   device.set_material(viennashe::materials::si());
 
-  typedef typename viennagrid::result_of::const_cell_range<MeshType>::type   CellContainer;
-
   // STEP 3: Define contacts
   double gnd = 0.0;
   double vcc = voltage;// * 2.0;
 
-  CellContainer cells(device.mesh());
+  viennagrid_dimension cell_dim;
+  viennagrid_mesh_cell_dimension_get(device.mesh(), &cell_dim);
 
-  if (cells.size() < 3) throw std::runtime_error("The Mesh is too small. It contains less than 3 cells!");
+  viennagrid_element_id *cells_begin, *cells_end;
+  viennagrid_mesh_elements_get(device.mesh(), cell_dim, &cells_begin, &cells_end);
 
-  device.set_contact_potential(gnd, cells[0]);
-  device.set_material(viennashe::materials::metal(), cells[0]);
-  device.set_contact_potential(vcc, cells[cells.size()-1]);
-  device.set_material(viennashe::materials::metal(), cells[cells.size()-1]);
+  if (cells_end - cells_begin < 3) throw std::runtime_error("The Mesh is too small. It contains less than 3 cells!");
+
+  device.set_contact_potential(gnd, cells_begin[0]);
+  device.set_material(viennashe::materials::metal(), cells_begin[0]);
+  device.set_contact_potential(vcc, *(cells_end - 1));
+  device.set_material(viennashe::materials::metal(), *(cells_end - 1));
 
 }
 
 int main()
 {
-  typedef viennagrid::line_1d_mesh                                    MeshType;
-  typedef viennashe::device<MeshType>                                 DeviceType;
-  typedef viennagrid::result_of::const_cell_range<MeshType>::type     CellContainer;
+  typedef viennashe::device<viennagrid_mesh>                          DeviceType;
 
   std::cout << viennashe::preamble() << std::endl;
 
@@ -94,10 +94,7 @@ int main()
   //
   // Set up and initialize device
   //
-
   init_device(device, 0.1);
-
-  CellContainer cells(device.mesh());
 
   //
   // Use a drift-diffusion simulation for obtaining an initial guess of the potential:
@@ -155,6 +152,12 @@ int main()
   std::cout << "* main(): Writing SHE result..." << std::endl;
   viennashe::io::gnuplot_edf_writer edfwriter;
 
+  viennagrid_dimension cell_dim;
+  viennagrid_mesh_cell_dimension_get(device.mesh(), &cell_dim);
+
+  viennagrid_element_id *cells_begin, *cells_end;
+  viennagrid_mesh_elements_get(device.mesh(), cell_dim, &cells_begin, &cells_end);
+
   double n_mid_without  = 0;
   double Jn_mid_without = 0;
 
@@ -177,8 +180,8 @@ int main()
 
     viennashe::io::write_cell_quantity_for_gnuplot(Jn, device, "simple_impurity_scattering_Jn1.dat");
 
-    n_mid_without  = n(cells[25]);
-    Jn_mid_without = Jn(cells[25])[0];
+    n_mid_without  = n(cells_begin[25])[0];
+    Jn_mid_without = Jn(cells_begin[25])[0];
   }
   // ####################################################################################################################################
 
@@ -214,8 +217,8 @@ int main()
 
   viennashe::io::write_cell_quantity_for_gnuplot(Jn, device, "simple_impurity_scattering_Jn2.dat");
 
-  double n_mid_with  = n(cells[25]);
-  double Jn_mid_with = Jn(cells[25])[0];
+  double n_mid_with  = n(cells_begin[25])[0];
+  double Jn_mid_with = Jn(cells_begin[25])[0];
 
   if(!viennashe::testing::fuzzy_equal(n_mid_without, n_mid_with))
   {

@@ -46,6 +46,7 @@
 #include <cstddef>
 #include <string>
 #include <map>
+#include <vector>
 
 #include "viennashe/version.hpp"
 

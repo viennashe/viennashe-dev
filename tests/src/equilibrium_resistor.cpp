@@ -30,8 +30,7 @@
 #include "viennashe/core.hpp"
 
 // ViennaGrid default configurations and centroid() algorithm:
-#include "viennagrid/config/default_configs.hpp"
-#include "viennagrid/algorithm/centroid.hpp"
+#include "viennagrid/viennagrid.h"
 
 
 /** \file equilibrium_resistor.cpp Contains a test of the SHE of the BTE in a resistor at equilibrium
@@ -71,8 +70,6 @@ class kinetic_energy_wrapper
 template <typename DeviceType>
 void init_device(DeviceType & device, double len_x)
 {
-  typedef typename DeviceType::mesh_type           MeshType;
-
   // STEP 2: Set doping
   std::cout << "* init_device(): Setting doping..." << std::endl;
 
@@ -83,25 +80,29 @@ void init_device(DeviceType & device, double len_x)
 
 
   // STEP 2: Define contacts
-  typedef typename viennagrid::result_of::const_cell_range<MeshType>::type   CellContainer;
-  typedef typename viennagrid::result_of::iterator<CellContainer>::type      CellIterator;
-
   double gnd = 0.0;
   double vcc = 0.0;
 
-  CellContainer cells(device.mesh());
-  for (CellIterator cit  = cells.begin();
-                    cit != cells.end();
-                  ++cit)
+  viennagrid_dimension cell_dim;
+  viennagrid_mesh_cell_dimension_get(device.mesh(), &cell_dim);
+
+  viennagrid_element_id *cells_begin, *cells_end;
+  viennagrid_mesh_elements_get(device.mesh(), cell_dim, &cells_begin, &cells_end);
+  for (viennagrid_element_id *cit  = cells_begin;
+                              cit != cells_end;
+                            ++cit)
   {
     //left contact:
-    if (viennagrid::centroid(*cit)[0] < 0.1 * len_x)
+    viennagrid_numeric centroid[3];
+    viennagrid_element_centroid(device.mesh(), *cit, centroid);
+
+    if (centroid[0] < 0.1 * len_x)
     {
       device.set_contact_potential(gnd, *cit);
     }
 
     //right contact:
-    if (viennagrid::centroid(*cit)[0] > 0.9 * len_x)
+    if (centroid[0] > 0.9 * len_x)
       device.set_contact_potential(vcc, *cit);
   }
 
@@ -200,8 +201,7 @@ int test_result_at_point(viennashe::carrier_type_id carrier_type,
 
 inline int simulate(double temperature)
 {
-  typedef viennagrid::quadrilateral_2d_mesh                     MeshType;
-  typedef viennashe::device<MeshType>                           DeviceType;
+  typedef viennashe::device<viennagrid_mesh>          DeviceType;
 
   std::cout << "* main(): Creating device..." << std::endl;
   DeviceType device;
@@ -267,16 +267,18 @@ inline int simulate(double temperature)
   //
   // check result: Must equal kinetic energy:
   //
-  typedef viennagrid::result_of::const_cell_range<MeshType>::type   CellContainer;
-  typedef viennagrid::result_of::iterator<CellContainer>::type      CellIterator;
 
   //VectorType she_result = she_simulator.edf().vector();
   //std::cout << "she_result: " << she_result << std::endl;
 
-  CellContainer cells(device.mesh());
-  for (CellIterator cit = cells.begin();
-       cit != cells.end();
-       ++cit)
+  viennagrid_dimension cell_dim;
+  viennagrid_mesh_cell_dimension_get(device.mesh(), &cell_dim);
+
+  viennagrid_element_id *cells_begin, *cells_end;
+  viennagrid_mesh_elements_get(device.mesh(), cell_dim, &cells_begin, &cells_end);
+  for (viennagrid_element_id *cit  = cells_begin;
+                              cit != cells_end;
+                            ++cit)
   {
     for (size_t index_H=0; index_H < she_simulator.quantities().electron_distribution_function().get_value_H_size(); ++index_H)
     {
@@ -295,7 +297,7 @@ inline int simulate(double temperature)
         }
       }
     }
-    std::cout << "Tests passed for cell " << cit->id().get() << std::endl;
+    std::cout << "Tests passed for cell " << viennagrid_index_from_element_id(*cit) << std::endl;
   }
 
   return EXIT_SUCCESS;

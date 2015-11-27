@@ -47,6 +47,8 @@ namespace viennashe
   {
   public:
     typedef MeshT                           mesh_type;
+    typedef viennagrid_region               segment_type;
+    typedef viennagrid_region_id            segment_id_type;
 
     typedef long                            material_id_type;
     typedef std::size_t                     id_type;
@@ -95,6 +97,13 @@ namespace viennashe
     MeshT const & mesh() const { return mesh_; }
     MeshT       & mesh()       { return mesh_; }
 
+    segment_type segment(segment_id_type seg_id)
+    {
+      segment_type seg;
+      viennagrid_mesh_region_get(mesh_, seg_id, &seg);
+      return seg;
+    }
+
     void scale(double factor)
     {
       viennagrid_mesh_scale(mesh_, factor, NULL);
@@ -108,7 +117,7 @@ namespace viennashe
     /** @brief Sets the homogeneous temperature of the device. */
     void set_lattice_temperature(double new_value)
     {
-      set_lattice_temp_impl(new_value, mesh_);
+      set_lattice_temp_region_impl(new_value, NULL);
     }
 
     /** @brief Sets the lattice temperature at a cell. */
@@ -118,10 +127,10 @@ namespace viennashe
     }
 
     /** @brief Sets the lattice temperature on a segment. */
-    /*void set_lattice_temperature(double new_value, segment_type const & s)
+    void set_lattice_temperature(double new_value, segment_type seg)
     {
-      set_lattice_temp_impl(new_value, s);
-    }*/
+      set_lattice_temp_region_impl(new_value, seg);
+    }
 
     /** @brief Returns the lattice temperature on a cell */
     double get_lattice_temperature(viennagrid_element_id cell) const
@@ -156,22 +165,15 @@ namespace viennashe
     }
 
     /** @brief Sets the donator doping (in m^-3) in the specified segment */
-    /*void set_doping_n(double value, viennagrid_region_id region)
+    void set_doping_n(double value, segment_type seg)
     {
-      viennagrid_region_contains_element()
-      set_doping_n_impl(value, d);
-    }*/
-
-    /** @brief Sets the donator doping (in m^-3) in the specified segment */
-    /*void set_doping_n(double value, segment_id_type const & seg_id)
-    {
-      set_doping_n_impl(value, segment(seg_id));
-    }*/
+      set_doping_np_impl(value, seg, DONATOR_DOPING_TYPE_ID);
+    }
 
     /** @brief Sets the donator doping (in m^-3) in the whole device */
     void set_doping_n(double value)
     {
-      set_doping_n_impl(value, mesh_);
+      set_doping_np_impl(value, NULL, DONATOR_DOPING_TYPE_ID);
     }
 
     /** @brief Returns the donator doping (in m^-3) in the specified cell */
@@ -220,21 +222,15 @@ namespace viennashe
     }
 
     /** @brief Sets the acceptor doping (in m^-3) in the specified segment */
-    /*void set_doping_p(double value, segment_type const & d)
+    void set_doping_p(double value, segment_type seg)
     {
-      set_doping_p_impl(value, d);
-    }*/
-
-    /** @brief Sets the donator doping (in m^-3) in the specified segment */
-    /*void set_doping_p(double value, segment_id_type const & seg_id)
-    {
-      set_doping_p_impl(value, segment(seg_id));
-    }*/
+      set_doping_np_impl(value, seg, ACCEPTOR_DOPING_TYPE_ID);
+    }
 
     /** @brief Sets the acceptor doping (in m^-3) in the whole device */
     void set_doping_p(double value)
     {
-      set_doping_p_impl(value, mesh_);
+      set_doping_np_impl(value, NULL, ACCEPTOR_DOPING_TYPE_ID);
     }
 
     /** @brief Returns the donator doping (in m^-3) in the specified cell */
@@ -296,36 +292,30 @@ namespace viennashe
 
     //segment
     /** @brief Sets the material ID on a segment */
-    /*void set_material(long material_id, segment_type const & seg)
+    void set_material(long material_id, segment_type seg)
     {
       set_material_on_complex(material_id, seg);
-    }*/
-
-    /** @brief Sets the material ID on a segment */
-    /*void set_material(long material_id, segment_id_type id)
-    {
-      set_material_on_complex(material_id, segment(id));
-    }*/
+    }
 
     /** @brief Sets the material type using the structs defined in viennashe::materials on a segment */
-    /*template <typename MaterialType>
-    void set_material(MaterialType, segment_type const & seg)
+    template <typename MaterialType>
+    void set_material(MaterialType, segment_type seg)
     {
       set_material_on_complex(long(MaterialType::id), seg);
-    }*/
+    }
 
     // full mesh
     /** @brief Sets a uniform material ID on the whole device */
     void set_material(long material_id)
     {
-      set_material_on_complex(material_id, mesh_);
+      set_material_on_complex(material_id, NULL);
     }
 
     /** @brief Sets a uniform material type using the structs defined in viennashe::materials on the whole device */
     template <typename MaterialType>
     void set_material(MaterialType)
     {
-      set_material_on_complex(long(MaterialType::id), mesh_);
+      set_material_on_complex(long(MaterialType::id), NULL);
     }
 
     /** @brief Returns the material id of the provided cell */
@@ -374,19 +364,23 @@ namespace viennashe
     }
 
     /** @brief Sets a contact potential for a whole segment */
-    /*void set_contact_potential(double pot, segment_type const & seg)
+    void set_contact_potential(double pot, segment_type seg)
     {
-      typedef typename viennagrid::result_of::const_cell_range<segment_type>::type        CellOnSegmentContainer;
-      typedef typename viennagrid::result_of::iterator<CellOnSegmentContainer>::type      CellOnSegmentIterator;
+      viennagrid_dimension cell_dim;
+      viennagrid_mesh_cell_dimension_get(mesh_, &cell_dim);
 
-      CellOnSegmentContainer cells_on_segment(seg);
-      for (CellOnSegmentIterator cit  = cells_on_segment.begin();
-                                 cit != cells_on_segment.end();
-                               ++cit)
+      viennagrid_element_id *cells_begin, *cells_end;
+      viennagrid_mesh_elements_get(mesh_, cell_dim, &cells_begin, &cells_end);
+      for (viennagrid_element_id *cit  = cells_begin;
+                                  cit != cells_end;
+                                ++cit)
       {
-        set_contact_potential(pot, *cit);
+        viennagrid_bool cell_in_segment;
+        viennagrid_region_contains_element(seg, *cit, &cell_in_segment);
+        if (cell_in_segment)
+          set_contact_potential(pot, *cit);
       }
-    }*/
+    }
 
     /** @brief Returns the contact potential at a given cell (this is the externally applied voltage not considering any built-in potential) */
     double get_contact_potential(viennagrid_element_id cell) const
@@ -471,21 +465,30 @@ protected:
       cell_temperature_.at(get_id(cell)) = value;
     }
 
-    template<typename MeshOrSegmentT>
-    void set_lattice_temp_impl(double value, MeshOrSegmentT const & meshseg)    //ComplexType is a segment or a mesh
+    /** @brief Sets the lattice temperature on either the full mesh or a particular segment.
+     *
+     *  @param value    Value of the lattice temperature in Kelvin
+     *  @param mesh     The mesh
+     *  @param seg      The segment (region). If NULL, then the value will be applied to the whole mesh.
+     */
+    void set_lattice_temp_region_impl(double value, segment_type seg)
     {
       if (value <= 0.0) { throw viennashe::invalid_value_exception("device.set_lattice_temp*: Lattice temperatures have to be greater 0 K!", value); }
 
       viennagrid_dimension cell_dim;
-      viennagrid_mesh_cell_dimension_get(mesh, &cell_dim);
+      viennagrid_mesh_cell_dimension_get(mesh_, &cell_dim);
 
       viennagrid_element_id *cells_begin, *cells_end;
-      viennagrid_mesh_elements_get(meshseg, cell_dim, &cells_begin, &cells_end);
+      viennagrid_mesh_elements_get(mesh_, cell_dim, &cells_begin, &cells_end);
       for (viennagrid_element_id *cit  = cells_begin;
                                   cit != cells_end;
                                 ++cit)
       {
-        set_lattice_temp_impl(value, *cit);
+        viennagrid_bool cell_in_segment = true;
+        if (seg)
+          viennagrid_region_contains_element(seg, *cit, &cell_in_segment);
+        if (cell_in_segment)
+          set_lattice_temp_impl(value, *cit);
       }
     }
 
@@ -506,39 +509,29 @@ protected:
       cell_doping_p_.at(get_id(c)) = value;
     }
 
-    template <typename MeshOrSegmentT>
-    void set_doping_n_impl(double value, MeshOrSegmentT const & meshseg)
+    void set_doping_np_impl(double value, segment_type seg, doping_type_id doping_type)
     {
       if (value <= 0.0) { throw viennashe::invalid_value_exception("device.set_doping*: Concentrations have to be greater 0 !", value); }
 
       viennagrid_dimension cell_dim;
-      viennagrid_mesh_cell_dimension_get(mesh, &cell_dim);
+      viennagrid_mesh_cell_dimension_get(mesh_, &cell_dim);
 
       viennagrid_element_id *cells_begin, *cells_end;
-      viennagrid_mesh_elements_get(meshseg, cell_dim, &cells_begin, &cells_end);
+      viennagrid_mesh_elements_get(mesh_, cell_dim, &cells_begin, &cells_end);
       for (viennagrid_element_id *cit  = cells_begin;
                                   cit != cells_end;
                                 ++cit)
       {
-        set_doping_n_impl(value, *cit);
-      }
-    }
-
-    template <typename MeshOrSegmentT>
-    void set_doping_p_impl(double value, MeshOrSegmentT const & meshseg)
-    {
-      if (value <= 0.0) { throw viennashe::invalid_value_exception("device.set_doping*: Concentrations have to be greater 0 !", value); }
-
-      viennagrid_dimension cell_dim;
-      viennagrid_mesh_cell_dimension_get(mesh, &cell_dim);
-
-      viennagrid_element_id *cells_begin, *cells_end;
-      viennagrid_mesh_elements_get(meshseg, cell_dim, &cells_begin, &cells_end);
-      for (viennagrid_element_id *cit  = cells_begin;
-                                  cit != cells_end;
-                                ++cit)
-      {
-        set_doping_p_impl(value, *cit);
+        viennagrid_bool cell_in_segment = true;
+        if (seg)
+          viennagrid_region_contains_element(seg, *cit, &cell_in_segment);
+        if (cell_in_segment)
+        {
+          if (doping_type == DONATOR_DOPING_TYPE_ID)
+            cell_doping_n_.at(get_id(*cit)) = value;
+          else
+            cell_doping_p_.at(get_id(*cit)) = value;
+        }
       }
     }
 
@@ -546,19 +539,22 @@ protected:
     // Material
     //
 
-    template <typename MeshOrSegmentT>
-    void set_material_on_complex(long material_id, MeshOrSegmentT const & meshseg)
+    void set_material_on_complex(long material_id, segment_type seg)
     {
       viennagrid_dimension cell_dim;
-      viennagrid_mesh_cell_dimension_get(mesh, &cell_dim);
+      viennagrid_mesh_cell_dimension_get(mesh_, &cell_dim);
 
       viennagrid_element_id *cells_begin, *cells_end;
-      viennagrid_mesh_elements_get(meshseg, cell_dim, &cells_begin, &cells_end);
+      viennagrid_mesh_elements_get(mesh_, cell_dim, &cells_begin, &cells_end);
       for (viennagrid_element_id *cit  = cells_begin;
                                   cit != cells_end;
                                 ++cit)
       {
-        set_material(material_id, *cit);
+        viennagrid_bool cell_in_segment = true;
+        if (seg)
+          viennagrid_region_contains_element(seg, *cit, &cell_in_segment);
+        if (cell_in_segment)
+          set_material(material_id, *cit);
       }
     }
 
@@ -568,19 +564,22 @@ protected:
     // Traps
     //
 
-    template <typename MeshOrSegmentT>
-    void add_trap_level_on_complex(trap_level_type trap, MeshOrSegmentT const & meshseg)
+    void add_trap_level_on_complex(trap_level_type trap, segment_type seg)
     {
       viennagrid_dimension cell_dim;
-      viennagrid_mesh_cell_dimension_get(mesh, &cell_dim);
+      viennagrid_mesh_cell_dimension_get(mesh_, &cell_dim);
 
       viennagrid_element_id *cells_begin, *cells_end;
-      viennagrid_mesh_elements_get(meshseg, cell_dim, &cells_begin, &cells_end);
+      viennagrid_mesh_elements_get(mesh_, cell_dim, &cells_begin, &cells_end);
       for (viennagrid_element_id *cit  = cells_begin;
                                   cit != cells_end;
                                 ++cit)
       {
-        add_trap_level(trap, *cit);
+        viennagrid_bool cell_in_segment = true;
+        if (seg)
+          viennagrid_region_contains_element(seg, *cit, &cell_in_segment);
+        if (cell_in_segment)
+          add_trap_level(trap, *cit);
       }
     }
 

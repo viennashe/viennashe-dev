@@ -37,33 +37,11 @@ viennasheErrorCode viennashe_create_quantity_register(viennashe_quan_register * 
 
     // Get simulator
     viennashe_simulator_impl * int_sim = sim;
-    if (!int_sim->is_valid())
-    {
-      viennashe::log::error() << "ERROR! viennashe_create_quantity_register(): The simulator (sim) must be valid!" << std::endl;
-      return 2;
-    }
 
     libviennashe::quan_register_internal * int_reg = new libviennashe::quan_register_internal;
     int_reg->int_sim = int_sim; // Make sure to register the quans for a certain simulator!
 
-
-    //
-    // Register Quantities
-    if (int_sim->stype == libviennashe::meshtype::line_1d)
-      libviennashe::register_quans(*(int_reg->int_sim->sim1d),  *int_reg);
-    else if (int_sim->stype == libviennashe::meshtype::quadrilateral_2d)
-      libviennashe::register_quans(*(int_reg->int_sim->simq2d), *int_reg);
-    else if (int_sim->stype == libviennashe::meshtype::triangular_2d)
-      libviennashe::register_quans(*(int_reg->int_sim->simt2d), *int_reg);
-    else if (int_sim->stype == libviennashe::meshtype::hexahedral_3d)
-      libviennashe::register_quans(*(int_reg->int_sim->simh3d), *int_reg);
-    else if (int_sim->stype == libviennashe::meshtype::tetrahedral_3d)
-      libviennashe::register_quans(*(int_reg->int_sim->simt3d), *int_reg);
-    else
-    {
-      viennashe::log::error() << "ERROR! viennashe_create_quantity_register(): Malconfigured simulator!" << std::endl;
-      return 2;
-    }
+    libviennashe::register_quans(int_reg->int_sim->sim_,  *int_reg);
 
     *reg = reinterpret_cast<viennashe_quan_register>(int_reg);
   }
@@ -202,31 +180,9 @@ VIENNASHE_EXPORT viennasheErrorCode viennashe_get_she_edf(viennashe_quan_registe
 
     libviennashe::quan_register_internal * int_reg = reinterpret_cast<libviennashe::quan_register_internal *>(reg);
     // Get simulator
-    viennashe_simulator_impl * int_sim = int_reg->int_sim;
-    if (!int_sim->is_valid())
-    {
-      viennashe::log::error() << "ERROR! viennashe_get_she_edf(): The simulator (sim) must be valid!" << std::endl;
-      return 1;
-    }
-
     viennashe::carrier_type_id arg_ctype = (ctype == viennashe_electron_id) ? viennashe::ELECTRON_TYPE_ID : viennashe::HOLE_TYPE_ID;
 
-    if (int_sim->stype == libviennashe::meshtype::line_1d)
-      libviennashe::she_fill_edf(*(int_reg->int_sim->sim1d), arg_ctype, energies, values, len);
-    else if (int_sim->stype == libviennashe::meshtype::quadrilateral_2d)
-      libviennashe::she_fill_edf(*(int_reg->int_sim->simq2d), arg_ctype, energies, values, len);
-    else if (int_sim->stype == libviennashe::meshtype::triangular_2d)
-      libviennashe::she_fill_edf(*(int_reg->int_sim->simt2d), arg_ctype, energies, values, len);
-    else if (int_sim->stype == libviennashe::meshtype::hexahedral_3d)
-      libviennashe::she_fill_edf(*(int_reg->int_sim->simh3d), arg_ctype, energies, values, len);
-    else if (int_sim->stype == libviennashe::meshtype::tetrahedral_3d)
-      libviennashe::she_fill_edf(*(int_reg->int_sim->simt3d), arg_ctype, energies, values, len);
-    else
-    {
-      viennashe::log::error() << "ERROR! viennashe_get_she_edf(): Malconfigured simulator!" << std::endl;
-      return 2;
-    }
-
+    libviennashe::she_fill_edf(int_reg->int_sim->sim_, arg_ctype, energies, values, len);
 
   }
   catch (...)
@@ -251,32 +207,10 @@ VIENNASHE_EXPORT viennasheErrorCode viennashe_get_she_dos(viennashe_quan_registe
     if (energies == NULL) { return 3; }
     if (values == NULL) { return 4; }
     libviennashe::quan_register_internal * int_reg = reinterpret_cast<libviennashe::quan_register_internal *>(reg);
-    // Get simulator
-    viennashe_simulator_impl * int_sim = int_reg->int_sim;
-    if (!int_sim->is_valid())
-    {
-      viennashe::log::error() << "ERROR! viennashe_get_she_dos(): The simulator (sim) must be valid!" << std::endl;
-      return 1;
-    }
 
     viennashe::carrier_type_id arg_ctype = (ctype == viennashe_electron_id) ? viennashe::ELECTRON_TYPE_ID : viennashe::HOLE_TYPE_ID;
 
-    if (int_sim->stype == libviennashe::meshtype::line_1d)
-      libviennashe::she_fill_dos(*(int_reg->int_sim->sim1d), arg_ctype, energies, values, len);
-    else if (int_sim->stype == libviennashe::meshtype::quadrilateral_2d)
-      libviennashe::she_fill_dos(*(int_reg->int_sim->simq2d), arg_ctype, energies, values, len);
-    else if (int_sim->stype == libviennashe::meshtype::triangular_2d)
-      libviennashe::she_fill_dos(*(int_reg->int_sim->simt2d), arg_ctype, energies, values, len);
-    else if (int_sim->stype == libviennashe::meshtype::hexahedral_3d)
-      libviennashe::she_fill_dos(*(int_reg->int_sim->simh3d), arg_ctype, energies, values, len);
-    else if (int_sim->stype == libviennashe::meshtype::tetrahedral_3d)
-      libviennashe::she_fill_dos(*(int_reg->int_sim->simt3d), arg_ctype, energies, values, len);
-    else
-    {
-      viennashe::log::error() << "ERROR! viennashe_get_she_dos(): Malconfigured simulator!" << std::endl;
-      return 2;
-    }
-
+    libviennashe::she_fill_dos(int_reg->int_sim->sim_, arg_ctype, energies, values, len);
 
   }
   catch (...)
@@ -298,32 +232,10 @@ VIENNASHE_EXPORT viennasheErrorCode viennashe_get_she_group_velocity(viennashe_q
     CHECK_ARGUMENT_FOR_NULL(values,4,"values");
 
     libviennashe::quan_register_internal * int_reg = reinterpret_cast<libviennashe::quan_register_internal *>(reg);
-    // Get simulator
-    viennashe_simulator_impl * int_sim = int_reg->int_sim;
-    if (!int_sim->is_valid())
-    {
-      viennashe::log::error() << "ERROR! viennashe_get_she_group_velocity(): The simulator (sim) must be valid!" << std::endl;
-      return 1;
-    }
 
     viennashe::carrier_type_id arg_ctype = (ctype == viennashe_electron_id) ? viennashe::ELECTRON_TYPE_ID : viennashe::HOLE_TYPE_ID;
 
-    if (int_sim->stype == libviennashe::meshtype::line_1d)
-      libviennashe::she_fill_group_velocity(*(int_reg->int_sim->sim1d), arg_ctype, energies, values, len);
-    else if (int_sim->stype == libviennashe::meshtype::quadrilateral_2d)
-      libviennashe::she_fill_group_velocity(*(int_reg->int_sim->simq2d), arg_ctype, energies, values, len);
-    else if (int_sim->stype == libviennashe::meshtype::triangular_2d)
-      libviennashe::she_fill_group_velocity(*(int_reg->int_sim->simt2d), arg_ctype, energies, values, len);
-    else if (int_sim->stype == libviennashe::meshtype::hexahedral_3d)
-      libviennashe::she_fill_group_velocity(*(int_reg->int_sim->simh3d), arg_ctype, energies, values, len);
-    else if (int_sim->stype == libviennashe::meshtype::tetrahedral_3d)
-      libviennashe::she_fill_group_velocity(*(int_reg->int_sim->simt3d), arg_ctype, energies, values, len);
-    else
-    {
-      viennashe::log::error() << "ERROR! viennashe_get_she_group_velocity(): Malconfigured simulator!" << std::endl;
-      return 2;
-    }
-
+    libviennashe::she_fill_group_velocity(int_reg->int_sim->sim_, arg_ctype, energies, values, len);
 
   }
   catch (...)

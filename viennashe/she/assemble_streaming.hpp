@@ -48,10 +48,10 @@ namespace viennashe
   namespace she
   {
 
-    double compute_weighted_interface_area(viennagrid_mesh mesh,
-                                           viennagrid_element_id cell,
-                                           viennagrid_element_id other_cell,
-                                           viennagrid_element_id facet)
+    inline double compute_weighted_interface_area(viennagrid_mesh mesh,
+                                                  viennagrid_element_id cell,
+                                                  viennagrid_element_id other_cell,
+                                                  viennagrid_element_id facet)
     {
       std::vector<double> centroid_1(3), centroid_2(3);
 

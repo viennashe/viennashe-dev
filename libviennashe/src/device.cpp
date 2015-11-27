@@ -25,32 +25,34 @@
 namespace libviennashe
 {
 
-    template < typename DeviceT >
+    template<typename DeviceT>
     void get_vertices_on_cell(DeviceT const & device,
                               viennashe_index_type cell_id,
                               viennashe_index_type * vertex_ids
                               )
     {
       typedef typename DeviceT::mesh_type MeshType;
-      typedef typename viennagrid::result_of::cell<MeshType>::type       CellType;
-      typedef typename viennagrid::result_of::const_cell_range<MeshType>::type      CellContainer;
-      typedef typename viennagrid::result_of::const_vertex_range<CellType>::type     VertexOnCellContainer;
-      typedef typename viennagrid::result_of::iterator<VertexOnCellContainer>::type  VertexOnCellIterator;
 
-      CellContainer   cells(device.mesh());
+      if (!vertex_ids) throw std::invalid_argument("vertices = NULL !");
 
-      if (vertex_ids == 0) throw std::invalid_argument("vertices = NULL !");
-      if (/*cell_id < 0 ||*/ cell_id >= cells.size()) throw std::invalid_argument("cell_id invalid !");
+      viennagrid_dimension cell_dim;
+      viennagrid_mesh_cell_dimension_get(device.mesh(), &cell_dim);
 
+      viennagrid_element_id *cells_begin, *cells_end;
+      viennagrid_mesh_elements_get(device.mesh(), cell_dim, &cells_begin, &cells_end);
 
-      VertexOnCellContainer vertices_on_cell(cells[cell_id]);
+      if (/*cell_id < 0 ||*/ cell_id >= viennashe_index_type(cells_end - cells_begin)) throw std::invalid_argument("cell_id invalid !");
+
+      viennagrid_element_id *vertices_on_cell_begin, *vertices_on_cell_end;
+      viennagrid_element_boundary_elements(device.mesh(), cells_begin[cell_id], 0, &vertices_on_cell_begin, &vertices_on_cell_end);
+
       std::size_t j = 0;
-      for (VertexOnCellIterator vit = vertices_on_cell.begin(); vit != vertices_on_cell.end(); ++vit, ++j)
+      for (viennagrid_element_id *vit = vertices_on_cell_begin; vit != vertices_on_cell_end; ++vit, ++j)
       {
-        vertex_ids[j] = static_cast<viennashe_index_type>(vit->id().get());
+        vertex_ids[j] = viennashe_index_type(viennagrid_index_from_element_id(*vit));
       }
 
-    } // dump_mesh
+    } // get_vertices_on_cell
 
 
   /**
@@ -63,15 +65,17 @@ namespace libviennashe
   template < typename DeviceT >
   void initalize_device(DeviceT & device, long * material_ids, double * doping_n, double * doping_p)
   {
-    typedef typename DeviceT::mesh_type              MeshType;
+    viennagrid_dimension cell_dim;
+    viennagrid_mesh_cell_dimension_get(device.mesh(), &cell_dim);
 
-    typedef typename viennagrid::result_of::const_cell_range<MeshType>::type     CellContainer;
+    viennagrid_element_id *cells_begin, *cells_end;
+    viennagrid_mesh_elements_get(device.mesh(), cell_dim, &cells_begin, &cells_end);
 
-    CellContainer   cells     = viennagrid::cells(device.mesh());
+    std::size_t cell_num = cells_end - cells_begin;
 
-    for (std::size_t i = 0; i < cells.size(); ++i)
+    for (std::size_t i = 0; i < cell_num; ++i)
     {
-      device.set_material(material_ids[i], cells[i]);
+      device.set_material(material_ids[i], cells_begin[i]);
 
       if (doping_n[i] < 0)
       {
@@ -84,8 +88,8 @@ namespace libviennashe
       else
       {
         // Zero doping means do not set !
-        if (doping_n[i]) device.set_doping_n(doping_n[i], cells[i]);
-        if (doping_p[i]) device.set_doping_p(doping_p[i], cells[i]);
+        if (doping_n[i]) device.set_doping_n(doping_n[i], cells_begin[i]);
+        if (doping_p[i]) device.set_doping_p(doping_p[i], cells_begin[i]);
       }
     }
 
@@ -101,17 +105,19 @@ namespace libviennashe
   template < typename DeviceT >
   void set_contact_potential(DeviceT & device, viennashe_index_type * cell_ids, double * values, viennashe_index_type len)
   {
-    typedef typename DeviceT::mesh_type              MeshType;
+    viennagrid_dimension cell_dim;
+    viennagrid_mesh_cell_dimension_get(device.mesh(), &cell_dim);
 
-    typedef typename viennagrid::result_of::const_cell_range<MeshType>::type     CellContainer;
+    viennagrid_element_id *cells_begin, *cells_end;
+    viennagrid_mesh_elements_get(device.mesh(), cell_dim, &cells_begin, &cells_end);
 
-    CellContainer   cells(device.mesh());
+    std::size_t cell_num = cells_end - cells_begin;
 
     for (std::size_t i = 0; i < len; ++i)
     {
       const viennashe_index_type id = cell_ids[i];
-      if (id < cells.size())
-        device.set_contact_potential(values[i], cells[id] );
+      if (id < cell_num)
+        device.set_contact_potential(values[i], cells_begin[id] );
       else
         viennashe::log::warn() << "WARNING! set_contact_potential(): Invalid cell id '" << id << "' ... skipping!" << std::endl;
     }
@@ -127,11 +133,7 @@ namespace libviennashe
   template < typename DeviceT >
   void set_contact_potential(DeviceT & device, viennashe_index_type segment_id,  double value)
   {
-    if (segment_id < device.segmentation().size())
-      device.set_contact_potential(value, device.segment(static_cast<int>(segment_id)));
-    else
-      viennashe::log::warn() << "WARNING! set_contact_potential(): Invalid segment id '" << segment_id << "' ... skipping!" << std::endl;
-
+    device.set_contact_potential(value, device.segment(static_cast<viennagrid_region_id>(segment_id)));
   } // initalize_device
 
 } // namespace libviennashe
@@ -161,14 +163,10 @@ viennasheErrorCode viennashe_create_1d_device(viennashe_device * dev, double len
       return 3;
     }
 
-    //
-    // Generate device
-    int_dev->stype     = libviennashe::meshtype::line_1d;
-    int_dev->device_1d = new viennashe::device<viennagrid::line_1d_mesh>();
 
     viennashe::util::device_generation_config generator_params;
     generator_params.add_segment(0.0, len_x, static_cast<unsigned long>(points_x));
-    int_dev->device_1d->generate_mesh(generator_params);
+    int_dev->device_.generate_mesh(generator_params);
 
     *dev = int_dev;
   }
@@ -185,10 +183,8 @@ viennasheErrorCode viennashe_free_device(viennashe_device dev)
 {
   try
   {
-    if (dev != NULL)
-    {
-      delete (dev);
-    }
+    if (dev)
+      delete dev;
   }
   catch(...)
   {
@@ -211,25 +207,9 @@ viennasheErrorCode viennashe_initalize_device(viennashe_device dev, viennashe_ma
       return 2;
     }
 
-    viennashe_device_impl * int_dev = (dev);
+    viennashe_device_impl * int_dev = dev;
 
-    if (int_dev->device_1d == NULL)
-    {
-      viennashe::log::error() << "ERROR! initalize_device(): The device must exist!" << std::endl;
-      return 1;
-    }
-
-    switch (int_dev->stype)
-    {
-    case libviennashe::meshtype::line_1d:           libviennashe::initalize_device(*int_dev->device_1d,      material_ids, doping_n, doping_p); break;
-    case libviennashe::meshtype::quadrilateral_2d:  libviennashe::initalize_device(*int_dev->device_quad_2d, material_ids, doping_n, doping_p); break;
-    case libviennashe::meshtype::triangular_2d:     libviennashe::initalize_device(*int_dev->device_tri_2d,  material_ids, doping_n, doping_p); break;
-    case libviennashe::meshtype::hexahedral_3d:     libviennashe::initalize_device(*int_dev->device_hex_3d, material_ids, doping_n, doping_p); break;
-    case libviennashe::meshtype::tetrahedral_3d:    libviennashe::initalize_device(*int_dev->device_tet_3d, material_ids, doping_n, doping_p); break;
-    default:
-      viennashe::log::error() << "ERROR! initalize_device(): UNKOWN DEVICE TYPE!" << std::endl;
-      return -1;
-    }
+    libviennashe::initalize_device(int_dev->device_, material_ids, doping_n, doping_p);
   }
   catch(...)
   {
@@ -252,25 +232,11 @@ viennasheErrorCode viennashe_set_material_on_segment(viennashe_device dev, vienn
       return 2;
     }
 
-    viennashe_device_impl * int_dev = (dev);
+    viennashe_device_impl * int_dev = dev;
 
-    if (int_dev->device_1d == NULL)
-    {
-      viennashe::log::error() << "ERROR! viennashe_set_material_on_segment(): The device must exist!" << std::endl;
-      return 1;
-    }
-
-    switch (int_dev->stype)
-    {
-    case libviennashe::meshtype::line_1d:           int_dev->device_1d->set_material(material_id, static_cast<int>(segment_id)); break;
-    case libviennashe::meshtype::quadrilateral_2d:  int_dev->device_quad_2d->set_material(material_id, static_cast<int>(segment_id)); break;
-    case libviennashe::meshtype::triangular_2d:     int_dev->device_tri_2d->set_material(material_id, static_cast<int>(segment_id)); break;
-    case libviennashe::meshtype::hexahedral_3d:     int_dev->device_hex_3d->set_material(material_id, static_cast<int>(segment_id)); break;
-    case libviennashe::meshtype::tetrahedral_3d:    int_dev->device_tet_3d->set_material(material_id, static_cast<int>(segment_id)); break;
-    default:
-      viennashe::log::error() << "ERROR! initalize_device(): UNKOWN DEVICE TYPE!" << std::endl;
-      return -1;
-    }
+    viennagrid_region region;
+    viennagrid_mesh_region_get(int_dev->device_.mesh(), segment_id, &region);
+    int_dev->device_.set_material(material_id, region);
   }
   catch(...)
   {
@@ -293,26 +259,11 @@ viennasheErrorCode viennashe_set_doping_n_on_segment(viennashe_device dev, doubl
       return 2;
     }
 
-    viennashe_device_impl * int_dev = (dev);
+    viennashe_device_impl * int_dev = dev;
 
-    if (int_dev->device_1d == NULL)
-    {
-      viennashe::log::error() << "ERROR! viennashe_set_doping_n_on_segment(): The device must exist!" << std::endl;
-      return 1;
-    }
-
-    switch (int_dev->stype)
-    {
-    case libviennashe::meshtype::line_1d:           int_dev->device_1d->set_doping_n(doping_n, static_cast<int>(segment_id)); break;
-    case libviennashe::meshtype::quadrilateral_2d:  int_dev->device_quad_2d->set_doping_n(doping_n, static_cast<int>(segment_id)); break;
-    case libviennashe::meshtype::triangular_2d:     int_dev->device_tri_2d->set_doping_n(doping_n, static_cast<int>(segment_id)); break;
-    case libviennashe::meshtype::hexahedral_3d:     int_dev->device_hex_3d->set_doping_n(doping_n, static_cast<int>(segment_id)); break;
-    case libviennashe::meshtype::tetrahedral_3d:    int_dev->device_tet_3d->set_doping_n(doping_n, static_cast<int>(segment_id)); break;
-    default:
-      viennashe::log::error() << "ERROR! viennashe_set_doping_n_on_segment(): UNKOWN DEVICE TYPE!" << std::endl;
-      return -1;
-    }
-
+    viennagrid_region region;
+    viennagrid_mesh_region_get(int_dev->device_.mesh(), segment_id, &region);
+    int_dev->device_.set_doping_n(doping_n, region);
   }
   catch(...)
   {
@@ -335,26 +286,11 @@ viennasheErrorCode viennashe_set_doping_p_on_segment(viennashe_device dev, doubl
       return 2;
     }
 
-    viennashe_device_impl * int_dev = (dev);
+    viennashe_device_impl * int_dev = dev;
 
-    if (int_dev->device_1d == NULL)
-    {
-      viennashe::log::error() << "ERROR! viennashe_set_doping_p_on_segment(): The device must exist!" << std::endl;
-      return 1;
-    }
-
-    switch (int_dev->stype)
-    {
-    case libviennashe::meshtype::line_1d:           int_dev->device_1d->set_doping_p(doping_p, static_cast<int>(segment_id)); break;
-    case libviennashe::meshtype::quadrilateral_2d:  int_dev->device_quad_2d->set_doping_p(doping_p, static_cast<int>(segment_id)); break;
-    case libviennashe::meshtype::triangular_2d:     int_dev->device_tri_2d->set_doping_p(doping_p, static_cast<int>(segment_id)); break;
-    case libviennashe::meshtype::hexahedral_3d:     int_dev->device_hex_3d->set_doping_p(doping_p, static_cast<int>(segment_id)); break;
-    case libviennashe::meshtype::tetrahedral_3d:    int_dev->device_tet_3d->set_doping_p(doping_p, static_cast<int>(segment_id)); break;
-    default:
-      viennashe::log::error() << "ERROR! viennashe_set_doping_p_on_segment(): UNKOWN DEVICE TYPE!" << std::endl;
-      return -1;
-    }
-
+    viennagrid_region region;
+    viennagrid_mesh_region_get(int_dev->device_.mesh(), segment_id, &region);
+    int_dev->device_.set_doping_p(doping_p, region);
   }
   catch(...)
   {
@@ -374,25 +310,9 @@ viennasheErrorCode viennashe_set_contact_potential_cells(viennashe_device dev, v
     CHECK_ARGUMENT_FOR_NULL(cell_ids,2,"cell_ids");
     CHECK_ARGUMENT_FOR_NULL(values,3,"values");
 
-    viennashe_device_impl * int_dev = (dev);
+    viennashe_device_impl * int_dev = dev;
 
-    if (int_dev->device_1d == NULL)
-    {
-      viennashe::log::error() << "ERROR! set_contact_potential(): The device must exist!" << std::endl;
-      return 1;
-    }
-
-    switch (int_dev->stype)
-    {
-    case libviennashe::meshtype::line_1d:           libviennashe::set_contact_potential(*int_dev->device_1d, cell_ids, values, len); break;
-    case libviennashe::meshtype::quadrilateral_2d:  libviennashe::set_contact_potential(*int_dev->device_quad_2d, cell_ids, values, len); break;
-    case libviennashe::meshtype::triangular_2d:     libviennashe::set_contact_potential(*int_dev->device_tri_2d, cell_ids, values, len); break;
-    case libviennashe::meshtype::hexahedral_3d:     libviennashe::set_contact_potential(*int_dev->device_hex_3d, cell_ids, values, len); break;
-    case libviennashe::meshtype::tetrahedral_3d:    libviennashe::set_contact_potential(*int_dev->device_tet_3d, cell_ids, values, len); break;
-    default:
-      viennashe::log::error() << "ERROR! initalize_device(): UNKOWN DEVICE TYPE!" << std::endl;
-      return -1;
-    }
+    libviennashe::set_contact_potential(int_dev->device_, cell_ids, values, len);
   }
   catch(...)
   {
@@ -410,25 +330,9 @@ viennasheErrorCode viennashe_set_contact_potential_segment(viennashe_device dev,
     // Checks
     CHECK_ARGUMENT_FOR_NULL(dev,1,"dev");
 
-    viennashe_device_impl * int_dev = (dev);
+    viennashe_device_impl * int_dev = dev;
 
-    if (int_dev->device_1d == NULL)
-    {
-      viennashe::log::error() << "ERROR! set_contact_potential(): The device must exist!" << std::endl;
-      return 1;
-    }
-
-    switch (int_dev->stype)
-    {
-    case libviennashe::meshtype::line_1d:           libviennashe::set_contact_potential(*int_dev->device_1d, segment_id, value); break;
-    case libviennashe::meshtype::quadrilateral_2d:  libviennashe::set_contact_potential(*int_dev->device_quad_2d, segment_id, value); break;
-    case libviennashe::meshtype::triangular_2d:     libviennashe::set_contact_potential(*int_dev->device_tri_2d, segment_id, value); break;
-    case libviennashe::meshtype::hexahedral_3d:     libviennashe::set_contact_potential(*int_dev->device_hex_3d, segment_id, value); break;
-    case libviennashe::meshtype::tetrahedral_3d:    libviennashe::set_contact_potential(*int_dev->device_tet_3d, segment_id, value); break;
-    default:
-      viennashe::log::error() << "ERROR! initalize_device(): UNKOWN DEVICE TYPE!" << std::endl;
-      return -1;
-    }
+    libviennashe::set_contact_potential(int_dev->device_, segment_id, value);
   }
   catch(...)
   {
@@ -447,19 +351,11 @@ viennasheErrorCode viennashe_get_num_vertices(viennashe_device dev, viennashe_in
     CHECK_ARGUMENT_FOR_NULL(dev,1,"dev");
     CHECK_ARGUMENT_FOR_NULL(num,2,"num");
 
-    viennashe_device_impl * int_dev = (dev);
+    viennashe_device_impl * int_dev = dev;
 
-    if (int_dev->stype == libviennashe::meshtype::line_1d)
-      *num = static_cast<viennashe_index_type>(viennagrid::vertices(int_dev->device_1d->mesh()).size());
-    if (int_dev->stype == libviennashe::meshtype::quadrilateral_2d)
-      *num = static_cast<viennashe_index_type>(viennagrid::vertices(int_dev->device_quad_2d->mesh()).size());
-    if (int_dev->stype == libviennashe::meshtype::triangular_2d)
-      *num = static_cast<viennashe_index_type>(viennagrid::vertices(int_dev->device_tri_2d->mesh()).size());
-    if (int_dev->stype == libviennashe::meshtype::hexahedral_3d)
-      *num = static_cast<viennashe_index_type>(viennagrid::vertices(int_dev->device_hex_3d->mesh()).size());
-    if (int_dev->stype == libviennashe::meshtype::tetrahedral_3d)
-      *num = static_cast<viennashe_index_type>(viennagrid::vertices(int_dev->device_tet_3d->mesh()).size());
-
+    viennagrid_int vertex_count;
+    viennagrid_mesh_element_count(int_dev->device_.mesh(), 0, &vertex_count);
+    *num = vertex_count;
   }
   catch(...)
   {
@@ -478,18 +374,14 @@ viennasheErrorCode viennashe_get_num_cells(viennashe_device dev, viennashe_index
     CHECK_ARGUMENT_FOR_NULL(dev,1,"dev");
     CHECK_ARGUMENT_FOR_NULL(num,2,"num");
 
-    viennashe_device_impl * int_dev = (dev);
+    viennashe_device_impl * int_dev = dev;
 
-    if (int_dev->stype == libviennashe::meshtype::line_1d)
-      *num = static_cast<viennashe_index_type>(viennagrid::cells(int_dev->device_1d->mesh()).size());
-    if (int_dev->stype == libviennashe::meshtype::quadrilateral_2d)
-      *num = static_cast<viennashe_index_type>(viennagrid::cells(int_dev->device_quad_2d->mesh()).size());
-    if (int_dev->stype == libviennashe::meshtype::triangular_2d)
-      *num = static_cast<viennashe_index_type>(viennagrid::cells(int_dev->device_tri_2d->mesh()).size());
-    if (int_dev->stype == libviennashe::meshtype::hexahedral_3d)
-      *num = static_cast<viennashe_index_type>(viennagrid::cells(int_dev->device_hex_3d->mesh()).size());
-    if (int_dev->stype == libviennashe::meshtype::tetrahedral_3d)
-      *num = static_cast<viennashe_index_type>(viennagrid::cells(int_dev->device_tet_3d->mesh()).size());
+    viennagrid_dimension cell_dim;
+    viennagrid_mesh_cell_dimension_get(int_dev->device_.mesh(), &cell_dim);
+
+    viennagrid_int cell_count;
+    viennagrid_mesh_element_count(int_dev->device_.mesh(), cell_dim, &cell_count);
+    *num = cell_count;
   }
   catch(...)
   {
@@ -508,18 +400,11 @@ viennasheErrorCode viennashe_get_num_segments(viennashe_device dev, viennashe_in
     CHECK_ARGUMENT_FOR_NULL(dev,1,"dev");
     CHECK_ARGUMENT_FOR_NULL(num,2,"num");
 
-    viennashe_device_impl * int_dev = (dev);
+    viennashe_device_impl * int_dev = dev;
 
-    if (int_dev->stype == libviennashe::meshtype::line_1d)
-      *num = static_cast<viennashe_index_type>(int_dev->device_1d->segmentation().size());
-    if (int_dev->stype == libviennashe::meshtype::quadrilateral_2d)
-      *num = static_cast<viennashe_index_type>(int_dev->device_quad_2d->segmentation().size());
-    if (int_dev->stype == libviennashe::meshtype::triangular_2d)
-      *num = static_cast<viennashe_index_type>(int_dev->device_tri_2d->segmentation().size());
-    if (int_dev->stype == libviennashe::meshtype::hexahedral_3d)
-      *num = static_cast<viennashe_index_type>(int_dev->device_hex_3d->segmentation().size());
-    if (int_dev->stype == libviennashe::meshtype::tetrahedral_3d)
-      *num = static_cast<viennashe_index_type>(int_dev->device_tet_3d->segmentation().size());
+    viennagrid_region_id *regions_begin, *regions_end;
+    viennagrid_mesh_regions_get(int_dev->device_.mesh(), &regions_begin, &regions_end);
+    *num = regions_end - regions_begin;
   }
   catch(...)
   {
@@ -538,22 +423,25 @@ viennasheErrorCode viennashe_get_num_vertices_on_segment (viennashe_device dev, 
     CHECK_ARGUMENT_FOR_NULL(dev,1,"dev");
     CHECK_ARGUMENT_FOR_NULL(num,3,"num");
 
-
-    viennashe_index_type num_seg = 0;
-    viennashe_get_num_segments(dev, &num_seg);
     //
-    viennashe_device_impl * int_dev = (dev);
+    viennashe_device_impl * int_dev = dev;
 
-    if (int_dev->stype == libviennashe::meshtype::line_1d)
-      *num = static_cast<viennashe_index_type>(viennagrid::vertices(int_dev->device_1d->segmentation()[static_cast<int>(segment_id)]).size());
-    if (int_dev->stype == libviennashe::meshtype::quadrilateral_2d)
-      *num = static_cast<viennashe_index_type>(viennagrid::vertices(int_dev->device_quad_2d->segmentation()[static_cast<int>(segment_id)]).size());
-    if (int_dev->stype == libviennashe::meshtype::triangular_2d)
-      *num = static_cast<viennashe_index_type>(viennagrid::vertices(int_dev->device_tri_2d->segmentation()[static_cast<int>(segment_id)]).size());
-    if (int_dev->stype == libviennashe::meshtype::hexahedral_3d)
-      *num = static_cast<viennashe_index_type>(viennagrid::vertices(int_dev->device_hex_3d->segmentation()[static_cast<int>(segment_id)]).size());
-    if (int_dev->stype == libviennashe::meshtype::tetrahedral_3d)
-      *num = static_cast<viennashe_index_type>(viennagrid::vertices(int_dev->device_tet_3d->segmentation()[static_cast<int>(segment_id)]).size());
+    viennagrid_element_id *vertices_begin, *vertices_end;
+    viennagrid_mesh_elements_get(int_dev->device_.mesh(), 0, &vertices_begin, &vertices_end);
+
+    viennagrid_region region = int_dev->device_.segment(segment_id);
+
+    viennashe_index_type vertex_num = 0;
+
+    for (viennagrid_element_id *vit = vertices_begin; vit != vertices_end; ++vit)
+    {
+      viennagrid_bool vertex_in_region;
+      viennagrid_region_contains_element(region, *vit, &vertex_in_region);
+      if (vertex_in_region)
+        ++vertex_num;
+    }
+
+    *num = vertex_num;
   }
   catch(...)
   {
@@ -572,21 +460,27 @@ viennasheErrorCode viennashe_get_num_cells_on_segment(viennashe_device dev, vien
     CHECK_ARGUMENT_FOR_NULL(dev,1,"dev");
     CHECK_ARGUMENT_FOR_NULL(num,3,"num");
 
-    viennashe_index_type num_seg = 0;
-    viennashe_get_num_segments(dev, &num_seg);
-    //
-    viennashe_device_impl * int_dev = (dev);
+    viennashe_device_impl * int_dev = dev;
 
-    if (int_dev->stype == libviennashe::meshtype::line_1d)
-      *num = static_cast<viennashe_index_type>(viennagrid::cells(int_dev->device_1d->segmentation()[static_cast<int>(segment_id)]).size());
-    if (int_dev->stype == libviennashe::meshtype::quadrilateral_2d)
-      *num = static_cast<viennashe_index_type>(viennagrid::cells(int_dev->device_quad_2d->segmentation()[static_cast<int>(segment_id)]).size());
-    if (int_dev->stype == libviennashe::meshtype::triangular_2d)
-      *num = static_cast<viennashe_index_type>(viennagrid::cells(int_dev->device_tri_2d->segmentation()[static_cast<int>(segment_id)]).size());
-    if (int_dev->stype == libviennashe::meshtype::hexahedral_3d)
-      *num = static_cast<viennashe_index_type>(viennagrid::cells(int_dev->device_hex_3d->segmentation()[static_cast<int>(segment_id)]).size());
-    if (int_dev->stype == libviennashe::meshtype::tetrahedral_3d)
-      *num = static_cast<viennashe_index_type>(viennagrid::cells(int_dev->device_tet_3d->segmentation()[static_cast<int>(segment_id)]).size());
+    viennagrid_dimension cell_dim;
+    viennagrid_mesh_cell_dimension_get(int_dev->device_.mesh(), &cell_dim);
+
+    viennagrid_element_id *cells_begin, *cells_end;
+    viennagrid_mesh_elements_get(int_dev->device_.mesh(), cell_dim, &cells_begin, &cells_end);
+
+    viennagrid_region region = int_dev->device_.segment(segment_id);
+
+    viennashe_index_type cell_num = 0;
+
+    for (viennagrid_element_id *cit = cells_begin; cit != cells_end; ++cit)
+    {
+      viennagrid_bool cell_in_region;
+      viennagrid_region_contains_element(region, *cit, &cell_in_region);
+      if (cell_in_region)
+        ++cell_num;
+    }
+
+    *num = cell_num;
   }
   catch(...)
   {
@@ -605,13 +499,11 @@ viennasheErrorCode viennashe_get_dimension (viennashe_device dev, viennashe_inde
     CHECK_ARGUMENT_FOR_NULL(dev,1,"dev");
     CHECK_ARGUMENT_FOR_NULL(dim,2,"dim");
 
-    viennashe_device_impl * int_dev = (dev);
+    viennashe_device_impl * int_dev = dev;
 
-    if (int_dev->stype == libviennashe::meshtype::line_1d)          *dim = 1;
-    if (int_dev->stype == libviennashe::meshtype::quadrilateral_2d) *dim = 2;
-    if (int_dev->stype == libviennashe::meshtype::triangular_2d)    *dim = 2;
-    if (int_dev->stype == libviennashe::meshtype::hexahedral_3d)    *dim = 3;
-    if (int_dev->stype == libviennashe::meshtype::tetrahedral_3d)   *dim = 3;
+    viennagrid_dimension geo_dim;
+    viennagrid_mesh_geometric_dimension_get(int_dev->device_.mesh(), &geo_dim);
+    *dim = geo_dim;
   }
   catch(...)
   {
@@ -630,13 +522,17 @@ viennasheErrorCode viennashe_get_num_vertices_per_cell (viennashe_device dev, vi
     CHECK_ARGUMENT_FOR_NULL(dev,1,"dev");
     CHECK_ARGUMENT_FOR_NULL(num,2,"num");
 
-    viennashe_device_impl * int_dev = (dev);
+    viennashe_device_impl * int_dev = dev;
 
-    if (int_dev->stype == libviennashe::meshtype::line_1d)          *num = 2;
-    if (int_dev->stype == libviennashe::meshtype::quadrilateral_2d) *num = 4;
-    if (int_dev->stype == libviennashe::meshtype::triangular_2d)    *num = 3;
-    if (int_dev->stype == libviennashe::meshtype::hexahedral_3d)    *num = 6;
-    if (int_dev->stype == libviennashe::meshtype::tetrahedral_3d)   *num = 4;
+    viennagrid_dimension cell_dim;
+    viennagrid_mesh_cell_dimension_get(int_dev->device_.mesh(), &cell_dim);
+
+    viennagrid_element_id *cells_begin, *cells_end;
+    viennagrid_mesh_elements_get(int_dev->device_.mesh(), cell_dim, &cells_begin, &cells_end);
+
+    viennagrid_element_id *vertices_on_cell_begin, *vertices_on_cell_end;
+    viennagrid_element_boundary_elements(int_dev->device_.mesh(), cells_begin[0], 0, &vertices_on_cell_begin, &vertices_on_cell_end);
+    *num = vertices_on_cell_end - vertices_on_cell_begin;
   }
   catch(...)
   {
@@ -647,7 +543,7 @@ viennasheErrorCode viennashe_get_num_vertices_per_cell (viennashe_device dev, vi
 }
 
 
-VIENNASHE_EXPORT viennasheErrorCode viennashe_create_device(viennashe_device * dev, viennashe_topology_type_id topology_id,
+VIENNASHE_EXPORT viennasheErrorCode viennashe_create_device(viennashe_device * dev, viennashe_index_type geo_dim,
                                                             double ** vertices, viennashe_index_type num_vertices,
                                                             viennashe_index_type ** cells, viennashe_index_type num_cells,
                                                             viennashe_index_type * segmentation)
@@ -662,47 +558,10 @@ VIENNASHE_EXPORT viennasheErrorCode viennashe_create_device(viennashe_device * d
 
     viennashe_device_impl * int_dev = new viennashe_device_impl();
 
-    viennashe::util::device_from_array_generator<viennashe_index_type> gen(vertices, cells, segmentation, num_vertices, num_cells);
+    viennashe::util::device_from_array_generator<viennashe_index_type> gen(geo_dim, vertices, cells, segmentation, num_vertices, num_cells);
+    int_dev->device_.generate_mesh(gen);
 
-    if (topology_id == viennashe_line_1d)
-    {
-      int_dev->stype = libviennashe::meshtype::line_1d;
-      int_dev->device_1d = new viennashe::device<viennagrid::line_1d_mesh>();
-      int_dev->device_1d->generate_mesh(gen);
-    }
-    else if (topology_id == viennashe_quadrilateral_2d)
-    {
-      int_dev->stype = libviennashe::meshtype::quadrilateral_2d;
-      int_dev->device_quad_2d = new viennashe::device<viennagrid::quadrilateral_2d_mesh>();
-      int_dev->device_quad_2d->generate_mesh(gen);
-    }
-    else if (topology_id == viennashe_triangular_2d)
-    {
-      int_dev->stype = libviennashe::meshtype::triangular_2d;
-      int_dev->device_tri_2d = new viennashe::device<viennagrid::triangular_2d_mesh>();
-      int_dev->device_tri_2d->generate_mesh(gen);
-    }
-    else if (topology_id == viennashe_hexahedral_3d)
-    {
-      int_dev->stype = libviennashe::meshtype::hexahedral_3d;
-      int_dev->device_hex_3d = new viennashe::device<viennagrid::hexahedral_3d_mesh>();
-      int_dev->device_hex_3d->generate_mesh(gen);
-    }
-    else if (topology_id == viennashe_tetrahedral_3d)
-    {
-      int_dev->stype = libviennashe::meshtype::tetrahedral_3d;
-      int_dev->device_tet_3d = new viennashe::device<viennagrid::tetrahedral_3d_mesh>();
-      int_dev->device_tet_3d->generate_mesh(gen);
-    }
-    else
-    {
-      viennashe::log::error() << "ERROR! viennashe_create_device(): Invalid topolgy id !" << std::endl;
-      return 2;
-    }
-
-    // RETURN
     *dev = int_dev;
-
   }
   catch(...)
   {
@@ -714,10 +573,10 @@ VIENNASHE_EXPORT viennasheErrorCode viennashe_create_device(viennashe_device * d
 
 
 
-VIENNASHE_EXPORT viennasheErrorCode viennashe_create_device_flat(viennashe_device * dev, viennashe_topology_type_id topology_id,
-                                                            double * vertices, viennashe_index_type num_vertices,
-                                                            viennashe_index_type * cells, viennashe_index_type num_cells,
-                                                            viennashe_index_type * segmentation)
+VIENNASHE_EXPORT viennasheErrorCode viennashe_create_device_flat(viennashe_device * dev, viennashe_index_type geo_dim,
+                                                                 double * vertices, viennashe_index_type num_vertices,
+                                                                 viennashe_index_type * cells, viennashe_index_type num_cells,
+                                                                 viennashe_index_type * segmentation)
 {
   try
   {
@@ -729,47 +588,10 @@ VIENNASHE_EXPORT viennasheErrorCode viennashe_create_device_flat(viennashe_devic
 
     viennashe_device_impl * int_dev = new viennashe_device_impl();
 
-    viennashe::util::device_from_flat_array_generator<viennashe_index_type> gen(vertices, cells, segmentation, num_vertices, num_cells);
+    viennashe::util::device_from_flat_array_generator<viennashe_index_type> gen(geo_dim, vertices, cells, segmentation, num_vertices, num_cells);
+    int_dev->device_.generate_mesh(gen);
 
-    if (topology_id == viennashe_line_1d)
-    {
-      int_dev->stype = libviennashe::meshtype::line_1d;
-      int_dev->device_1d = new viennashe::device<viennagrid::line_1d_mesh>();
-      int_dev->device_1d->generate_mesh(gen);
-    }
-    else if (topology_id == viennashe_quadrilateral_2d)
-    {
-      int_dev->stype = libviennashe::meshtype::quadrilateral_2d;
-      int_dev->device_quad_2d = new viennashe::device<viennagrid::quadrilateral_2d_mesh>();
-      int_dev->device_quad_2d->generate_mesh(gen);
-    }
-    else if (topology_id == viennashe_triangular_2d)
-    {
-      int_dev->stype = libviennashe::meshtype::triangular_2d;
-      int_dev->device_tri_2d = new viennashe::device<viennagrid::triangular_2d_mesh>();
-      int_dev->device_tri_2d->generate_mesh(gen);
-    }
-    else if (topology_id == viennashe_hexahedral_3d)
-    {
-      int_dev->stype = libviennashe::meshtype::hexahedral_3d;
-      int_dev->device_hex_3d = new viennashe::device<viennagrid::hexahedral_3d_mesh>();
-      int_dev->device_hex_3d->generate_mesh(gen);
-    }
-    else if (topology_id == viennashe_tetrahedral_3d)
-    {
-      int_dev->stype = libviennashe::meshtype::tetrahedral_3d;
-      int_dev->device_tet_3d = new viennashe::device<viennagrid::tetrahedral_3d_mesh>();
-      int_dev->device_tet_3d->generate_mesh(gen);
-    }
-    else
-    {
-      viennashe::log::error() << "ERROR! viennashe_create_device_flat(): Invalid topolgy id !" << std::endl;
-      return 2;
-    }
-
-    // RETURN
     *dev = int_dev;
-
   }
   catch(...)
   {
@@ -780,7 +602,7 @@ VIENNASHE_EXPORT viennasheErrorCode viennashe_create_device_flat(viennashe_devic
 }
 
 
-VIENNASHE_EXPORT viennasheErrorCode viennashe_create_device_from_file(viennashe_device * dev, viennashe_topology_type_id topology_id, char const * filename)
+VIENNASHE_EXPORT viennasheErrorCode viennashe_create_device_from_file(viennashe_device * dev, char const * filename)
 {
   try
   {
@@ -790,46 +612,9 @@ VIENNASHE_EXPORT viennasheErrorCode viennashe_create_device_from_file(viennashe_
     CHECK_ARGUMENT_FOR_NULL(filename,2,"filename");
 
     viennashe_device_impl * int_dev = new viennashe_device_impl();
+    int_dev->device_.load_mesh(filename);
 
-    if (topology_id == viennashe_line_1d)
-    {
-      int_dev->stype = libviennashe::meshtype::line_1d;
-      int_dev->device_1d = new viennashe::device<viennagrid::line_1d_mesh>();
-      int_dev->device_1d->load_mesh(std::string(filename));
-    }
-    else if (topology_id == viennashe_quadrilateral_2d)
-    {
-      int_dev->stype = libviennashe::meshtype::quadrilateral_2d;
-      int_dev->device_quad_2d = new viennashe::device<viennagrid::quadrilateral_2d_mesh>();
-      int_dev->device_quad_2d->load_mesh(std::string(filename));
-    }
-    else if (topology_id == viennashe_triangular_2d)
-    {
-      int_dev->stype = libviennashe::meshtype::triangular_2d;
-      int_dev->device_tri_2d = new viennashe::device<viennagrid::triangular_2d_mesh>();
-      int_dev->device_tri_2d->load_mesh(std::string(filename));
-    }
-    else if (topology_id == viennashe_hexahedral_3d)
-    {
-      int_dev->stype = libviennashe::meshtype::hexahedral_3d;
-      int_dev->device_hex_3d = new viennashe::device<viennagrid::hexahedral_3d_mesh>();
-      int_dev->device_hex_3d->load_mesh(std::string(filename));
-    }
-    else if (topology_id == viennashe_tetrahedral_3d)
-    {
-      int_dev->stype = libviennashe::meshtype::tetrahedral_3d;
-      int_dev->device_tet_3d = new viennashe::device<viennagrid::tetrahedral_3d_mesh>();
-      int_dev->device_tet_3d->load_mesh(std::string(filename));
-    }
-    else
-    {
-      viennashe::log::error() << "ERROR! viennashe_create_device_from_file(): Invalid topolgy id !" << std::endl;
-      return 2;
-    }
-
-    // RETURN
     *dev = int_dev;
-
   }
   catch(std::exception const & ex)
   {
@@ -869,33 +654,7 @@ viennasheErrorCode viennashe_get_grid (viennashe_device  dev, double ** vertices
       return 4;
     }
 
-    // Check topology and set parameters and generate mesh
-    if (dev->stype == libviennashe::meshtype::line_1d)
-    {
-      viennashe::util::dump_mesh(*(dev->device_1d), vertices, *num_vertices, cells, *num_cells);
-    }
-    else if(dev->stype == libviennashe::meshtype::quadrilateral_2d)
-    {
-      viennashe::util::dump_mesh(*(dev->device_quad_2d), vertices, *num_vertices, cells, *num_cells);
-    }
-    else if (dev->stype == libviennashe::meshtype::triangular_2d)
-    {
-      viennashe::util::dump_mesh(*(dev->device_tri_2d), vertices, *num_vertices, cells, *num_cells);
-    }
-    else if (dev->stype == libviennashe::meshtype::hexahedral_3d)
-    {
-      viennashe::util::dump_mesh(*(dev->device_hex_3d), vertices, *num_vertices, cells, *num_cells);
-    }
-    else if (dev->stype == libviennashe::meshtype::tetrahedral_3d)
-    {
-      viennashe::util::dump_mesh(*(dev->device_tet_3d), vertices, *num_vertices, cells, *num_cells);
-    }
-    else
-    {
-      viennashe::log::error() << "ERROR! viennashe_get_grid(): Unkown topology type or malconfigured device (dev)!" << std::endl;
-      return 1;
-    }
-
+    viennashe::util::dump_mesh(dev->device_, vertices, *num_vertices, cells, *num_cells);
   }
   catch(...)
   {
@@ -927,58 +686,19 @@ viennasheErrorCode viennashe_get_nth_vertex(viennashe_device dev, viennashe_inde
 
     *x = 0; *y = 0; *z = 0;
 
-    // Check topology and set parameters and generate mesh
-    if (dev->stype == libviennashe::meshtype::line_1d)
-    {
-      typedef viennashe_device_impl::dev1d_type::mesh_type MeshType;
-      typedef viennagrid::result_of::const_vertex_range<MeshType>::type      VertexContainer;
+    viennagrid_element_id *vertices_begin, *vertices_end;
+    viennagrid_mesh_elements_get(dev->device_.mesh(), 0, &vertices_begin, &vertices_end);
 
-      VertexContainer vertices((dev->device_1d)->mesh());
-      *x = viennagrid::point(vertices[vid])[0];
-    }
-    else if(dev->stype == libviennashe::meshtype::quadrilateral_2d)
-    {
-      typedef viennashe_device_impl::devq2d_type::mesh_type MeshType;
-      typedef viennagrid::result_of::const_vertex_range<MeshType>::type      VertexContainer;
+    viennagrid_numeric *coords;
+    viennagrid_mesh_vertex_coords_get(dev->device_.mesh(), vertices_begin[vid], &coords);
 
-      VertexContainer vertices((dev->device_quad_2d)->mesh());
-      *x = viennagrid::point(vertices[vid])[0];
-      *y = viennagrid::point(vertices[vid])[1];
-    }
-    else if (dev->stype == libviennashe::meshtype::triangular_2d)
-    {
-      typedef viennashe_device_impl::devt2d_type::mesh_type MeshType;
-      typedef viennagrid::result_of::const_vertex_range<MeshType>::type      VertexContainer;
-
-      VertexContainer vertices((dev->device_tri_2d)->mesh());
-      *x = viennagrid::point(vertices[vid])[0];
-      *y = viennagrid::point(vertices[vid])[1];
-    }
-    else if (dev->stype == libviennashe::meshtype::hexahedral_3d)
-    {
-      typedef viennashe_device_impl::devh3d_type::mesh_type MeshType;
-      typedef viennagrid::result_of::const_vertex_range<MeshType>::type      VertexContainer;
-
-      VertexContainer vertices((dev->device_hex_3d)->mesh());
-      *x = viennagrid::point(vertices[vid])[0];
-      *y = viennagrid::point(vertices[vid])[1];
-      *z = viennagrid::point(vertices[vid])[2];
-    }
-    else if (dev->stype == libviennashe::meshtype::tetrahedral_3d)
-    {
-      typedef viennashe_device_impl::devt3d_type::mesh_type MeshType;
-      typedef viennagrid::result_of::const_vertex_range<MeshType>::type      VertexContainer;
-
-      VertexContainer vertices((dev->device_tet_3d)->mesh());
-      *x = viennagrid::point(vertices[vid])[0];
-      *y = viennagrid::point(vertices[vid])[1];
-      *z = viennagrid::point(vertices[vid])[2];
-    }
-    else
-    {
-      viennashe::log::error() << "ERROR! viennashe_get_nth_vertex(): Unkown topology type or malconfigured device (dev)!" << std::endl;
-      return 1;
-    }
+    viennagrid_dimension geo_dim;
+    viennagrid_mesh_geometric_dimension_get(dev->device_.mesh(), &geo_dim);
+    *x = coords[0];
+    if (geo_dim > 1)
+      *y = coords[1];
+    if (geo_dim > 2)
+      *z = coords[2];
 
   }
   catch(...)
@@ -1005,32 +725,7 @@ viennasheErrorCode viennashe_get_nth_cell  (viennashe_device dev, viennashe_inde
       return 2;
     }
 
-    // Check topology and set parameters and generate mesh
-    if (dev->stype == libviennashe::meshtype::line_1d)
-    {
-      libviennashe::get_vertices_on_cell(*(dev->device_1d), cid, vertex_id_list);
-    }
-    else if(dev->stype == libviennashe::meshtype::quadrilateral_2d)
-    {
-      libviennashe::get_vertices_on_cell(*(dev->device_quad_2d), cid, vertex_id_list);
-    }
-    else if (dev->stype == libviennashe::meshtype::triangular_2d)
-    {
-      libviennashe::get_vertices_on_cell(*(dev->device_tri_2d), cid, vertex_id_list);
-    }
-    else if (dev->stype == libviennashe::meshtype::hexahedral_3d)
-    {
-      libviennashe::get_vertices_on_cell(*(dev->device_hex_3d), cid, vertex_id_list);
-    }
-    else if (dev->stype == libviennashe::meshtype::tetrahedral_3d)
-    {
-      libviennashe::get_vertices_on_cell(*(dev->device_tet_3d), cid, vertex_id_list);
-    }
-    else
-    {
-      viennashe::log::error() << "ERROR! viennashe_get_nth_vertex(): Unkown topology type or malconfigured device (dev)!" << std::endl;
-      return 1;
-    }
+    libviennashe::get_vertices_on_cell(dev->device_, cid, vertex_id_list);
 
   }
   catch(...)

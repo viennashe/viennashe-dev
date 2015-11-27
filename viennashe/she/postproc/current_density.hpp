@@ -192,9 +192,13 @@ namespace viennashe
           : device_(o.device_), quan_(o.quan_), facet_evaluator_(o.facet_evaluator_) {}
 
         /** @brief Functor interface returning the current density magnitude on the facet */
-        double operator()(viennagrid_element_id facet) const
+        std::vector<double> operator()(viennagrid_element_id facet) const
         {
-          return facet_evaluator_(facet);
+          double value = facet_evaluator_(facet);
+
+          std::vector<double> ret(3);
+          ret[0] = value;
+          return ret;
         }
 
         /** @brief Functor interface returning the current density at the provided cell */
@@ -229,17 +233,15 @@ namespace viennashe
      * @param conf             The simulator configuration
      * @param container        Container for the current density vector
      */
-    template <typename DeviceType,
-              typename SHEQuantity,
-              typename ContainerType>
-    void write_current_density_to_container(DeviceType const & device,
-                                            viennashe::config const & conf,
-                                            SHEQuantity const & quan,
-                                            ContainerType & container)
+    template <typename DeviceType, typename SHEQuantity>
+    void write_current_density_to_quantity_field(DeviceType const & device,
+                                                 viennashe::config const & conf,
+                                                 SHEQuantity const & quan,
+                                                 viennagrid_quantity_field field)
     {
       current_density_wrapper<DeviceType, SHEQuantity> current_wrapper(device, conf, quan);
 
-      viennashe::write_macroscopic_quantity_to_container(device, current_wrapper, container);
+      viennashe::write_macroscopic_quantity_to_quantity_field(device, current_wrapper, field);
     }
 
 

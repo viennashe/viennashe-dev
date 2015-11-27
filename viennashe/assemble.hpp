@@ -137,7 +137,7 @@ namespace viennashe
       else
       {
         viennashe::she::carrier_density_wrapper<SHEUnknownT> density_wrapper(conf, f_np);
-        return density_wrapper(cell);
+        return density_wrapper(cell)[0];
       }
     }
 

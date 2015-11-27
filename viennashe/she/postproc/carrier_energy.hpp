@@ -76,7 +76,7 @@ namespace viennashe
           : conf_(conf), quan_(quan) {}
 
       template <typename CellType>
-      value_type operator()(CellType const & cell) const
+      std::vector<value_type> operator()(CellType const & cell) const
       {
         typedef typename detail::carrier_density_wrapper_by_reference<SHEQuantity>     carrier_density_type;
         carrier_density_type carrier_density_(conf_, quan_);
@@ -87,7 +87,7 @@ namespace viennashe
         typename viennashe::config::dispersion_relation_type dispersion = conf_.dispersion_relation(quan_.get_carrier_type_id());
 
         if (density <= 0)
-          return 0;
+          return std::vector<value_type>(3);
 
         if (quan_.get_unknown_mask(cell))
         {
@@ -142,7 +142,9 @@ namespace viennashe
           } // index_H
         }
 
-        return avg_energy / density;
+        std::vector<value_type> ret(3);
+        ret[0] = avg_energy / density;
+        return ret;
       }
 
     private:
@@ -158,17 +160,15 @@ namespace viennashe
      * @param conf             The simulator configuration
      * @param container        The container for storing the average carrier energy values
      */
-    template <typename DeviceType,
-              typename SHEQuantity,
-              typename ContainerType>
-    void write_kinetic_carrier_energy_to_container(DeviceType const & device,
-                                                   viennashe::config const & conf,
-                                                   SHEQuantity const & quan,
-                                                   ContainerType & container)
+    template <typename DeviceType, typename SHEQuantity>
+    void write_kinetic_carrier_energy_to_quantity_field(DeviceType const & device,
+                                                        viennashe::config const & conf,
+                                                        SHEQuantity const & quan,
+                                                        viennagrid_quantity_field field)
     {
       viennashe::she::carrier_energy_wrapper<SHEQuantity> wrapper(conf, quan);
 
-      viennashe::write_macroscopic_quantity_to_container(device, wrapper, container);
+      viennashe::write_macroscopic_quantity_to_quantity_field(device, wrapper, field);
     }
 
 

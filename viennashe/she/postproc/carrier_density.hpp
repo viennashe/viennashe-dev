@@ -163,9 +163,11 @@ namespace viennashe
         { }
 
         template <typename ElementType>
-        value_type operator()(ElementType const & elem) const
+        std::vector<value_type> operator()(ElementType const & elem) const
         {
-          return this->density_impl_by_ref_(elem);
+          std::vector<value_type> ret(3);
+          ret[0] = this->density_impl_by_ref_(elem);
+          return ret;
         }
 
       private:
@@ -215,19 +217,17 @@ namespace viennashe
      * @param energy_start   (Optional) Lower bound for the kinetic energy (in eV) range to be considered for the averaging the SHE order
      * @param energy_end     (Optional) Upper bound for the kinetic energy (in eV) range to be considered for the averaging the SHE order
      */
-    template <typename DeviceType,
-              typename SHEQuantity,
-              typename ContainerType>
-    void write_carrier_density_to_container(DeviceType const & device,
-                                            SHEQuantity const & quan,
-                                            viennashe::config::dispersion_relation_type const & dispersion,
-                                            ContainerType & container,
-                                            double energy_start = 0.0,
-                                            double energy_end = 1.0)
+    template <typename DeviceType, typename SHEQuantity>
+    void write_carrier_density_to_quantity_field(DeviceType const & device,
+                                                 SHEQuantity const & quan,
+                                                 viennashe::config::dispersion_relation_type const & dispersion,
+                                                 viennagrid_quantity_field field,
+                                                 double energy_start = 0.0,
+                                                 double energy_end = 1.0)
     {
       carrier_density_wrapper<SHEQuantity> wrapper(quan, dispersion, energy_start, energy_end);
 
-      viennashe::write_macroscopic_quantity_to_container(device, wrapper, container);
+      viennashe::write_macroscopic_quantity_to_quantity_field(device, wrapper, field);
     }
 
 

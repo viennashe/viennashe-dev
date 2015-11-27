@@ -33,9 +33,7 @@
 //#define VIENNASHE_HAVE_PARALLEL_SOLVER    //automatically set by the build system
 //#define VIENNASHE_HAVE_GPU_SOLVER         //automatically set by the build system
 
-#include "viennagrid/mesh/mesh.hpp"
-#include "viennagrid/io/vtk_writer.hpp"
-#include "viennagrid/config/default_configs.hpp"
+#include "viennagrid/viennagrid.h"
 
 
 #include "viennashe/core.hpp"
@@ -53,19 +51,8 @@ int main()
   std::cout << "* Test started! *" << std::endl;
   std::cout << "*****************" << std::endl;
 
-
-  //doing nothing but instantiating a few types
-  viennagrid::triangular_2d_mesh  mesh;
-
-  std::cout << "--- Triangular mesh, 2d ---" << std::endl;
-  std::cout << "Size<0>: " << viennagrid::vertices(mesh).size() << std::endl;
-  std::cout << "Size<1>: " << viennagrid::vertices(mesh).size() << std::endl;
-  std::cout << "Size<2>: " << viennagrid::vertices(mesh).size() << std::endl;
-
   //this is the external linkage check:
   other_func();
-
-
 
   std::cout << "*******************************" << std::endl;
   std::cout << "* Test finished successfully! *" << std::endl;

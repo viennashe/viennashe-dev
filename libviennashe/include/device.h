@@ -27,12 +27,7 @@ extern "C" {
 // Types
 */
 
-/** @brief Enum of available toplogical mesh configurations */
-typedef enum { viennashe_line_1d,
-               viennashe_quadrilateral_2d, viennashe_triangular_2d,
-               viennashe_hexahedral_3d, viennashe_tetrahedral_3d }
-        viennashe_topology_type_id;
-
+struct viennashe_device_impl;
 
 typedef viennashe_device_impl*        viennashe_device; /*! The device! */
 
@@ -57,17 +52,17 @@ VIENNASHE_EXPORT viennasheErrorCode viennashe_set_contact_potential_segment(vien
 
 VIENNASHE_EXPORT viennasheErrorCode viennashe_create_1d_device(viennashe_device * dev, double len_x, size_t points_x);
 
-VIENNASHE_EXPORT viennasheErrorCode viennashe_create_device(viennashe_device * dev, viennashe_topology_type_id topology_id,
-                                                            double ** vertices, viennashe_index_type num_vertices,
-                                                            viennashe_index_type ** cells, viennashe_index_type num_cells,
-                                                            viennashe_index_type * segmentation);
+VIENNASHE_EXPORT viennasheErrorCode viennashe_create_device(viennashe_device * dev, viennashe_index_type geo_dim,
+                                                            double **vertices,
+                                                            viennashe_index_type num_vertices, viennashe_index_type **cells,
+                                                            viennashe_index_type num_cells, viennashe_index_type *segmentation);
 
-VIENNASHE_EXPORT viennasheErrorCode viennashe_create_device_flat(viennashe_device * dev, viennashe_topology_type_id topology_id,
+VIENNASHE_EXPORT viennasheErrorCode viennashe_create_device_flat(viennashe_device * dev, viennashe_index_type geo_dim,
                                                                  double * vertices, viennashe_index_type num_vertices,
                                                                  viennashe_index_type * cells, viennashe_index_type num_cells,
                                                                  viennashe_index_type * segmentation);
 
-VIENNASHE_EXPORT viennasheErrorCode viennashe_create_device_from_file(viennashe_device * dev, viennashe_topology_type_id topology_id, char const * filename);
+VIENNASHE_EXPORT viennasheErrorCode viennashe_create_device_from_file(viennashe_device * dev, char const * filename);
 
 
 /* *************** */

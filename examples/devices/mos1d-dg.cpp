@@ -109,11 +109,11 @@ void init_device(DeviceType & device,
   typedef typename DeviceType::segment_type        SegmentType;
 
   // Get the segments of the mesh
-  SegmentType const & gate     = device.segment(0);
-  SegmentType const & oxide    = device.segment(1);
-  SegmentType const & silicon  = device.segment(2);
-  SegmentType const & silicon2 = device.segment(3);
-  SegmentType const & bulk     = device.segment(4);
+  SegmentType gate     = device.segment(0);
+  SegmentType oxide    = device.segment(1);
+  SegmentType silicon  = device.segment(2);
+  SegmentType silicon2 = device.segment(3);
+  SegmentType bulk     = device.segment(4);
 
   std::cout << "* init_device(): Setting material ..." << std::endl;
 
@@ -188,7 +188,7 @@ int main()
 
   /** With the mesh in place, we now initalize the device by setting the materials, dopings and contact potentials **/
   //                        ND     NA
-  //init_device(device, Vg,  3e23,  1e8 ); // configure a p-channel MOS
+  init_device(device, Vg,  3e23,  1e8 ); // configure a p-channel MOS
 
 
   /** <h3>Drift-Diffusion Simulations</h3>
@@ -322,7 +322,7 @@ int main()
   **/
   std::cout << "* main(): Writing SHE result..." << std::endl;
 
-  /*if (config.get_electron_equation() == viennashe::EQUATION_SHE )
+  if (config.get_electron_equation() == viennashe::EQUATION_SHE )
   {
     viennashe::io::she_vtk_writer<DeviceType>()(device,
                                                 she_simulator.config(),
@@ -335,7 +335,7 @@ int main()
                                                 she_simulator.config(),
                                                 she_simulator.quantities().hole_distribution_function(),
                                                 "mos1d-dg_edf_p");
-  }*/
+  }
 
   /**   The macroscopic quantities are written to simple data files suitable for Gnuplot (http://www.gnuplot.info/) **/
   viennashe::io::write_cell_quantity_for_gnuplot(she_simulator.dg_pot_p(),         device, "mos1d-dg_she_dgpot_holes.dat"     );

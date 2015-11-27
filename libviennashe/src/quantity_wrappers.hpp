@@ -40,6 +40,12 @@ namespace libviennashe
   /** @brief Contains everything quantity related */
   namespace quantity
   {
+    namespace detail
+    {
+      inline double unpack_to_scalar(double value) { return value; }
+      inline double unpack_to_scalar(std::vector<double> vec) { return vec[0]; }
+    }
+
     /** @brief The main quantity wrapper <b>interface</b> */
     class quantity_wrapper
     {
@@ -85,12 +91,12 @@ namespace libviennashe
 
     /** @brief Implements quantity_wrapper. Wraps scalar quantities, which are accessible via a
      *         device based accessor in ViennaSHE (cf. accessor.hpp) */
-    template <typename DeviceT, typename AccessorT, typename ElementTagT >
+    template <typename DeviceT, typename AccessorT>
     class accessor_based_quantity_wrapper : public quantity_wrapper
     {
     public:
 
-      typedef accessor_based_quantity_wrapper<DeviceT, AccessorT, ElementTagT> self_type;
+      typedef accessor_based_quantity_wrapper<DeviceT, AccessorT> self_type;
 
       /**
        * @brief CTOR.
@@ -99,9 +105,10 @@ namespace libviennashe
        * @param name The unique name of the quantity
        */
       accessor_based_quantity_wrapper(AccessorT const & acc,
-        DeviceT const & dev,
-        std::string name)
-        : quantity_wrapper(name), dev_(dev), acc_(acc)
+                                      DeviceT const & dev,
+                                      viennagrid_dimension topo_dim,
+                                      std::string name)
+        : quantity_wrapper(name), dev_(dev), acc_(acc), topo_dim_(topo_dim)
       { }
 
       accessor_based_quantity_wrapper(accessor_based_quantity_wrapper const & o)
@@ -119,7 +126,9 @@ namespace libviennashe
        */
       double get(std::size_t id) const
       {
-        return acc_(viennagrid::elements<ElementTagT>(dev_.mesh())[id]);
+        viennagrid_element_id *elements_begin, *elements_end;
+        viennagrid_mesh_elements_get(dev_.mesh(), topo_dim_, &elements_begin, &elements_end);
+        return detail::unpack_to_scalar(acc_(elements_begin[id]));
       }
 
       /**
@@ -127,7 +136,9 @@ namespace libviennashe
        */
       virtual void fill(double ** values, viennashe_index_type * len) const
       {
-        const std::size_t num = viennagrid::elements<ElementTagT>(dev_.mesh()).size();
+        viennagrid_element_id *elements_begin, *elements_end;
+        viennagrid_mesh_elements_get(dev_.mesh(), topo_dim_, &elements_begin, &elements_end);
+        const std::size_t num = elements_end - elements_begin;
 
         for (std::size_t i = 0; i < num; ++i)
         {
@@ -151,17 +162,18 @@ namespace libviennashe
     private:
       DeviceT   const & dev_;
       AccessorT acc_;
+      viennagrid_dimension topo_dim_;
     };
 
     /** @brief Implements quantity_wrapper. Wraps vector valued quantities, which are accessible via a
      *         device based accessor in ViennaSHE (cf. accessor.hpp)
      */
-    template <typename DeviceT, typename AccessorT, typename ElementTagT >
+    template <typename DeviceT, typename AccessorT>
     class accessor_based_array_quantity_wrapper : public quantity_wrapper
     {
     public:
 
-      typedef accessor_based_array_quantity_wrapper<DeviceT, AccessorT, ElementTagT> self_type;
+      typedef accessor_based_array_quantity_wrapper<DeviceT, AccessorT> self_type;
 
       /**
        * @brief CTOR.
@@ -170,8 +182,9 @@ namespace libviennashe
        * @param name The unique name of the vector valued quantity
        */
       accessor_based_array_quantity_wrapper(AccessorT const & acc,
-        DeviceT const & dev,
-        std::string name)
+                                            DeviceT const & dev,
+                                            viennagrid_dimension topo_dim,
+                                            std::string name)
         : quantity_wrapper(name), dev_(dev), acc_(acc)
       { }
 
@@ -192,7 +205,9 @@ namespace libviennashe
        */
       std::vector<double> get(std::size_t id) const
       {
-        return acc_(viennagrid::elements<ElementTagT>(dev_.mesh())[id]);
+        viennagrid_element_id *elements_begin, *elements_end;
+        viennagrid_mesh_elements_get(dev_.mesh(), topo_dim_, &elements_begin, &elements_end);
+        return acc_(elements_begin[id]);
       }
 
       /** @brief Implements fill_single. */
@@ -201,7 +216,9 @@ namespace libviennashe
       /** @brief Implements fill */
       virtual void fill(double ** values, viennashe_index_type * len) const
       {
-        const std::size_t num = viennagrid::elements<ElementTagT>(dev_.mesh()).size();
+        viennagrid_element_id *elements_begin, *elements_end;
+        viennagrid_mesh_elements_get(dev_.mesh(), topo_dim_, &elements_begin, &elements_end);
+        const std::size_t num = elements_end - elements_begin;
 
         for (std::size_t i = 0; i < num; ++i)
         {
@@ -222,6 +239,7 @@ namespace libviennashe
     private:
       DeviceT   const & dev_;
       AccessorT acc_;
+      viennagrid_dimension topo_dim_;
     };
 
     /** @brief The main quantity register. Not deep copy-able! */

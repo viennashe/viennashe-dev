@@ -21,6 +21,7 @@
 #include <string>
 #include <stdexcept>
 #include <vector>
+#include <cassert>
 
 // viennagrid
 #include "viennagrid/viennagrid.h"
@@ -457,66 +458,65 @@ namespace viennashe
      * @param num_vertices The number of vertices in the domain
      * @param num_cells The number of cells in the domain
      */
-    /* TODO: Port to ViennaGrid 3.0
-    template < typename IndexT = unsigned long>
+    template<typename IndexT = unsigned long>
     struct device_from_array_generator
     {
-      device_from_array_generator( double ** vertices,
+      device_from_array_generator( IndexT geo_dim,
+                                   double ** vertices,
                                    IndexT ** cells,
                                    IndexT * segmentation,
                                    IndexT   num_vertices,
                                    IndexT   num_cells)
-      : vertices_(vertices), cells_(cells), segmentation_(segmentation),
+      : geo_dim_(geo_dim), vertices_(vertices), cells_(cells), segmentation_(segmentation),
         num_vertices_(num_vertices), num_cells_(num_cells)
       { }
 
-      / ** @brief Functor interface. The mesh and the segmentation need to be given. * /
-      template < typename MeshT, typename SegmentationT >
-      void operator()(MeshT & mesh, SegmentationT & seg) const
+      /** @brief Functor interface. The mesh and the segmentation need to be given. */
+      void operator()(viennagrid_mesh mesh) const
       {
-        typedef typename viennagrid::result_of::point<MeshT>::type    PointType;
-        typedef typename viennagrid::result_of::vertex<MeshT>::type   VertexType;
-        typedef typename viennagrid::result_of::cell<MeshT>::type     CellType;
+        viennagrid_mesh_geometric_dimension_set(mesh, geo_dim_);
 
-        typedef typename viennagrid::result_of::cell_tag<MeshT>::type  CellTag;
-
-        typedef typename viennagrid::result_of::handle<MeshT, viennagrid::vertex_tag>::type  VertexHandleType;
+        std::vector<viennagrid_element_id> vertex_ids(num_vertices_);
 
         for (int i = 0; i < static_cast<int>(num_vertices_); ++i)
         {
-          PointType p;
-          for (std::size_t j = 0; j < (std::size_t )PointType::dim; ++j)
+          viennagrid_numeric p[3];
+          for (std::size_t j = 0; j < std::size_t(geo_dim_); ++j)
             p[j] = vertices_[i][j];
 
-          viennagrid::make_vertex_with_id( mesh, typename VertexType::id_type(i), p );
+          viennagrid_mesh_vertex_create(mesh, p, &(vertex_ids[i]));
         }
 
-        for (int i = 0; i < static_cast<int>(num_cells_); ++i )
+        for (int i = 0; i < static_cast<int>(num_cells_); ++i)
         {
-          viennagrid::static_array<VertexHandleType, viennagrid::boundary_elements<CellTag, viennagrid::vertex_tag>::num> cell_vertex_handles;
-          for (std::size_t j=0; j < (std::size_t )viennagrid::boundary_elements<CellTag, viennagrid::vertex_tag>::num; ++j)
-          {
-            cell_vertex_handles[j] = viennagrid::vertices(mesh).handle_at(cells_[i][j]);
-          }
+          viennagrid_element_id vertices_of_cell[4];
+          for (std::size_t j=0; j <= std::size_t(geo_dim_); ++j) // TODO: Generalize to more than just simplices
+            vertices_of_cell[j] = vertex_ids.at(cells_[i][j]);
 
-          IndexT seg_id = segmentation_[i];
-          if (segmentation_ != 0) seg_id = segmentation_[i];
+          viennagrid_element_type element_type = VIENNAGRID_ELEMENT_TYPE_LINE;
+          if (geo_dim_ == 2)
+            element_type = VIENNAGRID_ELEMENT_TYPE_TRIANGLE;
+          if (geo_dim_ == 3)
+            element_type = VIENNAGRID_ELEMENT_TYPE_TETRAHEDRON;
 
-          viennagrid::make_element_with_id<CellType>(seg[static_cast<int>(seg_id)],
-                                                     cell_vertex_handles.begin(),
-                                                     cell_vertex_handles.end(),
-                                                     typename CellType::id_type(i));
+          viennagrid_element_id new_cell;
+          viennagrid_mesh_element_create(mesh, element_type, geo_dim_ + 1, vertices_of_cell, &new_cell);
+
+          viennagrid_region region;
+          viennagrid_mesh_region_get_or_create(mesh, segmentation_[i], &region);
+          viennagrid_region_element_add(region, new_cell);
         }
       }
 
     private:
+      viennagrid_dimension geo_dim_;
       double ** vertices_;
       IndexT ** cells_;
       IndexT *  segmentation_;
       IndexT    num_vertices_;
       IndexT    num_cells_;
 
-    }; */
+    };
 
     /**
      * @brief A device generator to generate a device from <b>flat</b> C-Arrays (DOES NOT TAKE OWNERSHIP)
@@ -525,69 +525,67 @@ namespace viennashe
      * @param num_vertices The number of vertices in the domain
      * @param num_cells The number of cells in the domain
      */
-    /* TODO: Port to ViennaGrid 3.0
-    template < typename IndexT = unsigned long>
+    template<typename IndexT = unsigned long>
     struct device_from_flat_array_generator
     {
-      device_from_flat_array_generator( double * vertices,
+      device_from_flat_array_generator( IndexT geo_dim,
+                                        double * vertices,
                                         IndexT * cells,
                                         IndexT * segmentation,
                                         IndexT num_vertices,
                                         IndexT num_cells)
-      : vertices_(vertices), cells_(cells), segmentation_(segmentation),
+      : geo_dim_(geo_dim), vertices_(vertices), cells_(cells), segmentation_(segmentation),
         num_vertices_(num_vertices), num_cells_(num_cells)
       { }
 
-      / ** @brief Functor interface. The mesh and the segmentation need to be given. * /
-      template < typename MeshT, typename SegmentationT >
-      void operator()(MeshT & mesh, SegmentationT & seg) const
+      /** @brief Functor interface. The mesh and the segmentation need to be given. */
+      void operator()(viennagrid_mesh mesh) const
       {
-        typedef typename viennagrid::result_of::point<MeshT>::type    PointType;
-        typedef typename viennagrid::result_of::vertex<MeshT>::type   VertexType;
-        typedef typename viennagrid::result_of::cell<MeshT>::type     CellType;
+        viennagrid_mesh_geometric_dimension_set(mesh, geo_dim_);
 
-        typedef typename viennagrid::result_of::cell_tag<MeshT>::type  CellTag;
+        std::vector<viennagrid_element_id> vertex_ids(num_vertices_);
 
-        typedef typename viennagrid::result_of::handle<MeshT, viennagrid::vertex_tag>::type  VertexHandleType;
-
-        const std::size_t dim = (std::size_t )PointType::dim;
         for (int i = 0; i < static_cast<int>(num_vertices_); ++i)
         {
-          PointType p;
-          for (std::size_t j = 0; j < dim; ++j)
-            p[j] = vertices_[std::size_t(i)*dim + j];
+          viennagrid_numeric p[3];
+          for (std::size_t j = 0; j < std::size_t(geo_dim_); ++j)
+            p[j] = vertices_[std::size_t(i)*geo_dim_ + j];
 
-          viennagrid::make_vertex_with_id( mesh, typename VertexType::id_type(i), p );
+          viennagrid_mesh_vertex_create(mesh, p, &(vertex_ids[i]));
         }
 
         for (int i = 0; i < static_cast<int>(num_cells_); ++i )
         {
-          const std::size_t nen = viennagrid::boundary_elements<CellTag, viennagrid::vertex_tag>::num;
-
-          viennagrid::static_array<VertexHandleType, viennagrid::boundary_elements<CellTag, viennagrid::vertex_tag>::num> cell_vertex_handles;
-          for (std::size_t j = 0; j < nen; ++j)
+          viennagrid_element_id vertices_of_cell[4];
+          for (std::size_t j=0; j <= std::size_t(geo_dim_); ++j) // TODO: Generalize to more than just simplices
           {
-            cell_vertex_handles[j] = viennagrid::vertices(mesh).handle_at(cells_[std::size_t(i)*nen + j]);
+            vertices_of_cell[j] = vertex_ids.at(cells_[std::size_t(i)*(geo_dim_ + 1) + j]);
           }
 
-          IndexT seg_id = 0;
-          if (segmentation_ != 0) seg_id = segmentation_[i];
+          viennagrid_element_type element_type = VIENNAGRID_ELEMENT_TYPE_LINE;
+          if (geo_dim_ == 2)
+            element_type = VIENNAGRID_ELEMENT_TYPE_TRIANGLE;
+          if (geo_dim_ == 3)
+            element_type = VIENNAGRID_ELEMENT_TYPE_TETRAHEDRON;
 
-          viennagrid::make_element_with_id<CellType>(seg[int(seg_id)],
-                                                     cell_vertex_handles.begin(),
-                                                     cell_vertex_handles.end(),
-                                                     typename CellType::id_type(i));
+          viennagrid_element_id new_cell;
+          viennagrid_mesh_element_create(mesh, element_type, geo_dim_ + 1, vertices_of_cell, &new_cell);
+
+          viennagrid_region region;
+          viennagrid_mesh_region_get_or_create(mesh, segmentation_[i], &region);
+          viennagrid_region_element_add(region, new_cell);
         }
       }
 
     private:
-      double        * vertices_;
+      viennagrid_dimension geo_dim_;
+      double * vertices_;
       IndexT * cells_;
       IndexT * segmentation_;
       IndexT   num_vertices_;
       IndexT   num_cells_;
 
-    }; */
+    };
 
   } //namespace util
 } //namespace viennashe

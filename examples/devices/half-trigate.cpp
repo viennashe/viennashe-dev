@@ -69,16 +69,16 @@ void init_device(DeviceType & device)
   typedef typename DeviceType::segment_type          SegmentType;
 
   /** Provide convenience names for the various segments: **/
-  SegmentType const &  source_segment = device.segmentation()[1];
-  SegmentType const & channel_segment = device.segmentation()[2];
-  SegmentType const &   drain_segment = device.segmentation()[3];
-  SegmentType const &   oxide_segment = device.segmentation()[4];
-  SegmentType const &    gate_segment = device.segmentation()[5];
-  SegmentType const &    body_segment = device.segmentation()[6];
+  SegmentType   source_segment = device.segment(1);
+  SegmentType  channel_segment = device.segment(2);
+  SegmentType    drain_segment = device.segment(3);
+  SegmentType    oxide_segment = device.segment(4);
+  SegmentType     gate_segment = device.segment(5);
+  SegmentType     body_segment = device.segment(6);
 
-  SegmentType const &  source_contact_segment = device.segmentation()[7];
-  SegmentType const &   drain_contact_segment = device.segmentation()[8];
-  SegmentType const &    body_contact_segment = device.segmentation()[9];
+  SegmentType   source_contact_segment = device.segment(7);
+  SegmentType    drain_contact_segment = device.segment(8);
+  SegmentType     body_contact_segment = device.segment(9);
 
   /** Now we are ready to set the material for each segment: **/
 
@@ -179,8 +179,7 @@ int main()
     Here we just need to call the initialization routine defined before:
    **/
   std::cout << "* main(): Initializing device..." << std::endl;
-  throw std::runtime_error("Device initialization missing!");
-  //init_device(device);
+  init_device(device);
 
   /** <h3>Drift-Diffusion Simulations</h3>
 
@@ -244,8 +243,8 @@ int main()
     is by writing the computed values to a VTK file, where
     it can then be inspected by e.g. ParaView.
   **/
-  //viennashe::io::write_quantities_to_VTK_file(dd_simulator,            // simulator object
-  //                                            "half-trigate_dd_quan"); // file name
+  viennashe::io::write_quantities_to_VTK_file(dd_simulator,            // simulator object
+                                              "half-trigate_dd_quan"); // file name
 
 
   /** <h3>A Single SHE Postprocessing Step</h3>
@@ -311,13 +310,13 @@ int main()
     As for the drift-diffusion case, all macroscopic output quantities can be written
     to one or more VTK files using write_quantities_to_VTK_file():
   **/
-  //viennashe::io::write_quantities_to_VTK_file(she_simulator,            // simulator object
-  //                                            "half-trigate_she_quan"); // file name
+  viennashe::io::write_quantities_to_VTK_file(she_simulator,            // simulator object
+                                              "half-trigate_she_quan"); // file name
 
   /** If desired, one may also write individual quantities to VTK,
       for example the electrostatic potential or the electron density: **/
-  //viennashe::io::write_quantity_to_VTK_file(she_simulator.potential(),        device, "trigate_she_potential");
-  //viennashe::io::write_quantity_to_VTK_file(she_simulator.electron_density(), device, "trigate_she_electrons");
+  viennashe::io::write_quantity_to_VTK_file(she_simulator.potential(),        device, "trigate_she_potential");
+  viennashe::io::write_quantity_to_VTK_file(she_simulator.electron_density(), device, "trigate_she_electrons");
 
   /** Finally, print a small message to let the user know that everything succeeded **/
   std::cout << "* main(): Results can now be viewed with your favorite VTK viewer (e.g. ParaView)." << std::endl;

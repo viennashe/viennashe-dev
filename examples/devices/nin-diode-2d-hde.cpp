@@ -60,9 +60,9 @@ void init_device(DeviceType & device)
   typedef typename DeviceType::segment_type        SegmentType;
 
   /** Define concenience references to the segments: **/
-  SegmentType const & contact_left  = device.segment(1);
-  SegmentType const & i_center      = device.segment(3);
-  SegmentType const & contact_right = device.segment(5);
+  SegmentType contact_left  = device.segment(1);
+  SegmentType i_center      = device.segment(3);
+  SegmentType contact_right = device.segment(5);
 
   /** First set the whole device to silicon and provide a donator doping of \f$10^{24} \textrm{m}^{-3}\f$ and an acceptor doping of \f$10^{8} \textrm{m}^{-3}\f$ **/
   device.set_material(viennashe::materials::si());
@@ -86,16 +86,16 @@ void init_device(DeviceType & device)
       When reading the lattice temperature from file you specify the temperature in the same manner.
       Also, have a look at the ViennaGrid manual for an in-depth explanation of the various types of iteration
       over mesh elements available. **/
-  typedef typename viennagrid::result_of::const_cell_range<MeshType>::type   CellContainer;
-  typedef typename viennagrid::result_of::iterator<CellContainer>::type      CellIterator;
 
-  CellContainer cells(device.mesh());
-  for (CellIterator cit = cells.begin();
-       cit != cells.end();
-       ++cit)
-  {
+  viennagrid_dimension cell_dim;
+  viennagrid_mesh_cell_dimension_get(device.mesh(), &cell_dim);
+
+  viennagrid_element_id *cells_begin, *cells_end;
+  viennagrid_mesh_elements_get(device.mesh(), cell_dim, &cells_begin, &cells_end);
+
+  for (viennagrid_element_id *cit = cells_begin; cit != cells_end; ++cit)
     device.set_lattice_temperature(300.0, *cit);
-  }
+
 }
 
 
@@ -132,7 +132,7 @@ int main()
     Here we just need to call the initialization routine defined before:
    **/
   std::cout << "* main(): Creating device..." << std::endl;
-  //init_device(device);
+  init_device(device);
 
   /** <h3>Drift-Diffusion Simulations</h3>
 
@@ -178,7 +178,7 @@ int main()
     is by writing the computed values to a VTK file, where
     it can then be inspected by e.g. ParaView.
   **/
-  //viennashe::io::write_quantities_to_VTK_file(dd_simulator, "nin2d_dd_quan");
+  viennashe::io::write_quantities_to_VTK_file(dd_simulator, "nin2d_dd_quan");
 
 
   /** <h3>Self-Consistent SHE Simulations</h3>
@@ -248,7 +248,7 @@ int main()
 
   /** Finally we also write all macroscopic quantities (electrostatic potential, carrier concentration, temperature profile, etc.) to a single VTK file:
   **/
-  //viennashe::io::write_quantities_to_VTK_file(she_simulator, "nin2d-hde_she_quan");
+  viennashe::io::write_quantities_to_VTK_file(she_simulator, "nin2d-hde_she_quan");
 
   /** Finally, print a small message to let the user know that everything succeeded **/
   std::cout << "* main(): Results can now be viewed with your favorite VTK viewer (e.g. ParaView)." << std::endl;

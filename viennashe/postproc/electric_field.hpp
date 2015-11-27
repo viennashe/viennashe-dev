@@ -101,13 +101,14 @@ namespace viennashe
 
     electric_field_wrapper(DeviceType const & device, PotentialAccessorType const & potential) : device_(device), potential_(potential) { }
 
-    double operator()(viennagrid_element_id facet) const
+    std::vector<double> operator()(viennagrid_element_id facet) const
     {
       //viennashe::detail::electric_field_on_facet<DeviceType, PotentialAccessorType> facet_eval(device_, potential_);
 
       throw std::runtime_error("electric_field_wrapper::operator(): TODO: Implement");
 
-      return 0; //facet_eval(facet);
+      std::vector<double> ret(3);
+      return ret; //facet_eval(facet);
     }
 
 /*
@@ -150,15 +151,14 @@ namespace viennashe
    * @tparam ContainerType   A container type, for example: std::vector or std::deque
    */
   template <typename DeviceType,
-            typename PotentialAccessor,
-            typename ContainerType>
-  void write_electric_field_to_container(DeviceType const & device,
-                                         PotentialAccessor const & potential,
-                                         ContainerType & container)
+            typename PotentialAccessor>
+  void write_electric_field_to_quantity_field(DeviceType const & device,
+                                              PotentialAccessor const & potential,
+                                              viennagrid_quantity_field field)
   {
     electric_field_wrapper<DeviceType, PotentialAccessor> Efield(device, potential);
 
-    viennashe::write_macroscopic_quantity_to_container(device, Efield, container);
+    viennashe::write_macroscopic_quantity_to_quantity_field(device, Efield, field);
   }
 
 } // viennashe

@@ -290,13 +290,15 @@ namespace viennashe
     viennagrid_dimension cell_dim;
     viennagrid_mesh_cell_dimension_get(device.mesh(), &cell_dim);
 
+    std::vector<double> tmp(3);
     viennagrid_element_id *cells_begin, *cells_end;
     viennagrid_mesh_elements_get(device.mesh(), cell_dim, &cells_begin, &cells_end);
     for (viennagrid_element_id *cit  = cells_begin;
                                 cit != cells_end;
                               ++cit)
     {
-      const double new_value = density_wrapper(*cit);
+      tmp = density_wrapper(*cit);
+      const double new_value = tmp[0];
       const double old_value = spatial_quan.get_value(*cit);
       double zw  = 0;
       if (std::fabs(old_value) > 0)

@@ -61,11 +61,11 @@ void init_device(DeviceType & device)
   typedef typename DeviceType::segment_type          SegmentType;
 
   /** Define concenience references to the segments: **/
-  SegmentType const & contact_left  = device.segment(0);
-  SegmentType const & n_left        = device.segment(1);
-  SegmentType const & i_center      = device.segment(2);
-  SegmentType const & n_right       = device.segment(3);
-  SegmentType const & contact_right = device.segment(4);
+  SegmentType contact_left  = device.segment(0);
+  SegmentType n_left        = device.segment(1);
+  SegmentType i_center      = device.segment(2);
+  SegmentType n_right       = device.segment(3);
+  SegmentType contact_right = device.segment(4);
 
   /** Set the materials per segment according to the schematic above: **/
   device.set_material(viennashe::materials::si(),    n_left);
@@ -152,7 +152,7 @@ int main()
       This is achieved by the function init_device() we defined above:
   **/
   std::cout << "* main(): Initializing device..." << std::endl;
-  //init_device(device);
+  init_device(device);
 
 
   /** <h3>Drift-Diffusion Simulations</h3>
@@ -200,7 +200,7 @@ int main()
     which is somewhat reasonable for one-dimensional device simulations,
     we write all simulation results to a VTK file, where it can be inspected with e.g. ParaView:
   **/
-  //viennashe::io::write_quantities_to_VTK_file(dd_simulator, "nin1d_dd_quan");
+  viennashe::io::write_quantities_to_VTK_file(dd_simulator, "nin1d_dd_quan");
 
 
   /** <h3>Self-Consistent SHE Simulations</h3>
@@ -274,7 +274,7 @@ int main()
 
   /** In addition, we write all macroscopic quantities such as carrier concentrations to a VTK file:
   **/
-  //viennashe::io::write_quantities_to_VTK_file(she_simulator, "nin1d_she_quan");
+  viennashe::io::write_quantities_to_VTK_file(she_simulator, "nin1d_she_quan");
 
 
   /** To easily plot 1d-graphs showing the computed energy distribution function, we also write the results

@@ -68,46 +68,12 @@ viennasheErrorCode viennashe_create_simulator (viennashe_simulator * sim, vienna
     CHECK_ARGUMENT_FOR_NULL(conf,3,"conf");
 
     // Get internal configuration and device
-    viennashe::config                * int_conf = reinterpret_cast<viennashe::config *>(conf);
+    viennashe::config     * int_conf = reinterpret_cast<viennashe::config *>(conf);
     viennashe_device_impl * int_dev  = dev;
 
-    // Check the device
-    if (!int_dev->is_valid())
-    {
-      viennashe::log::error() << "ERROR! create_simulator(): The device (dev) must be valid!" << std::endl;
-      return 2;
-    }
     // Create the internal simulator object and init with grid type and config
-    viennashe_simulator_impl * int_sim  = new viennashe_simulator_impl(int_dev->stype, int_conf);
+    viennashe_simulator_impl * int_sim  = new viennashe_simulator_impl(int_dev->device_, *int_conf);
 
-    //
-    // Create viennashe::simulator per grid type
-    if(int_dev->stype == libviennashe::meshtype::line_1d)
-    {
-      int_sim->sim1d  = new viennashe_simulator_impl::sim1d_type(*(int_dev->device_1d), *int_conf);
-    }
-    else if(int_dev->stype == libviennashe::meshtype::quadrilateral_2d)
-    {
-      int_sim->simq2d  = new viennashe_simulator_impl::simq2d_type(*(int_dev->device_quad_2d), *int_conf);
-    }
-    else if(int_dev->stype == libviennashe::meshtype::triangular_2d)
-    {
-      int_sim->simt2d  = new viennashe_simulator_impl::simt2d_type(*(int_dev->device_tri_2d), *int_conf);
-    }
-    else if(int_dev->stype == libviennashe::meshtype::hexahedral_3d)
-    {
-      int_sim->simh3d  = new viennashe_simulator_impl::simh3d_type(*(int_dev->device_hex_3d), *int_conf);
-    }
-    else if(int_dev->stype == libviennashe::meshtype::tetrahedral_3d)
-    {
-      int_sim->simt3d  = new viennashe_simulator_impl::simt3d_type(*(int_dev->device_tet_3d), *int_conf);
-    }
-    else
-    {
-      viennashe::log::error() << "ERROR! create_device(): The given mesh is malconfigured!" << std::endl;
-      return 2;
-    }
-    // RETURN
     *sim = int_sim;
   }
   catch(...)
@@ -147,55 +113,12 @@ viennasheErrorCode viennashe_set_initial_guess_from_other_sim(viennashe_simulato
 
     //
     // Get internal structures
-    viennashe_simulator_impl * int_sim       = (sim);
-    viennashe_simulator_impl * int_other_sim = (other_sim);
-    //
-    // Checks
-    if (!int_sim->is_valid())
-    {
-      viennashe::log::error() << "ERROR! set_initial_guess_from_other_sim(): The simulator (sim) must be valid!" << std::endl;
-      return 1;
-    }
-    if (!int_other_sim->is_valid())
-    {
-      viennashe::log::error() << "ERROR! set_initial_guess_from_other_sim(): The simulator (other_sim) must be valid!" << std::endl;
-      return 1;
-    }
-    if (int_sim->stype != int_other_sim->stype)
-    {
-      viennashe::log::error() << "ERROR! set_initial_guess_from_other_sim(): The simulators (sim and other_sim)"
-                              << " must be operating on the same grid!" << std::endl;
-      return 2;
-    }
+    viennashe_simulator_impl * int_sim       = sim;
+    viennashe_simulator_impl * int_other_sim = other_sim;
 
     //
     // Transfer the initial guess
-
-    if(int_sim->stype == libviennashe::meshtype::line_1d)
-    {
-      libviennashe::set_initial_guess(*(int_sim->sim1d), *(int_other_sim->sim1d));
-    }
-    else if(int_sim->stype == libviennashe::meshtype::quadrilateral_2d)
-    {
-      libviennashe::set_initial_guess(*(int_sim->simq2d), *(int_other_sim->simq2d));
-    }
-    else if(int_sim->stype == libviennashe::meshtype::triangular_2d)
-    {
-      libviennashe::set_initial_guess(*(int_sim->simt2d), *(int_other_sim->simt2d));
-    }
-    else if(int_sim->stype == libviennashe::meshtype::hexahedral_3d)
-    {
-      libviennashe::set_initial_guess(*(int_sim->simh3d), *(int_other_sim->simh3d));
-    }
-    else if(int_sim->stype == libviennashe::meshtype::tetrahedral_3d)
-    {
-      libviennashe::set_initial_guess(*(int_sim->simt3d), *(int_other_sim->simt3d));
-    }
-    else
-    {
-      viennashe::log::error() << "ERROR! set_initial_guess_from_other_sim(): Unkown grid type!" << std::endl;
-      return 1;
-    }
+    libviennashe::set_initial_guess(int_sim->sim_, int_other_sim->sim_);
   }
   catch(viennashe::quantity_not_found_exception const & ex)
   {
@@ -219,42 +142,11 @@ viennasheErrorCode viennashe_set_initial_guess(viennashe_simulator_impl * sim, c
     //
     // Get internal structures
     viennashe_simulator_impl * int_sim = sim;
-    //
-    // Checks
-    if (!int_sim->is_valid())
-    {
-      viennashe::log::error() << "ERROR! set_initial_guess(): The simulator (sim) must be valid!" << std::endl;
-      return 1;
-    }
 
     //
     // Transfer the initial guess
 
-    if(int_sim->stype == libviennashe::meshtype::line_1d)
-    {
-      libviennashe::set_initial_guess(*(int_sim->sim1d), name, values);
-    }
-    else if(int_sim->stype == libviennashe::meshtype::quadrilateral_2d)
-    {
-      libviennashe::set_initial_guess(*(int_sim->simq2d), name, values);
-    }
-    else if(int_sim->stype == libviennashe::meshtype::triangular_2d)
-    {
-      libviennashe::set_initial_guess(*(int_sim->simt2d), name, values);
-    }
-    else if(int_sim->stype == libviennashe::meshtype::hexahedral_3d)
-    {
-      libviennashe::set_initial_guess(*(int_sim->simh3d), name, values);
-    }
-    else if(int_sim->stype == libviennashe::meshtype::tetrahedral_3d)
-    {
-      libviennashe::set_initial_guess(*(int_sim->simt3d), name, values);
-    }
-    else
-    {
-      viennashe::log::error() << "ERROR! set_initial_guess(): Unkown grid type!" << std::endl;
-      return -2;
-    }
+    libviennashe::set_initial_guess(int_sim->sim_, name, values);
   }
   catch(viennashe::quantity_not_found_exception const & ex)
   {
@@ -275,40 +167,9 @@ viennasheErrorCode viennashe_run(viennashe_simulator_impl * sim)
   {
     CHECK_ARGUMENT_FOR_NULL(sim,1,"sim");
 
-
     viennashe_simulator_impl * int_sim = sim;
 
-    if (!int_sim->is_valid())
-    {
-      viennashe::log::error() << "ERROR! run(): The simulator (sim) must be valid!" << std::endl;
-      return 1;
-    }
-
-    if(int_sim->stype == libviennashe::meshtype::line_1d)
-    {
-      int_sim->sim1d->run();
-    }
-    else if(int_sim->stype == libviennashe::meshtype::quadrilateral_2d)
-    {
-      int_sim->simq2d->run();
-    }
-    else if(int_sim->stype == libviennashe::meshtype::triangular_2d)
-    {
-      int_sim->simt2d->run();
-    }
-    else if(int_sim->stype == libviennashe::meshtype::hexahedral_3d)
-    {
-      int_sim->simh3d->run();
-    }
-    else if(int_sim->stype == libviennashe::meshtype::tetrahedral_3d)
-    {
-      int_sim->simt3d->run();
-    }
-    else
-    {
-      viennashe::log::error() << "ERROR! run(): Unkown grid type!" << std::endl;
-      return -2;
-    }
+    int_sim->sim_.run();
   }
   catch(...)
   {

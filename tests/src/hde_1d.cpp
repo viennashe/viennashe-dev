@@ -29,7 +29,7 @@
 #include "viennashe/core.hpp"
 
 // ViennaGrid default configurations:
-#include "viennagrid/config/default_configs.hpp"
+#include "viennagrid/viennagrid.h"
 
 
 /** \file hde_1d.cpp Contains a simple test of the heat diffusion equation (essentially a poisson equation).
@@ -47,8 +47,8 @@ struct hde_test_mesh_generator
     : len_gate_(len_gate), cs_gate_(cs_gate), len_oxide_(len_oxide), cs_ox_(cs_ox), len_bulk_(len_bulk), cs_bulk_(cs_bulk)
   { }
 
-  template < typename MeshT, typename SegmentationT >
-  void operator()(MeshT & mesh, SegmentationT & seg) const
+  template<typename MeshT>
+  void operator()(MeshT & mesh) const
   {
     viennashe::util::device_generation_config gconf;
 
@@ -57,7 +57,7 @@ struct hde_test_mesh_generator
     gconf.add_segment(len_gate_+len_oxide_,           len_bulk_,        static_cast<unsigned long>(std::ceil(len_bulk_/cs_bulk_))   );
     gconf.add_segment(len_gate_+len_oxide_+len_bulk_, len_bulk_ + 2e-9, static_cast<unsigned long>(std::ceil(2e-9/cs_bulk_)+1)      );
 
-    viennashe::util::generate_device(mesh, seg, gconf);
+    viennashe::util::generate_device(mesh, gconf);
   }
 
 private:
@@ -83,10 +83,10 @@ void init_device(DeviceType & device, double TL_left, double TL_right)
   typedef typename DeviceType::mesh_type           MeshType;
   typedef typename DeviceType::segment_type        SegmentType;
 
-  SegmentType const & gate    = device.segment(0);
-  SegmentType const & oxide   = device.segment(1);
-  SegmentType const & silicon = device.segment(2);
-  SegmentType const & bulk    = device.segment(3);
+  SegmentType gate    = device.segment(0);
+  SegmentType oxide   = device.segment(1);
+  SegmentType silicon = device.segment(2);
+  SegmentType bulk    = device.segment(3);
 
   std::cout << "* init_device(): Setting material ..." << std::endl;
 
@@ -107,13 +107,14 @@ void init_device(DeviceType & device, double TL_left, double TL_right)
 
   std::cout << "* init_device(): Setting temperature boundary conditions (per cell) ..." << std::endl;
 
-  typedef typename viennagrid::result_of::const_cell_range<MeshType>::type   CellContainer;
-  typedef typename viennagrid::result_of::iterator<CellContainer>::type      CellIterator;
+  viennagrid_dimension cell_dim;
+  viennagrid_mesh_cell_dimension_get(device.mesh(), &cell_dim);
 
-  CellContainer cells(device.mesh());
-  for (CellIterator cit = cells.begin();
-       cit != cells.end();
-       ++cit)
+  viennagrid_element_id *cells_begin, *cells_end;
+  viennagrid_mesh_elements_get(device.mesh(), cell_dim, &cells_begin, &cells_end);
+  for (viennagrid_element_id *cit  = cells_begin;
+                              cit != cells_end;
+                            ++cit)
   {
     device.set_lattice_temperature(300.0, *cit);
   }
@@ -127,8 +128,7 @@ void init_device(DeviceType & device, double TL_left, double TL_right)
 
 int main()
 {
-  typedef viennagrid::line_1d_mesh       MeshType;
-  typedef viennashe::device<MeshType>    DeviceType;
+  typedef viennashe::device<viennagrid_mesh>    DeviceType;
 
   std::cout << viennashe::preamble() << std::endl;
 

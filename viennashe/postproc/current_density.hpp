@@ -221,18 +221,17 @@ namespace viennashe
   template <typename DeviceType,
             typename PotentialQuantityType,
             typename CarrierQuantityType,
-            typename MobilityModel,
-            typename ContainerType>
-  void write_current_density_to_container(DeviceType const & device,
-                                          PotentialQuantityType const & potential,
-                                          CarrierQuantityType const & carrier,
-                                          viennashe::carrier_type_id ctype,
-                                          MobilityModel const & mobility_model,
-                                          ContainerType & container)
+            typename MobilityModel>
+  void write_current_density_to_quantity_field(DeviceType const & device,
+                                               PotentialQuantityType const & potential,
+                                               CarrierQuantityType const & carrier,
+                                               viennashe::carrier_type_id ctype,
+                                               MobilityModel const & mobility_model,
+                                               viennagrid_quantity_field field)
   {
     current_density_wrapper<DeviceType, PotentialQuantityType, CarrierQuantityType, MobilityModel> Jfield(device, ctype, potential, carrier, mobility_model);
 
-    viennashe::write_macroscopic_quantity_to_container(device, Jfield, container);
+    viennashe::write_macroscopic_quantity_to_quantity_field(device, Jfield, field);
   }
 
 

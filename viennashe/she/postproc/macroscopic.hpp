@@ -20,6 +20,7 @@
 #include <math.h>
 #include <fstream>
 #include <iostream>
+#include <vector>
 
 #include "viennagrid/viennagrid.h"
 
@@ -40,26 +41,22 @@ namespace viennashe
    * @param quantity_container        The container to be filled with values
    * @tparam ContainerType   A container type, for example: std::vector or std::deque
    */
-  template <typename DeviceType,
-            typename MacroscopicQuantityAccessor,
-            typename ContainerType>
-  void write_macroscopic_quantity_to_container(DeviceType const & device,
-                                               MacroscopicQuantityAccessor const & quantity,
-                                               ContainerType & quantity_container)
+  template <typename DeviceType, typename MacroscopicQuantityAccessor>
+  void write_macroscopic_quantity_to_quantity_field(DeviceType const & device,
+                                                    MacroscopicQuantityAccessor const & quantity,
+                                                    viennagrid_quantity_field field)
   {
-    typedef typename DeviceType::mesh_type              MeshType;
+    viennagrid_dimension cell_dim;
+    viennagrid_mesh_cell_dimension_get(device.mesh(), &cell_dim);
 
-    typedef typename viennagrid::result_of::const_cell_range<MeshType>::type    CellContainer;
-    typedef typename viennagrid::result_of::iterator<CellContainer>::type       CellIterator;
-
-    MeshType const & mesh = device.mesh();
-
-    CellContainer cells(mesh);
-    for (CellIterator cit = cells.begin();
-        cit != cells.end();
-        ++cit)
+    viennagrid_element_id *cells_begin, *cells_end;
+    viennagrid_mesh_elements_get(device.mesh(), cell_dim, &cells_begin, &cells_end);
+    for (viennagrid_element_id *cit  = cells_begin;
+                                cit != cells_end;
+                              ++cit)
     {
-      quantity_container.at(static_cast<std::size_t>(cit->id().get())) = quantity(*cit);
+      std::vector<viennagrid_numeric> value = quantity(*cit);
+      viennagrid_quantity_field_value_set(field, *cit, &(value[0]));
     }
   }
 

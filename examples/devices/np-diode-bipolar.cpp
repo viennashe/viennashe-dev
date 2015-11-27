@@ -61,11 +61,11 @@ void init_device(DeviceType & device)
   typedef typename DeviceType::segment_type          SegmentType;
 
   /** Define concenience references to the segments: **/
-  SegmentType const & contact_left  = device.segment(0);
-  SegmentType const & n_left        = device.segment(1);
-  SegmentType const & i_center      = device.segment(2);
-  SegmentType const & p_right       = device.segment(3);
-  SegmentType const & contact_right = device.segment(4);
+  SegmentType contact_left  = device.segment(0);
+  SegmentType n_left        = device.segment(1);
+  SegmentType i_center      = device.segment(2);
+  SegmentType p_right       = device.segment(3);
+  SegmentType contact_right = device.segment(4);
 
   /** Set the materials per segment according to the schematic above: **/
   device.set_material(viennashe::materials::metal(), contact_left);

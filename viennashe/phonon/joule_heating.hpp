@@ -105,35 +105,39 @@ namespace viennashe
        * @param cell A cell
        * @return Power density on vertex
        */
-      value_type operator()(viennagrid_element_id cell) const
+      std::vector<value_type> operator()(viennagrid_element_id cell) const
       {
+        value_type value = 0;
         // PURE DD
         if ( conf_.get_electron_equation() == viennashe::EQUATION_CONTINUITY &&
              conf_.get_hole_equation()     == viennashe::EQUATION_CONTINUITY )
         {
-          return viennashe::hde::apply_joule_heating(Jfield_dd_n_, Efield_, cell) +
-                 viennashe::hde::apply_joule_heating(Jfield_dd_p_, Efield_, cell);
+          value = viennashe::hde::apply_joule_heating(Jfield_dd_n_, Efield_, cell) +
+                  viennashe::hde::apply_joule_heating(Jfield_dd_p_, Efield_, cell);
         }
         // PURE SHE (bipolar SHE)
         else if ( conf_.get_electron_equation() == viennashe::EQUATION_SHE &&
                   conf_.get_hole_equation()     == viennashe::EQUATION_SHE )
         {
-          return viennashe::hde::apply_joule_heating(Jfield_she_n_, Efield_, cell) +
-                 viennashe::hde::apply_joule_heating(Jfield_she_p_, Efield_, cell);
+          value = viennashe::hde::apply_joule_heating(Jfield_she_n_, Efield_, cell) +
+                  viennashe::hde::apply_joule_heating(Jfield_she_p_, Efield_, cell);
         }
         // SHE for electrons only
         else if ( conf_.get_electron_equation() == viennashe::EQUATION_SHE &&
                   conf_.get_hole_equation()     == viennashe::EQUATION_CONTINUITY )
         {
-          return viennashe::hde::apply_joule_heating(Jfield_she_n_, Efield_, cell) +
-                 viennashe::hde::apply_joule_heating(Jfield_dd_p_,  Efield_, cell);
+          value = viennashe::hde::apply_joule_heating(Jfield_she_n_, Efield_, cell) +
+                  viennashe::hde::apply_joule_heating(Jfield_dd_p_,  Efield_, cell);
         }
         else // SHE for holes only
         {
-          return viennashe::hde::apply_joule_heating(Jfield_dd_n_,  Efield_, cell) +
+          value = viennashe::hde::apply_joule_heating(Jfield_dd_n_,  Efield_, cell) +
                  viennashe::hde::apply_joule_heating(Jfield_she_p_, Efield_, cell);
         }
 
+        std::vector<value_type> ret(3);
+        ret[0] = value;
+        return ret;
       }
 
     private:

@@ -25,7 +25,7 @@
 #include "viennashe/core.hpp"
 
 // ViennaGrid default configurations:
-#include "viennagrid/config/default_configs.hpp"
+#include "viennagrid/viennagrid.h"
 
 /** \file ushape_2d.cpp Tests charge conservation in a U-shaped configuration.
  *  \test Tests charge conservation on a block of silicon with two contacts. The current is expected to flow in a U-shaped config
@@ -44,10 +44,10 @@ void init_device(DeviceType & device)
 {
   typedef typename DeviceType::segment_type          SegmentType;
 
-  SegmentType const & contact_left  = device.segment(1);
-  SegmentType const & oxide         = device.segment(2);
-  SegmentType const & contact_right = device.segment(3);
-  SegmentType const & body          = device.segment(4);
+  SegmentType contact_left  = device.segment(1);
+  SegmentType oxide         = device.segment(2);
+  SegmentType contact_right = device.segment(3);
+  SegmentType body          = device.segment(4);
 
   device.set_material(viennashe::materials::si(), body);
 
@@ -68,8 +68,7 @@ void init_device(DeviceType & device)
 
 int main()
 {
-  typedef viennagrid::triangular_2d_mesh               MeshType;
-  typedef viennashe::device<MeshType>                  DeviceType;
+  typedef viennashe::device<viennagrid_mesh>           DeviceType;
   typedef DeviceType::segment_type                     SegmentType;
 
   std::cout << viennashe::preamble() << std::endl;
@@ -78,8 +77,14 @@ int main()
   DeviceType device;
   device.load_mesh("../../tests/data/ushape2d/ushape125.mesh");
 
-  std::cout << "Vertices: " << viennagrid::vertices(device.mesh()).size() << std::endl;
-  std::cout << "Edges:    " << viennagrid::edges(device.mesh()).size()    << std::endl;
+  viennagrid_element_id *vertices_begin, *vertices_end;
+  viennagrid_mesh_elements_get(device.mesh(), 0, &vertices_begin, &vertices_end);
+
+  viennagrid_element_id *edges_begin, *edges_end;
+  viennagrid_mesh_elements_get(device.mesh(), 1, &edges_begin, &edges_end);
+
+  std::cout << "Vertices: " << vertices_end - vertices_begin << std::endl;
+  std::cout << "Edges:    " << edges_end - edges_begin       << std::endl;
 
   // scale device from meter to nanometer
   device.scale(1e-6);

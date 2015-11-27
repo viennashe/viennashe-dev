@@ -20,13 +20,7 @@
 
 int main()
 {
-  typedef viennagrid::line_1d_mesh                               MeshType;
-
-  typedef viennashe::device<MeshType>     DeviceType;
-
-  typedef viennagrid::result_of::const_cell_range<MeshType>::type     CellContainer;
-  typedef viennagrid::result_of::iterator<CellContainer>::type        CellIterator;
-  typedef viennagrid::result_of::const_facet_range<MeshType>::type    FacetContainer;
+  typedef viennashe::device<viennagrid_mesh>     DeviceType;
 
   std::cout << viennashe::preamble() << std::endl;
 
@@ -54,20 +48,21 @@ int main()
   //
   // DEBUG OUTPUT
   std::cout << std::endl;
-  CellContainer cells(device.mesh());
-  for (CellIterator cit  = cells.begin();
-                    cit != cells.end();
-                  ++cit)
+  viennagrid_dimension cell_dim;
+  viennagrid_mesh_cell_dimension_get(device.mesh(), &cell_dim);
+
+  viennagrid_element_id *cells_begin, *cells_end;
+  viennagrid_mesh_elements_get(device.mesh(), cell_dim, &cells_begin, &cells_end);
+  for (viennagrid_element_id *cit  = cells_begin;
+                              cit != cells_end;
+                            ++cit)
   {
-    std::cout << cit->id() << " => " << device.get_material(*cit)
+    std::cout << viennagrid_index_from_element_id(*cit) << " => " << device.get_material(*cit)
               << " ## Nd = " << device.get_doping_n(*cit)
               << " ## Na = " << device.get_doping_p(*cit)
               << " ## has bnd cond: " << (device.has_contact_potential(*cit)== true ? "TRUE" : "FALSE")
               << std::endl;
   } // for cells
-  FacetContainer facets(device.mesh());
-  for (std::size_t i = 0; i < facets.size(); ++i)
-    std::cout << facets[i] << std::endl;
 
   //
   // Use a drift-diffusion simulation

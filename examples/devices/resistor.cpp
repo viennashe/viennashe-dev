@@ -58,17 +58,20 @@ void init_device(DeviceType & device, double vcc)
   // ViennaGrid types for mesh handling:
   typedef typename DeviceType::mesh_type           MeshType;
 
-  typedef typename viennagrid::result_of::const_cell_range<MeshType>::type   CellContainer;
+  viennagrid_dimension cell_dim;
+  viennagrid_mesh_cell_dimension_get(device.mesh(), &cell_dim);
 
-  // Container of all cells in the mesh:
-  CellContainer cells(device.mesh());
+  viennagrid_element_id *cells_begin, *cells_end;
+  viennagrid_mesh_elements_get(device.mesh(), cell_dim, &cells_begin, &cells_end);
+
+  std::size_t cell_num = cells_end - cells_begin;
 
   /** Set the materials per segment according to the schematic above: **/
   device.set_material(viennashe::materials::si()); // Silicon everywhere
 
   // overwrite the material of the two cells on the left and right:
-  device.set_material(viennashe::materials::metal(), cells[0]);
-  device.set_material(viennashe::materials::metal(), cells[cells.size()-1]);
+  device.set_material(viennashe::materials::metal(), cells_begin[0]);
+  device.set_material(viennashe::materials::metal(), cells_begin[cell_num-1]);
 
   /**
   Next we set the doping. Since the device is homogeneous, we can just specify it throughout the device:
@@ -80,8 +83,8 @@ void init_device(DeviceType & device, double vcc)
   device.set_doping_p(1e4);
 
   /** Set the contact potentials: **/
-  device.set_contact_potential(0.0, cells[0]);
-  device.set_contact_potential(vcc, cells[cells.size()-1]);
+  device.set_contact_potential(0.0, cells_begin[0]);
+  device.set_contact_potential(vcc, cells_begin[cell_num-1]);
 }
 
 

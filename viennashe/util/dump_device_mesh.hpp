@@ -30,40 +30,46 @@ namespace viennashe
                   )
     {
       typedef typename DeviceT::mesh_type MeshType;
-      typedef typename viennagrid::result_of::point<MeshType>::type      PointType;
-      typedef typename viennagrid::result_of::cell<MeshType>::type       CellType;
-
-      typedef typename viennagrid::result_of::const_vertex_range<MeshType>::type      VertexContainer;
-      typedef typename viennagrid::result_of::const_cell_range<MeshType>::type        CellContainer;
-
-      typedef typename viennagrid::result_of::const_vertex_range<CellType>::type     VertexOnCellContainer;
-      typedef typename viennagrid::result_of::iterator<VertexOnCellContainer>::type  VertexOnCellIterator;
 
       if (vertices == 0) throw std::invalid_argument("vertices = NULL !");
       if (cells == 0)    throw std::invalid_argument("cells = NULL !");
 
-      VertexContainer grid_vertices(device.mesh());
-      CellContainer   grid_cells(device.mesh());
-      const size_t    dim = PointType::dim;
+      viennagrid_element_id *vertices_begin, *vertices_end;
+      viennagrid_mesh_elements_get(device.mesh(), 0, &vertices_begin, &vertices_end);
+
+      viennagrid_dimension cell_dim;
+      viennagrid_mesh_cell_dimension_get(device.mesh(), &cell_dim);
+
+      viennagrid_element_id *cells_begin, *cells_end;
+      viennagrid_mesh_elements_get(device.mesh(), cell_dim, &cells_begin, &cells_end);
 
       // Dump sizes
-      num_vertices = static_cast<IndexT>(grid_vertices.size());
-      num_cells    = static_cast<IndexT>(grid_cells.size());
+      num_vertices = IndexT(vertices_end - vertices_begin);
+      num_cells    = IndexT(   cells_end -    cells_begin);
+
+      viennagrid_dimension geo_dim;
+      viennagrid_mesh_geometric_dimension_get(device.mesh(), &geo_dim);
 
       // Dump vertices (iterate the C-way to have the indices)
-      for (std::size_t i = 0; i < grid_vertices.size(); ++i)
+      for (std::size_t i = 0; i < num_vertices; ++i)
       {
-        for (std::size_t j = 0; j < dim; ++j) vertices[i][j] = viennagrid::point(grid_vertices[i])[j];
+        viennagrid_numeric *coords;
+        viennagrid_mesh_vertex_coords_get(device.mesh(), vertices_begin[i], &coords);
+
+        for (std::size_t j = 0; j < std::size_t(geo_dim); ++j)
+          vertices[i][j] = coords[j];
       }
 
       // Dump cells (iterate the C-way to have the indices)
-      for (std::size_t i = 0; i < grid_cells.size(); ++i)
+      for (std::size_t i = 0; i < num_cells; ++i)
       {
-        VertexOnCellContainer vertices_on_cell(grid_cells[i]);
+        viennagrid_element_id *vertices_on_cell_begin, *vertices_on_cell_end;
+        viennagrid_element_boundary_elements(device.mesh(), cells_begin[i], 0, &vertices_on_cell_begin, &vertices_on_cell_end);
+
         std::size_t j = 0;
-        for (VertexOnCellIterator vit = vertices_on_cell.begin(); vit != vertices_on_cell.end(); ++vit, ++j)
+        for (viennagrid_element_id *vit = vertices_on_cell_begin; vit != vertices_on_cell_end; ++vit, ++j)
         {
-          cells[i][j] = static_cast<IndexT>(vit->id().get());
+          cells[i][j] = IndexT(viennagrid_index_from_element_id(*vit));
         }
       }
 

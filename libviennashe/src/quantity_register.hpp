@@ -59,11 +59,13 @@ namespace libviennashe
     {
       typedef typename DeviceType::mesh_type  MeshType;
       typedef typename viennashe::current_density_wrapper<DeviceType, PotentialQuantityType, CarrierQuantityType, MobilityModel> CurrentDensityAccessorType;
-      typedef typename viennagrid::result_of::cell_tag<MeshType>::type  CellTag;
 
       CurrentDensityAccessorType Jfield(device, ctype, potential, carrier, mobility_model);
 
-      libviennashe::quantity::accessor_based_array_quantity_wrapper<DeviceType, CurrentDensityAccessorType, CellTag> quan_cell(Jfield, device, name);
+      viennagrid_dimension cell_dim;
+      viennagrid_mesh_cell_dimension_get(device.mesh(), &cell_dim);
+
+      libviennashe::quantity::accessor_based_array_quantity_wrapper<DeviceType, CurrentDensityAccessorType> quan_cell(Jfield, device, cell_dim, name);
       reg.cell_based.register_quan(quan_cell);
     }
 
@@ -83,11 +85,13 @@ namespace libviennashe
     {
       typedef typename DeviceType::mesh_type  MeshType;
       typedef typename viennashe::she::current_density_wrapper<DeviceType, SHEQuanT> CurrentDensityAccessorType;
-      typedef typename viennagrid::result_of::cell_tag<MeshType>::type  CellTag;
 
       CurrentDensityAccessorType Jfield(device, conf, shequan);
 
-      libviennashe::quantity::accessor_based_array_quantity_wrapper<DeviceType, CurrentDensityAccessorType, CellTag> quan_cell(Jfield, device, name);
+      viennagrid_dimension cell_dim;
+      viennagrid_mesh_cell_dimension_get(device.mesh(), &cell_dim);
+
+      libviennashe::quantity::accessor_based_array_quantity_wrapper<DeviceType, CurrentDensityAccessorType> quan_cell(Jfield, device, cell_dim, name);
       reg.cell_based.register_quan(quan_cell);
     }
 
@@ -107,10 +111,12 @@ namespace libviennashe
     {
       typedef typename DeviceType::mesh_type  MeshType;
       typedef typename viennashe::she::carrier_velocity_wrapper<DeviceType, SHEQuanT> AccessorType;
-      typedef typename viennagrid::result_of::cell_tag<MeshType>::type  CellTag;
+
+      viennagrid_dimension cell_dim;
+      viennagrid_mesh_cell_dimension_get(device.mesh(), &cell_dim);
 
       AccessorType acc(device, conf, shequan);
-      libviennashe::quantity::accessor_based_array_quantity_wrapper<DeviceType, AccessorType, CellTag> quan_cell(acc, device, name);
+      libviennashe::quantity::accessor_based_array_quantity_wrapper<DeviceType, AccessorType> quan_cell(acc, device, cell_dim, name);
       reg.cell_based.register_quan(quan_cell);
     }
 
@@ -129,12 +135,14 @@ namespace libviennashe
                                  ConfigT const & conf, std::string name)
     {
       typedef typename DeviceType::mesh_type  MeshType;
-      typedef typename viennagrid::result_of::cell_tag<MeshType>::type  CellTag;
       typedef typename viennashe::she::carrier_energy_wrapper<SHEQuanT> AccessorType;
 
       AccessorType acc(conf, shequan);
 
-      libviennashe::quantity::accessor_based_quantity_wrapper<DeviceType, AccessorType, CellTag> quan_cell(acc, device, name);
+      viennagrid_dimension cell_dim;
+      viennagrid_mesh_cell_dimension_get(device.mesh(), &cell_dim);
+
+      libviennashe::quantity::accessor_based_quantity_wrapper<DeviceType, AccessorType> quan_cell(acc, device, cell_dim, name);
       reg.cell_based.register_quan(quan_cell);
     }
 
@@ -152,12 +160,14 @@ namespace libviennashe
                                  std::string name)
     {
       typedef typename DeviceType::mesh_type  MeshType;
-      typedef typename viennagrid::result_of::cell_tag<MeshType>::type  CellTag;
       typedef typename viennashe::she::average_expansion_order_wrapper<DeviceType, SHEQuanT> AccessorType;
 
       AccessorType acc(shequan, 0.0, 1.0);
 
-      libviennashe::quantity::accessor_based_quantity_wrapper<DeviceType, AccessorType, CellTag> quan_cell(acc, device, name);
+      viennagrid_dimension cell_dim;
+      viennagrid_mesh_cell_dimension_get(device.mesh(), &cell_dim);
+
+      libviennashe::quantity::accessor_based_quantity_wrapper<DeviceType, AccessorType> quan_cell(acc, device, cell_dim, name);
       reg.cell_based.register_quan(quan_cell);
     }
 
@@ -175,11 +185,13 @@ namespace libviennashe
                                  PotentialAccessor const & potential, std::string quantity_name)
     {
       typedef typename DeviceType::mesh_type  MeshType;
-      typedef typename viennagrid::result_of::cell_tag<MeshType>::type  CellTag;
       typedef typename viennashe::electric_field_wrapper<DeviceType, PotentialAccessor> ElectricFieldAccessorType;
       ElectricFieldAccessorType Efield(device, potential);
 
-      libviennashe::quantity::accessor_based_array_quantity_wrapper<DeviceType, ElectricFieldAccessorType, CellTag> quan_vertex(Efield, device, quantity_name);
+      viennagrid_dimension cell_dim;
+      viennagrid_mesh_cell_dimension_get(device.mesh(), &cell_dim);
+
+      libviennashe::quantity::accessor_based_array_quantity_wrapper<DeviceType, ElectricFieldAccessorType> quan_vertex(Efield, device, cell_dim, quantity_name);
       reg.cell_based.register_quan(quan_vertex);
     }
 
@@ -195,12 +207,14 @@ namespace libviennashe
       PotentialAccessor const & potential, std::string quantity_name)
     {
       typedef typename DeviceType::mesh_type  MeshType;
-      typedef typename viennagrid::result_of::cell_tag<MeshType>::type  CellTag;
       typedef typename viennashe::electric_flux_wrapper<DeviceType, PotentialAccessor> AccessorType;
-      typedef typename libviennashe::quantity::accessor_based_array_quantity_wrapper<DeviceType, AccessorType, CellTag> WrapperType;
+      typedef typename libviennashe::quantity::accessor_based_array_quantity_wrapper<DeviceType, AccessorType> WrapperType;
+
+      viennagrid_dimension cell_dim;
+      viennagrid_mesh_cell_dimension_get(device.mesh(), &cell_dim);
 
       AccessorType Dfield(device, potential);
-      WrapperType quan_cell(Dfield, device, quantity_name);
+      WrapperType quan_cell(Dfield, device, cell_dim, quantity_name);
       reg.cell_based.register_quan(quan_cell);
     }
 
@@ -218,7 +232,6 @@ namespace libviennashe
     typedef typename SimulatorT::ResultQuantityType  ResultQuantityType;
 
     typedef typename DeviceType::mesh_type  MeshType;
-    typedef typename viennagrid::result_of::cell_tag<MeshType>::type  CellTag;
 
     DeviceType const & device = sim.device();
 
@@ -226,52 +239,55 @@ namespace libviennashe
     // Register device quantities
     //
 
+    viennagrid_dimension cell_dim;
+    viennagrid_mesh_cell_dimension_get(device.mesh(), &cell_dim);
+
     // Doping
     viennashe::doping_accessor<DeviceType> doping_n(device, viennashe::ELECTRON_TYPE_ID);
     viennashe::doping_accessor<DeviceType> doping_p(device, viennashe::HOLE_TYPE_ID);
-    quantity::accessor_based_quantity_wrapper<DeviceType, viennashe::doping_accessor<DeviceType>, CellTag> doping_n_vertex(doping_n, device, "Donor doping concentration");
-    quantity::accessor_based_quantity_wrapper<DeviceType, viennashe::doping_accessor<DeviceType>, CellTag> doping_p_vertex(doping_p, device, "Acceptor doping concentration");
+    quantity::accessor_based_quantity_wrapper<DeviceType, viennashe::doping_accessor<DeviceType> > doping_n_vertex(doping_n, device, cell_dim, "Donor doping concentration");
+    quantity::accessor_based_quantity_wrapper<DeviceType, viennashe::doping_accessor<DeviceType> > doping_p_vertex(doping_p, device, cell_dim, "Acceptor doping concentration");
     reg.cell_based.register_quan(doping_n_vertex);
     reg.cell_based.register_quan(doping_p_vertex);
 
     // Built-in Potential
     viennashe::built_in_potential_accessor<DeviceType> builtinpot(device);
-    quantity::accessor_based_quantity_wrapper<DeviceType, viennashe::built_in_potential_accessor<DeviceType>, CellTag> builtinpot_vt(builtinpot, device, "Built-In potential");
+    quantity::accessor_based_quantity_wrapper<DeviceType, viennashe::built_in_potential_accessor<DeviceType> > builtinpot_vt(builtinpot, device, cell_dim, "Built-In potential");
     reg.cell_based.register_quan(builtinpot_vt);
 
     //
     // Register basic quantities
     //
 
-    typedef typename quantity::accessor_based_quantity_wrapper<DeviceType, ResultQuantityType, CellTag> ResultQuantityWrapperType;
+    typedef typename quantity::accessor_based_quantity_wrapper<DeviceType, ResultQuantityType> ResultQuantityWrapperType;
 
     // Potential
-    ResultQuantityWrapperType pot_vertex(sim.potential(), device, viennashe::quantity::potential());
+    ResultQuantityWrapperType pot_vertex(sim.potential(), device, cell_dim, viennashe::quantity::potential());
     reg.cell_based.register_quan(pot_vertex);
 
     // Electron Concentration
-    ResultQuantityWrapperType n_vertex(sim.electron_density(), device, viennashe::quantity::electron_density());
+    ResultQuantityWrapperType n_vertex(sim.electron_density(), device, cell_dim, viennashe::quantity::electron_density());
     reg.cell_based.register_quan(n_vertex);
 
     // Hole Concentration
-    ResultQuantityWrapperType p_vertex(sim.hole_density(), device, viennashe::quantity::hole_density());
+    ResultQuantityWrapperType p_vertex(sim.hole_density(), device, cell_dim, viennashe::quantity::hole_density());
     reg.cell_based.register_quan(p_vertex);
 
     // DG Electron Correction Potential
-    ResultQuantityWrapperType dgn_vertex(sim.dg_pot_n(), device, viennashe::quantity::density_gradient_electron_correction());
+    ResultQuantityWrapperType dgn_vertex(sim.dg_pot_n(), device, cell_dim, viennashe::quantity::density_gradient_electron_correction());
     reg.cell_based.register_quan(dgn_vertex);
 
     // DG Hole Correction Potential
-    ResultQuantityWrapperType dgp_vertex(sim.dg_pot_p(), device, viennashe::quantity::density_gradient_hole_correction());
+    ResultQuantityWrapperType dgp_vertex(sim.dg_pot_p(), device, cell_dim, viennashe::quantity::density_gradient_hole_correction());
     reg.cell_based.register_quan(dgp_vertex);
 
     // Lattice Temperature
-    ResultQuantityWrapperType hde_lat_temp(sim.quantities().lattice_temperature(), device, viennashe::quantity::lattice_temperature());
+    ResultQuantityWrapperType hde_lat_temp(sim.quantities().lattice_temperature(), device, cell_dim, viennashe::quantity::lattice_temperature());
     reg.cell_based.register_quan(hde_lat_temp);
 
     viennashe::lattice_temperature_accessor<DeviceType> lattice_temp(device);
-    quantity::accessor_based_quantity_wrapper<DeviceType, viennashe::lattice_temperature_accessor<DeviceType>, CellTag>
-        tl_dev(lattice_temp, device, "Transport lattice temperature");
+    quantity::accessor_based_quantity_wrapper<DeviceType, viennashe::lattice_temperature_accessor<DeviceType> >
+        tl_dev(lattice_temp, device, cell_dim, "Transport lattice temperature");
     reg.cell_based.register_quan(tl_dev);
 
     //
@@ -366,7 +382,7 @@ namespace libviennashe
   template <typename SHEQuanT, typename DFWrapperT, typename CellType >
   void she_fill_edf_at_cell(SHEQuanT const & quan, DFWrapperT const & edfacc, CellType const & cell, double ** ekin, double ** edf, viennashe_index_type * len)
   {
-    const std::size_t idx = std::size_t(cell.id().get());
+    const std::size_t idx = std::size_t(viennagrid_index_from_element_id(cell));
     len[idx] = static_cast<viennashe_index_type>(quan.get_value_H_size() - 1); // set length
     for (std::size_t index_H = 1; index_H < quan.get_value_H_size() - 1; ++index_H)
     {
@@ -391,7 +407,7 @@ namespace libviennashe
   template <typename DOSAccessorT, typename VertexType >
   void she_fill_dos_at_cell(viennashe_index_type num, double deltaeps, DOSAccessorT const & dosacc, VertexType const & vt, double ** ekin, double ** dos, viennashe_index_type * len)
   {
-    const std::size_t idx = std::size_t(vt.id().get());
+    const std::size_t idx = std::size_t(viennagrid_index_from_element_id(vt));
     len[idx] = num;
     for (std::size_t index_H = 0; index_H < num; ++index_H)
     {
@@ -415,26 +431,28 @@ namespace libviennashe
     typedef typename SimulatorT::device_type  DeviceType;
     typedef typename DeviceType::mesh_type    MeshType;
 
-    typedef typename viennagrid::result_of::const_cell_range<MeshType>::type   CellContainer;
-    typedef typename viennagrid::result_of::iterator<CellContainer>::type      CellIterator;
-
     DeviceType const & device = sim.device();
-    CellContainer cells(device.mesh());
+
+    viennagrid_dimension cell_dim;
+    viennagrid_mesh_cell_dimension_get(device.mesh(), &cell_dim);
+
+    viennagrid_element_id *cells_begin, *cells_end;
+    viennagrid_mesh_elements_get(device.mesh(), cell_dim, &cells_begin, &cells_end);
 
     if (ctype == viennashe::ELECTRON_TYPE_ID)
     {
-      for (CellIterator cit = cells.begin();
-           cit != cells.end();
-           ++cit)
+      for (viennagrid_element_id *cit  = cells_begin;
+                                  cit != cells_end;
+                                ++cit)
       {
         she_fill_edf_at_cell(sim.quantities().electron_distribution_function(), sim.edf(ctype), *cit, ekin, edf, len);
       }
     }
     else
     {
-      for (CellIterator cit = cells.begin();
-           cit != cells.end();
-           ++cit)
+      for (viennagrid_element_id *cit  = cells_begin;
+                                  cit != cells_end;
+                                ++cit)
       {
         she_fill_edf_at_cell(sim.quantities().hole_distribution_function(), sim.edf(ctype), *cit, ekin, edf, len);
       }
@@ -455,16 +473,15 @@ namespace libviennashe
     typedef typename SimulatorT::device_type  DeviceType;
     typedef typename DeviceType::mesh_type    MeshType;
 
-    typedef typename viennagrid::result_of::const_vertex_range<MeshType>::type     VertexContainer;
-    typedef typename viennagrid::result_of::iterator<VertexContainer>::type        VertexIterator;
-
     DeviceType const & device = sim.device();
-    VertexContainer vertices(device.mesh());
+
+    viennagrid_element_id *vertices_begin, *vertices_end;
+    viennagrid_mesh_elements_get(device.mesh(), 0, &vertices_begin, &vertices_end);
 
     const double ekinmax = viennashe::physics::convert::eV_to_joule(10.0); // TODO: Think about better maximum for the kinetic energy ...
     const viennashe_index_type  num = static_cast<viennashe_index_type>(std::ceil(ekinmax / sim.config().energy_spacing()));
 
-    for (VertexIterator vit = vertices.begin(); vit != vertices.end(); ++vit)
+    for (viennagrid_element_id *vit = vertices_begin; vit != vertices_end; ++vit)
     {
       she_fill_dos_at_cell(num, sim.config().energy_spacing(), sim.config().dispersion_relation(ctype), *vit, ekin, dos, len);
     }
@@ -485,19 +502,18 @@ namespace libviennashe
     typedef typename SimulatorT::device_type  DeviceType;
     typedef typename DeviceType::mesh_type    MeshType;
 
-    typedef typename viennagrid::result_of::const_vertex_range<MeshType>::type     VertexContainer;
-    typedef typename viennagrid::result_of::iterator<VertexContainer>::type        VertexIterator;
-
     DeviceType const & device = sim.device();
-    VertexContainer vertices(device.mesh());
+
+    viennagrid_element_id *vertices_begin, *vertices_end;
+    viennagrid_mesh_elements_get(device.mesh(), 0, &vertices_begin, &vertices_end);
 
     const double ekinmax  = viennashe::physics::convert::eV_to_joule(10.0); // TODO: Think about better maximum for the kinetic energy ...
 
     const viennashe_index_type num = static_cast<viennashe_index_type>(std::ceil(ekinmax / sim.config().energy_spacing()));
 
-    for (VertexIterator vit = vertices.begin(); vit != vertices.end(); ++vit)
+    for (viennagrid_element_id *vit = vertices_begin; vit != vertices_end; ++vit)
     {
-      const std::size_t idx = std::size_t(vit->id().get());
+      const std::size_t idx = std::size_t(viennagrid_index_from_element_id(*vit));
       len[idx] = num;
       for (std::size_t index_H = 0; index_H < num; ++index_H)
       {

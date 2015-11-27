@@ -39,10 +39,6 @@ namespace libviennashe
     typedef typename SimulatorT::device_type  DeviceType;
     typedef typename DeviceType::mesh_type    MeshType;
 
-    typedef typename viennagrid::result_of::point<MeshType>::type     PointType;
-    typedef typename viennagrid::result_of::const_cell_range<MeshType>::type  CellContainer;
-    typedef typename viennagrid::result_of::iterator<CellContainer>::type     CellIterator;
-
     DeviceType const & device = sim.device();
 
     std::ofstream writer(filename.c_str());
@@ -58,17 +54,22 @@ namespace libviennashe
 
     bool first = true;
 
-    const std::size_t dim = static_cast<std::size_t>(PointType::dim);
+    viennagrid_dimension geo_dim;
+    viennagrid_mesh_geometric_dimension_get(device.mesh(), &geo_dim);
+    const std::size_t dim = std::size_t(geo_dim);
 
-    CellContainer cells(device.mesh());
+    viennagrid_dimension cell_dim;
+    viennagrid_mesh_cell_dimension_get(device.mesh(), &cell_dim);
 
-    for (CellIterator cit = cells.begin();
-         cit != cells.end();
-         ++cit)
+    viennagrid_element_id *cells_begin, *cells_end;
+    viennagrid_mesh_elements_get(device.mesh(), cell_dim, &cells_begin, &cells_end);
+    for (viennagrid_element_id *cit  = cells_begin;
+                                cit != cells_end;
+                              ++cit)
     {
 
       std::vector<double> values(1);
-      reg.cell_based.get(name).fill_single(std::size_t(cit->id().get()), values);
+      reg.cell_based.get(name).fill_single(std::size_t(viennagrid_index_from_element_id(*cit)), values);
 
       if (values.size() == 0) continue;
 
@@ -83,7 +84,9 @@ namespace libviennashe
       }
 
       // Write values at point
-      for (std::size_t i = 0; i < dim; ++i) writer << viennagrid::centroid(*cit)[i] << " ";
+      viennagrid_numeric centroid[3];
+      viennagrid_element_centroid(device.mesh(), *cit, centroid);
+      for (std::size_t i = 0; i < dim; ++i) writer << centroid[i] << " ";
       for (std::size_t i = 0; i < values.size(); ++i)  writer << values[i]       << " ";
       writer << std::endl;
     } // for vertices
@@ -105,10 +108,6 @@ namespace libviennashe
   {
     typedef typename SimulatorT::device_type DeviceType;
     typedef typename DeviceType::mesh_type   MeshType;
-
-    typedef typename viennagrid::result_of::point<MeshType>::type     PointType;
-    typedef typename viennagrid::result_of::const_cell_range<MeshType>::type   CellContainer;
-    typedef typename viennagrid::result_of::iterator<CellContainer>::type      CellIterator;
 
     typedef typename SimulatorT::edf_type                              EDFType;
     typedef typename SimulatorT::generalized_edf_type                  GeneralizedEDFType;
@@ -147,19 +146,30 @@ namespace libviennashe
 
     bool first = true;
 
-    CellContainer cells(device.mesh());
-    for (CellIterator cit = cells.begin();
-         cit != cells.end();
-         ++cit)
+    viennagrid_dimension geo_dim;
+    viennagrid_mesh_geometric_dimension_get(device.mesh(), &geo_dim);
+    const std::size_t dim = std::size_t(geo_dim);
+
+    viennagrid_dimension cell_dim;
+    viennagrid_mesh_cell_dimension_get(device.mesh(), &cell_dim);
+
+    viennagrid_element_id *cells_begin, *cells_end;
+    viennagrid_mesh_elements_get(device.mesh(), cell_dim, &cells_begin, &cells_end);
+    for (viennagrid_element_id *cit  = cells_begin;
+                                cit != cells_end;
+                              ++cit)
     {
       // Write preamble
       if (first)
       {
         writer << "# ";
-        for (std::size_t i = 0; i < static_cast<std::size_t>(PointType::dim); ++i) writer << " x_" << i << " ";
+        for (std::size_t i = 0; i < dim; ++i) writer << " x_" << i << " ";
         writer << "     energy     edf      generalized_edf      dos      vg" << std::endl;
         first = false;
       }
+
+      viennagrid_numeric centroid[3];
+      viennagrid_element_centroid(device.mesh(), *cit, centroid);
 
       // Write values at point
       for (std::size_t index_H = 1; index_H < sim.quantities().carrier_distribution_function(ctype).get_value_H_size()-1; ++index_H)
@@ -170,7 +180,7 @@ namespace libviennashe
 
         if (eps >= 0.0)
         {
-          for (std::size_t i = 0; i < static_cast<std::size_t>(PointType::dim); ++i) writer << viennagrid::centroid(*cit)[i] << " ";
+          for (std::size_t i = 0; i < dim; ++i) writer << centroid[i] << " ";
           writer << eps << " " << edf(*cit, eps, index_H) << " " << gedf(*cit, eps, index_H) << " " << dos << " " << velo << std::endl;
         }
       }
@@ -212,12 +222,7 @@ viennasheErrorCode viennashe_write_to_gnuplot(viennashe_quan_register reg, char 
     libviennashe::quan_register_internal * int_reg = reinterpret_cast<libviennashe::quan_register_internal *>(reg);
     // Get internal simulator
     viennashe_simulator_impl const * int_sim = int_reg->int_sim;
-    // More checks
-    if (!int_sim->is_valid())
-    {
-      viennashe::log::error() << "ERROR! write_to_gnuplot(): The simulator (sim) must be valid!" << std::endl;
-      return 1;
-    }
+
     // Check if the quan exists
     if(! int_reg->cell_based.has_quan(name))
     {
@@ -225,32 +230,7 @@ viennasheErrorCode viennashe_write_to_gnuplot(viennashe_quan_register reg, char 
       return 2;
     }
 
-    // Do the actual work
-    if(int_sim->stype == libviennashe::meshtype::line_1d)
-    {
-      libviennashe::write_to_gnuplot(*(int_sim->sim1d), *int_reg, std::string(name), std::string(filename));
-    }
-    else if(int_sim->stype == libviennashe::meshtype::quadrilateral_2d)
-    {
-      libviennashe::write_to_gnuplot(*(int_sim->simq2d), *int_reg, std::string(name), std::string(filename));
-    }
-    else if(int_sim->stype == libviennashe::meshtype::triangular_2d)
-    {
-      libviennashe::write_to_gnuplot(*(int_sim->simt2d), *int_reg, std::string(name), std::string(filename));
-    }
-    else if(int_sim->stype == libviennashe::meshtype::hexahedral_3d)
-    {
-      libviennashe::write_to_gnuplot(*(int_sim->simh3d), *int_reg, std::string(name), std::string(filename));
-    }
-    else if(int_sim->stype == libviennashe::meshtype::tetrahedral_3d)
-    {
-      libviennashe::write_to_gnuplot(*(int_sim->simt3d), *int_reg, std::string(name), std::string(filename));
-    }
-    else
-    {
-      viennashe::log::error() << "ERROR! write_to_gnuplot(): Unkown grid type!" << std::endl;
-      return -2;
-    }
+    libviennashe::write_to_gnuplot(int_sim->sim_, *int_reg, std::string(name), std::string(filename));
   }
   catch (std::exception const & ex)
   {
@@ -288,41 +268,10 @@ VIENNASHE_EXPORT  viennasheErrorCode viennashe_write_she_results_to_gnuplot(vien
     libviennashe::quan_register_internal * int_reg = reinterpret_cast<libviennashe::quan_register_internal *>(reg);
     // Get internal simulator
     viennashe_simulator_impl const * int_sim = int_reg->int_sim;
-    // More checks
-    if (!int_sim->is_valid())
-    {
-      viennashe::log::error() << "ERROR! viennashe_write_she_results_to_gnuplot(): The simulator (sim) must be valid!" << std::endl;
-      return 1;
-    }
 
     viennashe::carrier_type_id ctype = ((carriertype == viennashe_electron_id) ? viennashe::ELECTRON_TYPE_ID : viennashe::HOLE_TYPE_ID);
 
-    // Do the actual work
-    if (int_sim->stype == libviennashe::meshtype::line_1d)
-    {
-      libviennashe::write_she_to_gnuplot(*(int_sim->sim1d), ctype, std::string(filename));
-    }
-    else if (int_sim->stype == libviennashe::meshtype::quadrilateral_2d)
-    {
-      libviennashe::write_she_to_gnuplot(*(int_sim->simq2d), ctype, std::string(filename));
-    }
-    else if (int_sim->stype == libviennashe::meshtype::triangular_2d)
-    {
-      libviennashe::write_she_to_gnuplot(*(int_sim->simt2d), ctype, std::string(filename));
-    }
-    else if (int_sim->stype == libviennashe::meshtype::hexahedral_3d)
-    {
-      libviennashe::write_she_to_gnuplot(*(int_sim->simh3d), ctype, std::string(filename));
-    }
-    else if (int_sim->stype == libviennashe::meshtype::tetrahedral_3d)
-    {
-      libviennashe::write_she_to_gnuplot(*(int_sim->simt3d), ctype, std::string(filename));
-    }
-    else
-    {
-      viennashe::log::error() << "ERROR! viennashe_write_she_results_to_gnuplot(): Unkown grid type!" << std::endl;
-      return -2;
-    }
+    libviennashe::write_she_to_gnuplot(int_sim->sim_, ctype, std::string(filename));
   }
   catch (...)
   {

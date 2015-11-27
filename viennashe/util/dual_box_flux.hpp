@@ -124,7 +124,7 @@ namespace viennashe
     } */
 
     /** @brief Returns the unit outer normal of a facet with respect to the provided cell */
-    std::vector<double>
+    inline std::vector<double>
     outer_cell_normal_at_facet(viennagrid_mesh mesh,
                                viennagrid_element_id cell,
                                viennagrid_element_id facet)

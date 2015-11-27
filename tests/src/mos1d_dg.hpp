@@ -33,8 +33,7 @@
 #include "viennashe/core.hpp"
 
 // ViennaGrid default configuration and centroid() algorithm:
-#include "viennagrid/config/default_configs.hpp"
-#include "viennagrid/algorithm/centroid.hpp"
+#include "viennagrid/viennagrid.h"
 
 
 /** \file mos1d_dg.hpp This is a header file containing all common definitions and
@@ -58,8 +57,8 @@ struct mos1d_mesh_generator
     : len_gate_(len_gate), cs_gate_(cs_gate), len_oxide_(len_oxide), cs_ox_(cs_ox), len_bulk_(len_bulk), cs_bulk_(cs_bulk)
   { }
 
-  template < typename MeshT, typename SegmentationT >
-  void operator()(MeshT & mesh, SegmentationT & seg) const
+  template<typename MeshT>
+  void operator()(MeshT & mesh) const
   {
     viennashe::util::device_generation_config gconf;
 
@@ -69,7 +68,7 @@ struct mos1d_mesh_generator
     gconf.add_segment(len_gate_+len_oxide_+20e-9,     len_bulk_,   static_cast<unsigned long>(std::ceil(len_bulk_ / cs_bulk_))    );
     gconf.add_segment(len_gate_+len_oxide_+20e-9+len_bulk_,  2e-9, static_cast<unsigned long>(std::ceil(2e-9 / cs_bulk_)     ) + 1);
 
-    viennashe::util::generate_device(mesh, seg, gconf);
+    viennashe::util::generate_device(mesh, gconf);
   }
 
 private:
@@ -95,11 +94,11 @@ void init_device(DeviceType & device, double Vg_init, double Nd, double Na)
 {
   typedef typename DeviceType::segment_type        SegmentType;
 
-  SegmentType const & gate     = device.segment(0);
-  SegmentType const & oxide    = device.segment(1);
-  SegmentType const & silicon  = device.segment(2);
-  SegmentType const & silicon2 = device.segment(3);
-  SegmentType const & bulk     = device.segment(4);
+  SegmentType gate     = device.segment(0);
+  SegmentType oxide    = device.segment(1);
+  SegmentType silicon  = device.segment(2);
+  SegmentType silicon2 = device.segment(3);
+  SegmentType bulk     = device.segment(4);
 
   std::cout << "* init_device(): Setting material ..." << std::endl;
 
@@ -181,13 +180,6 @@ private:
 template <typename DeviceType, typename AccessorType >
 bool test_result(AccessorType const & quan, DeviceType const & device, std::string filename )
 {
-  typedef typename DeviceType::mesh_type           MeshType;
-
-  typedef typename viennagrid::result_of::point<MeshType>::type     PointType;
-
-  typedef typename viennagrid::result_of::const_cell_range<MeshType>::type   CellContainer;
-  typedef typename viennagrid::result_of::iterator<CellContainer>::type      CellIterator;
-
   const double tol = 1e-1;
 
   std::cout << "test_result(): file = '" << filename << "'" << std::endl;
@@ -203,15 +195,23 @@ bool test_result(AccessorType const & quan, DeviceType const & device, std::stri
     }
 
     long linenum = 0;
-    CellContainer cells(device.mesh());
-    for (CellIterator cit = cells.begin();
-         cit != cells.end();
-         ++cit, ++linenum )
+
+    viennagrid_dimension cell_dim;
+    viennagrid_mesh_cell_dimension_get(device.mesh(), &cell_dim);
+
+    viennagrid_element_id *cells_begin, *cells_end;
+    viennagrid_mesh_elements_get(device.mesh(), cell_dim, &cells_begin, &cells_end);
+    for (viennagrid_element_id *cit  = cells_begin;
+                                cit != cells_end;
+                              ++cit, ++linenum)
     {
+      viennagrid_numeric centroid[3];
+      viennagrid_element_centroid(device.mesh(), *cit, centroid);
+
       //write values at point
-      for (std::size_t i = 0; i < static_cast<std::size_t>(PointType::dim); ++i)
+      for (std::size_t i = 0; i < static_cast<std::size_t>(cell_dim); ++i)
       {
-        const double value    = viennagrid::centroid(*cit)[i];
+        const double value    = centroid[i];
         const double refvalue = referencefile.data().at(linenum)[i];
         if(!viennashe::testing::fuzzy_equal(refvalue, value, tol))
         {
@@ -220,7 +220,7 @@ bool test_result(AccessorType const & quan, DeviceType const & device, std::stri
         }
       }
       const double value    = quan(*cit);
-      const double refvalue = referencefile.data().at(linenum)[PointType::dim];
+      const double refvalue = referencefile.data().at(linenum)[cell_dim];
       if(!viennashe::testing::fuzzy_equal(refvalue, value, tol))
       {
         std::cerr << "test_result(): Failure at " << *cit << " => " << quan(*cit) << std::endl;

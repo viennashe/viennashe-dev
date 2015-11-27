@@ -37,11 +37,11 @@ namespace viennashe
   template <typename DeviceType,
             typename PotentialAccessor,
             typename ContainerType>
-  void write_potential_to_container(DeviceType const & device,
-                                    PotentialAccessor const & pot,
-                                    ContainerType & container)
+  void write_potential_to_quantity_field(DeviceType const & device,
+                                         PotentialAccessor const & pot,
+                                         viennagrid_quantity_field field)
   {
-    viennashe::write_macroscopic_quantity_to_container(device, pot, container);
+    viennashe::write_macroscopic_quantity_to_quantity_field(device, pot, field);
   }
 
 } //namespace viennashe
