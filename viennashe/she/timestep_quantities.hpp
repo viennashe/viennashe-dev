@@ -100,26 +100,31 @@ namespace viennashe
 
         void setup_trap_unkown_indices(DeviceType const & device)
         {
-          /*
           typedef typename DeviceType::trap_level_container_type     TrapContainerType;
           typedef typename TrapContainerType::const_iterator         TrapIterator;
 
           long i = 0;
-          CellContainer cells(device.mesh());
+          viennagrid_dimension cell_dim;
+          viennagrid_mesh_cell_dimension_get(device.mesh(), &cell_dim);
 
-          cell_trap_unknown_indices_.resize(cells.size());
-          cell_trap_occupancies_.resize(cells.size());
+          viennagrid_element_id *cells_begin, *cells_end;
+          viennagrid_mesh_elements_get(device.mesh(), cell_dim, &cells_begin, &cells_end);
 
-          for (CellIterator cit = cells.begin();
-               cit != cells.end();
-               ++cit)
+          cell_trap_unknown_indices_.resize(cells_end - cells_begin);
+          cell_trap_occupancies_.resize(cells_end - cells_begin);
+
+          for (viennagrid_element_id *cit  = cells_begin;
+                                      cit != cells_end;
+                                    ++cit)
           {
+            std::size_t cell_index(viennagrid_index_from_element_id(*cit));
             TrapContainerType const & traps = device.get_trap_levels(*cit);
+
             if (viennashe::materials::is_semiconductor(device.get_material(*cit)) && traps.size() > 0 )
             {
-              std::vector<long> & idx = cell_trap_unknown_indices_.at(std::size_t(cit->id().get()));
+              std::vector<long> & idx = cell_trap_unknown_indices_.at(cell_index);
               idx.resize(traps.size());
-              cell_trap_occupancies_.at(std::size_t(cit->id().get())).resize(traps.size(), 0);
+              cell_trap_occupancies_.at(cell_index).resize(traps.size(), 0);
 
               std::size_t j = 0;
               for (TrapIterator trap_it  = traps.begin(); trap_it != traps.end(); ++trap_it, ++i, ++j)
@@ -128,12 +133,10 @@ namespace viennashe
             else
             {
               // NO UNKNOWNS HERE !
-              cell_trap_unknown_indices_.at(std::size_t(cit->id().get())).clear();
-              cell_trap_unknown_indices_.at(std::size_t(cit->id().get())).resize(0);
+              cell_trap_unknown_indices_.at(cell_index).clear();
+              cell_trap_unknown_indices_.at(cell_index).resize(0);
             }
-          } */
-
-          throw std::runtime_error("setup_trap_unkown_indices(): TODO: implement");
+          }
         }
 
         double trap_occupancy(viennagrid_element_id c, std::size_t inner_index) const

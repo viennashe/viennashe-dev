@@ -581,23 +581,9 @@ namespace viennashe
                                  MatrixType & A,
                                  VectorType & b)
   {
-    throw std::runtime_error("assemble_density_gradient(): TODO: implement!");
-
-    /*
-    typedef typename DeviceType::mesh_type           MeshType;
-
-    typedef typename viennagrid::result_of::point<MeshType>::type                 PointType;
-    typedef typename viennagrid::result_of::cell<MeshType>::type                  CellType;
-
-    typedef typename viennagrid::result_of::const_cell_range<MeshType>::type      CellContainer;
-    typedef typename viennagrid::result_of::iterator<CellContainer>::type         CellIterator;
-
-    typedef typename viennagrid::result_of::const_facet_range<CellType>::type     FacetOnCellContainer;
-    typedef typename viennagrid::result_of::iterator<FacetOnCellContainer>::type  FacetOnCellIterator;
-
     typedef typename viennashe::she::timestep_quantities<DeviceType>::unknown_quantity_type      SpatialUnknownType;
 
-    MeshType const & mesh = device.mesh();
+    viennagrid_mesh mesh = device.mesh();
 
     const bool with_full_newton = (conf.nonlinear_solver().id() == viennashe::solvers::nonlinear_solver_ids::newton_nonlinear_solver);
 
@@ -615,10 +601,14 @@ namespace viennashe
 
     const double nominal_band_edge = viennashe::physics::get_band_edge(ctype);
 
-    CellContainer cells(mesh);
-    for (CellIterator cit = cells.begin();
-        cit != cells.end();
-        ++cit)
+    viennagrid_dimension cell_dim;
+    viennagrid_mesh_cell_dimension_get(mesh, &cell_dim);
+
+    viennagrid_element_id *cells_begin, *cells_end;
+    viennagrid_mesh_elements_get(mesh, cell_dim, &cells_begin, &cells_end);
+    for (viennagrid_element_id *cit  = cells_begin;
+                                cit != cells_end;
+                              ++cit)
     {
       const long row_index2 = quantum_corr.get_unknown_index(*cit);
       if ( row_index2 < 0 ) //here is a Dirichlet boundary condition
@@ -632,27 +622,42 @@ namespace viennashe
       A(row_index, row_index) = 0.0;
       b[row_index] = 0.0;
 
-      PointType centroid_cell = viennagrid::centroid(*cit);
-      const double box_volume = viennagrid::volume(*cit);
+      std::vector<double> centroid_cell(3);
+      viennagrid_element_centroid(mesh, *cit, &(centroid_cell[0]));
 
-      FacetOnCellContainer facets(*cit);
-      for (FacetOnCellIterator focit = facets.begin();
-          focit != facets.end();
-          ++focit)
+      viennagrid_numeric box_volume;
+      viennagrid_element_volume(mesh, *cit, &box_volume);
+
+      viennagrid_element_id *facets_on_cell_begin, *facets_on_cell_end;
+      viennagrid_element_boundary_elements(mesh, *cit, cell_dim - 1, &facets_on_cell_begin, &facets_on_cell_end);
+      for (viennagrid_element_id *focit  = facets_on_cell_begin;
+                                  focit != facets_on_cell_end;
+                                ++focit)
       {
-        CellType const *other_cell_ptr = util::get_other_cell_of_facet(mesh, *focit, *cit);
+        viennagrid_element_id *other_cell_ptr;
+        util::get_other_cell_of_facet(mesh, *focit, *cit, &other_cell_ptr);
 
         if (!other_cell_ptr) continue;
 
         const double T = 0.5 * (device.get_lattice_temperature(*cit) + device.get_lattice_temperature(*other_cell_ptr));
 
-        PointType centroid_other_cell = viennagrid::centroid(*other_cell_ptr);
-        PointType cell_connection = centroid_other_cell - centroid_cell;
-        PointType cell_connection_normalized = cell_connection / viennagrid::norm(cell_connection);
-        PointType facet_unit_normal = viennashe::util::outer_cell_normal_at_facet(*cit, *focit);
+        std::vector<double> centroid_other_cell(3);
+        viennagrid_element_centroid(mesh, *other_cell_ptr, &(centroid_other_cell[0]));
+        std::vector<double> cell_connection(3);
+        for (std::size_t i=0; i<cell_connection.size(); ++i)
+          cell_connection[i] = centroid_other_cell[i] - centroid_cell[i];
+        double connection_len;
+        viennagrid_norm_2(3, &(cell_connection[0]), &connection_len);
+        std::vector<double> cell_connection_normalized(3);
+        for (std::size_t i=0; i<cell_connection.size(); ++i)
+          cell_connection_normalized[i] = cell_connection[i] / connection_len;
+        std::vector<double> facet_unit_normal = viennashe::util::outer_cell_normal_at_facet(mesh, *cit, *focit);
 
-        const double connection_len = viennagrid::norm_2(centroid_cell - centroid_other_cell);
-        const double weighted_interface_area = viennagrid::volume(*focit) * viennagrid::inner_prod(facet_unit_normal, cell_connection_normalized);
+        double facet_area;
+        viennagrid_element_volume(mesh, *focit, &facet_area);
+        double facet_contribution;
+        viennagrid_inner_prod(3, &(facet_unit_normal[0]), &(cell_connection_normalized[0]), &facet_contribution);
+        const double weighted_interface_area = facet_area * viennagrid::inner_prod(facet_unit_normal, cell_connection_normalized);
 
         const long  col_index = quantum_corr.get_unknown_index(*other_cell_ptr);
 
@@ -711,7 +716,7 @@ namespace viennashe
       b[row_index] -= box_volume * gamma_center;
 
     } //for vertices
-    */
+
   }
 
   /**
@@ -729,19 +734,8 @@ namespace viennashe
                      MatrixType & A,
                      VectorType & b)
   {
-    throw std::runtime_error("assemble_heat(): TODO: implement!");
-    /*
     typedef typename viennashe::she::timestep_quantities<DeviceType> QuantitiesType;
     typedef typename DeviceType::mesh_type           MeshType;
-
-    typedef typename viennagrid::result_of::point<MeshType>::type                 PointType;
-    typedef typename viennagrid::result_of::cell<MeshType>::type                  CellType;
-
-    typedef typename viennagrid::result_of::const_cell_range<MeshType>::type      CellContainer;
-    typedef typename viennagrid::result_of::iterator<CellContainer>::type         CellIterator;
-
-    typedef typename viennagrid::result_of::const_facet_range<CellType>::type     FacetOnCellContainer;
-    typedef typename viennagrid::result_of::iterator<FacetOnCellContainer>::type  FacetOnCellIterator;
 
     typedef typename viennashe::she::timestep_quantities<DeviceType>::unknown_quantity_type      SpatialUnknownType;
 
@@ -757,10 +751,14 @@ namespace viennashe
     // Quantity lookup:
     SpatialUnknownType const & lattice_temperature = quantities.get_unknown_quantity(viennashe::quantity::lattice_temperature());
 
-    CellContainer cells(mesh);
-    for (CellIterator cit = cells.begin();
-        cit != cells.end();
-        ++cit)
+    viennagrid_dimension cell_dim;
+    viennagrid_mesh_cell_dimension_get(mesh, &cell_dim);
+
+    viennagrid_element_id *cells_begin, *cells_end;
+    viennagrid_mesh_elements_get(mesh, cell_dim, &cells_begin, &cells_end);
+    for (viennagrid_element_id *cit  = cells_begin;
+                                cit != cells_end;
+                              ++cit)
     {
 
       const long row_index2 = lattice_temperature.get_unknown_index(*cit);
@@ -768,7 +766,8 @@ namespace viennashe
         continue;
       const std::size_t row_index = std::size_t(row_index2);
 
-      PointType centroid_cell = viennagrid::centroid(*cit);
+      std::vector<double> centroid_cell(3);
+      viennagrid_element_centroid(mesh, *cit, &(centroid_cell[0]));
 
       const double T_center = lattice_temperature.get_value(*cit);
 
@@ -780,33 +779,49 @@ namespace viennashe
       //
       //   K * laplace T
       //
-      FacetOnCellContainer facets(*cit);
-      for (FacetOnCellIterator focit = facets.begin();
-          focit != facets.end();
-          ++focit)
+      viennagrid_element_id *facets_on_cell_begin, *facets_on_cell_end;
+      viennagrid_element_boundary_elements(mesh, *cit, cell_dim - 1, &facets_on_cell_begin, &facets_on_cell_end);
+      for (viennagrid_element_id *focit  = facets_on_cell_begin;
+                                  focit != facets_on_cell_end;
+                                ++focit)
       {
-        CellType const *other_cell_ptr = util::get_other_cell_of_facet(mesh, *focit, *cit);
+        viennagrid_element_id *other_cell_ptr;
+        util::get_other_cell_of_facet(mesh, *focit, *cit, &other_cell_ptr);
 
         if (!other_cell_ptr) continue;
 
         const long col_index  = lattice_temperature.get_unknown_index(*other_cell_ptr);
 
-        PointType centroid_other_cell = viennagrid::centroid(*other_cell_ptr);
-        PointType cell_connection = centroid_other_cell - centroid_cell;
-        PointType cell_connection_normalized = cell_connection / viennagrid::norm(cell_connection);
-        PointType facet_unit_normal = viennashe::util::outer_cell_normal_at_facet(*cit, *focit);
+        std::vector<double> centroid_other_cell(3);
+        viennagrid_element_centroid(mesh, *other_cell_ptr, &(centroid_other_cell[0]));
+        std::vector<double> cell_connection(3);
+        for (std::size_t i=0; i<cell_connection.size(); ++i)
+          cell_connection[i] = centroid_other_cell[i] - centroid_cell[i];
+        double connection_len;
+        viennagrid_norm_2(3, &(cell_connection[0]), &connection_len);
+        std::vector<double> cell_connection_normalized(3);
+        for (std::size_t i=0; i<cell_connection.size(); ++i)
+          cell_connection_normalized[i] = cell_connection[i] / connection_len;
+        std::vector<double> facet_unit_normal = viennashe::util::outer_cell_normal_at_facet(mesh, *cit, *focit);
 
-        const double connection_len = viennagrid::norm_2(centroid_cell - centroid_other_cell);
-        const double weighted_interface_area = viennagrid::volume(*focit) * viennagrid::inner_prod(facet_unit_normal, cell_connection_normalized);
+        double facet_area;
+        viennagrid_element_volume(mesh, *focit, &facet_area);
+        double facet_contribution;
+        viennagrid_inner_prod(3, &(facet_unit_normal[0]), &(cell_connection_normalized[0]), &facet_contribution);
+        const double weighted_interface_area = facet_area * viennagrid::inner_prod(facet_unit_normal, cell_connection_normalized);
 
         const double T_outer = lattice_temperature.get_value(*other_cell_ptr);
 
         // off-diagonal contribution
         if (col_index >= 0)
         {
-          PointType facet_center = viennagrid::centroid(*focit);  //TODO: Use intersection of facet plane with connection
-          const double connection_in_cell = viennagrid::norm(facet_center - centroid_cell);
-          const double connection_in_other_cell = viennagrid::norm(facet_center - centroid_other_cell);
+          std::vector<double> facet_centroid(3);
+          viennagrid_element_centroid(mesh, *focit, &(facet_centroid[0]));
+          double connection_in_cell;
+          viennagrid_distance_2(3, &(facet_centroid[0]), &(centroid_cell[0]), &connection_in_cell);
+          double connection_in_other_cell;
+          viennagrid_distance_2(3, &(facet_centroid[0]), &(centroid_other_cell[0]), &connection_in_other_cell);
+
           const double kappa_mean = (connection_in_cell + connection_in_other_cell) /
                                        (connection_in_cell/kappa_center + connection_in_other_cell/diffusivity(*other_cell_ptr, T_outer));
 
@@ -824,13 +839,14 @@ namespace viennashe
 
       } //for facets
 
-      const double volume = viennagrid::volume(*cit);
+      viennagrid_numeric box_volume;
+      viennagrid_element_volume(mesh, *cit, &box_volume);
 
       // residual contribution
-      b[row_index] += volume * quan_power_density(*cit); // / kappa_center
+      b[row_index] += box_volume * quan_power_density(*cit)[0]; // / kappa_center
 
     } //for vertices
-    */
+
   } //assemble_poisson
 
   /**

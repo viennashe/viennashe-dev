@@ -38,25 +38,28 @@ namespace viennashe
 {
   namespace util
   {
-    /*
     namespace detail
     {
       // 1d case:
-      template <typename WrappedConfigT>
-      typename viennagrid::result_of::point< viennagrid::element<viennagrid::line_tag,WrappedConfigT> >::type
-      outer_cell_normal_at_facet(viennagrid::element<viennagrid::line_tag,   WrappedConfigT> const & cell,
-                                 viennagrid::element<viennagrid::vertex_tag, WrappedConfigT> const & facet)
+      inline std::vector<viennagrid_numeric>
+      outer_cell_normal_at_facet(viennagrid_mesh mesh, viennagrid_element_id cell, viennagrid_element_id facet)
       {
-        typedef typename viennagrid::result_of::point< viennagrid::element<viennagrid::line_tag,WrappedConfigT> >::type  PointType;
+        std::vector<viennagrid_numeric> centroid_cell(3);
+        std::vector<viennagrid_numeric> centroid_facet(3);
 
-        PointType centroid_cell  = viennagrid::centroid(cell);
-        PointType centroid_facet = viennagrid::centroid(facet);
+        viennagrid_element_centroid(mesh,  cell, &(centroid_cell[0]));
+        viennagrid_element_centroid(mesh, facet, &(centroid_facet[0]));
 
+        std::vector<viennagrid_numeric> ret(3);
         if (centroid_cell[0] < centroid_facet[0])
-          return PointType(1.0);
-        return PointType(-1.0);
+          ret[0] = 1.0;
+        else
+          ret[0] = -1.0;
+
+        return ret;
       }
 
+      /*
       // 2d, triangles and quadrilaterals:
       template <typename CellTagT, typename WrappedConfigT>
       typename viennagrid::result_of::point< viennagrid::element<CellTagT, WrappedConfigT> >::type
@@ -118,10 +121,10 @@ namespace viennashe
                                  viennagrid::element<viennagrid::quadrilateral_tag, WrappedConfigT> const & facet)
       {
         return outer_cell_normal_at_facet_3d(cell, facet);
-      }
+      } */
 
 
-    } */
+    }
 
     /** @brief Returns the unit outer normal of a facet with respect to the provided cell */
     inline std::vector<double>
@@ -129,11 +132,15 @@ namespace viennashe
                                viennagrid_element_id cell,
                                viennagrid_element_id facet)
     {
-      std::vector<double> ret(3);
+      viennagrid_dimension cell_dim;
+      viennagrid_mesh_cell_dimension_get(mesh, &cell_dim);
 
-      throw std::runtime_error("outer_cell_normal_at_facet(): TODO: implement!");
+      if (cell_dim == 1)
+        return detail::outer_cell_normal_at_facet(mesh, cell, facet);
+      else
+        throw std::runtime_error("outer_cell_normal_at_facet(): TODO: implement for 2d and 3d!");
 
-      return ret;
+      return std::vector<double>(3);
     }
 
 
@@ -147,44 +154,49 @@ namespace viennashe
      * @param cell_setter      Functor for storing the interpolated flux vector
      * @param facet_access     Functor for accessing the normal components of the flux
      */
-    template <typename DeviceT, typename CellT, typename FacetContainerT, typename CellSetterT, typename FacetAccessorT>
+    template <typename DeviceT, typename CellSetterT, typename FacetAccessorT>
     void dual_box_flux_to_cell(DeviceT     const & device,
-                               CellT       const & cell,        FacetContainerT const & facets,
+                               viennagrid_element_id cell,
                                CellSetterT       & cell_setter, FacetAccessorT  const & facet_access)
     {
-      /*
-      typedef typename viennagrid::result_of::iterator<FacetContainerT>::type   FacetOnCellIterator;
-      typedef typename DeviceT::mesh_type                                       MeshType;
-      typedef typename FacetOnCellIterator::value_type                          FacetType;
-      typedef typename viennagrid::result_of::point<CellT>::type                PointType;
+      viennagrid_dimension geo_dim;
+      viennagrid_mesh_geometric_dimension_get(device.mesh(), &geo_dim);
 
-      typedef typename viennagrid::result_of::const_coboundary_range<MeshType, FacetType, CellT>::type    CellOnFacetContainer;
+      viennagrid_dimension cell_dim;
+      viennagrid_mesh_cell_dimension_get(device.mesh(), &cell_dim);
 
-      viennashe::math::dense_matrix<double> M(PointType::dim, PointType::dim);
-      std::vector<double>                   b(PointType::dim);
+      viennagrid_element_id *facets_begin, *facets_end;
+      viennagrid_element_boundary_elements(device.mesh(), cell, cell_dim - 1, &facets_begin, &facets_end);
 
-      std::vector<PointType>  normals(facets.size());
-      std::vector<double>     flux_contributions(facets.size());
+      viennagrid_int facet_num = facets_end - facets_begin;
+
+      viennashe::math::dense_matrix<double> M(geo_dim, geo_dim);
+      std::vector<double>                   b(geo_dim);
+
+      std::vector<std::vector<double> >  normals(facet_num);
+      std::vector<double>     flux_contributions(facet_num);
 
       // for all edges connected with the current vertex
       std::size_t facet_ctr = 0;
-      for (FacetOnCellIterator focit  = facets.begin();
-                               focit != facets.end();
-                             ++focit, ++facet_ctr )
+
+      for (viennagrid_element_id *focit  = facets_begin;
+                                  focit != facets_end;
+                                ++focit, ++facet_ctr )
       {
         flux_contributions[facet_ctr] = facet_access(*focit);
-        normals[facet_ctr]            = outer_cell_normal_at_facet(cell, *focit); // vector along the edge pointing away from Vertex 'to'
+        normals[facet_ctr]            = outer_cell_normal_at_facet(device.mesh(), cell, *focit); // vector along the edge pointing away from Vertex 'to'
 
         // flip orientation of flux contribution if global orientation is different:
-        CellOnFacetContainer cells_on_facet(device.mesh(), viennagrid::handle(device.mesh(), *focit));
-        if (&cells_on_facet[0] != &cell)
+        viennagrid_element_id *cells_on_facet_begin, *cells_on_facet_end;
+        viennagrid_element_coboundary_elements(device.mesh(), *focit, cell_dim, &cells_on_facet_begin, &cells_on_facet_end);
+        if (cells_on_facet_begin[0] != cell)
           flux_contributions[facet_ctr] *= -1.0;
       }
 
       // assemble mass matrix and rhs: M_i * V_i = rhs_i
-      for ( std::size_t i = 0; i < static_cast<std::size_t>(PointType::dim); ++i )
+      for ( std::size_t i = 0; i < static_cast<std::size_t>(geo_dim); ++i )
       {
-        for ( std::size_t j = 0; j < static_cast<std::size_t>(PointType::dim); ++j )
+        for ( std::size_t j = 0; j < static_cast<std::size_t>(geo_dim); ++j )
         {
           for ( std::size_t k = 0; k < normals.size(); ++k )
             M(i, j) += normals[k][i] * normals[k][j];
@@ -193,15 +205,13 @@ namespace viennashe
           b[i] += normals[k][i] * flux_contributions[k];
       }
 
-      std::vector<double> to_value(PointType::dim); // default: zero vector
+      std::vector<double> to_value(geo_dim); // default: zero vector
 
       std::vector<double> result = viennashe::solvers::solve(M, b);
       for (std::size_t i=0; i<result.size(); ++i)
         to_value[i] = result[i];
 
-      cell_setter(cell, to_value);*/
-
-      throw std::runtime_error("dual_box_flux_to_cell(): Not implemented!");
+      cell_setter(cell, to_value);
 
     } // dual_box_flux_to_cell
 

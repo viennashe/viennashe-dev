@@ -720,42 +720,42 @@ namespace viennashe
       viennagrid_quantity_field current_n;
       viennagrid_quantity_field_create(&current_n);
       viennagrid_quantity_field_init(current_n, cell_dim, VIENNAGRID_QUANTITY_FIELD_TYPE_NUMERIC, 3, VIENNAGRID_QUANTITY_FIELD_STORAGE_DENSE);
-      viennagrid_quantity_field_name_set(electric_field, "Electron current density");
+      viennagrid_quantity_field_name_set(current_n, "Electron current density");
 
       viennagrid_quantity_field current_p;
       viennagrid_quantity_field_create(&current_p);
       viennagrid_quantity_field_init(current_p, cell_dim, VIENNAGRID_QUANTITY_FIELD_TYPE_NUMERIC, 3, VIENNAGRID_QUANTITY_FIELD_STORAGE_DENSE);
-      viennagrid_quantity_field_name_set(electric_field, "Hole current density");
+      viennagrid_quantity_field_name_set(current_p, "Hole current density");
 
       viennagrid_quantity_field carrier_velocity_n;
       viennagrid_quantity_field_create(&carrier_velocity_n);
       viennagrid_quantity_field_init(carrier_velocity_n, cell_dim, VIENNAGRID_QUANTITY_FIELD_TYPE_NUMERIC, 3, VIENNAGRID_QUANTITY_FIELD_STORAGE_DENSE);
-      viennagrid_quantity_field_name_set(electric_field, "Electron avg. carrier drift velocity");
+      viennagrid_quantity_field_name_set(carrier_velocity_n, "Electron avg. carrier drift velocity");
 
       viennagrid_quantity_field carrier_velocity_p;
       viennagrid_quantity_field_create(&carrier_velocity_p);
       viennagrid_quantity_field_init(carrier_velocity_p, cell_dim, VIENNAGRID_QUANTITY_FIELD_TYPE_NUMERIC, 3, VIENNAGRID_QUANTITY_FIELD_STORAGE_DENSE);
-      viennagrid_quantity_field_name_set(electric_field, "Hole avg. carrier drift velocity");
+      viennagrid_quantity_field_name_set(carrier_velocity_p, "Hole avg. carrier drift velocity");
 
       viennagrid_quantity_field pwr_density_container;
       viennagrid_quantity_field_create(&pwr_density_container);
       viennagrid_quantity_field_init(pwr_density_container, cell_dim, VIENNAGRID_QUANTITY_FIELD_TYPE_NUMERIC, 1, VIENNAGRID_QUANTITY_FIELD_STORAGE_DENSE);
-      viennagrid_quantity_field_name_set(electric_field, "Joule heating power density");
+      viennagrid_quantity_field_name_set(pwr_density_container, "Joule heating power density");
 
       viennagrid_quantity_field avg_energy_n;
       viennagrid_quantity_field_create(&avg_energy_n);
       viennagrid_quantity_field_init(avg_energy_n, cell_dim, VIENNAGRID_QUANTITY_FIELD_TYPE_NUMERIC, 1, VIENNAGRID_QUANTITY_FIELD_STORAGE_DENSE);
-      viennagrid_quantity_field_name_set(electric_field, "Electron avg. energy");
+      viennagrid_quantity_field_name_set(avg_energy_n, "Electron avg. energy");
 
       viennagrid_quantity_field avg_energy_p;
       viennagrid_quantity_field_create(&avg_energy_p);
       viennagrid_quantity_field_init(avg_energy_p, cell_dim, VIENNAGRID_QUANTITY_FIELD_TYPE_NUMERIC, 1, VIENNAGRID_QUANTITY_FIELD_STORAGE_DENSE);
-      viennagrid_quantity_field_name_set(electric_field, "Hole avg. energy");
+      viennagrid_quantity_field_name_set(avg_energy_p, "Hole avg. energy");
 
       viennagrid_quantity_field avg_trap_occupancy;
       viennagrid_quantity_field_create(&avg_trap_occupancy);
       viennagrid_quantity_field_init(avg_trap_occupancy, cell_dim, VIENNAGRID_QUANTITY_FIELD_TYPE_NUMERIC, 1, VIENNAGRID_QUANTITY_FIELD_STORAGE_DENSE);
-      viennagrid_quantity_field_name_set(electric_field, "Average trap occupancy");
+      viennagrid_quantity_field_name_set(avg_trap_occupancy, "Average trap occupancy");
 
       //
       // Device data
@@ -818,6 +818,7 @@ namespace viennashe
       //
       std::deque<UnknownQuantityType> const & unknown_quans = simulator_obj.quantity_history(0).unknown_quantities();
 
+      std::cout << unknown_quans.size() << " quantities to output!" << std::endl;
       for (std::size_t quan_index = 0; quan_index < unknown_quans.size(); ++quan_index)
       {
         UnknownQuantityType const & quan = unknown_quans.at(quan_index);
@@ -918,7 +919,16 @@ namespace viennashe
       } // traps
       */
 
-      viennagrid_mesh_io_write(mesh_io, filename.c_str());
+      std::string filename_with_extension(filename);
+      filename_with_extension += ".vtu";
+      std::cout << "Mesh IO: Writing to " << filename_with_extension << std::endl;
+
+      viennagrid_int quantity_count;
+      viennagrid_mesh_io_quantity_field_count(mesh_io, &quantity_count);
+      std::cout << quantity_count << " quantities registered!" << std::endl;
+
+      viennagrid_error err = viennagrid_mesh_io_write_with_filetype(mesh_io, filename_with_extension.c_str(), VIENNAGRID_FILETYPE_VTK_MESH);
+      std::cout << "Status: " << err << std::endl;
       viennagrid_mesh_io_release(mesh_io);
 
       viennagrid_quantity_field_release(electric_field);

@@ -68,24 +68,21 @@ namespace viennashe
 
       value_type operator()(viennagrid_element_id facet) const
       {
-
-        /*
-        typedef typename viennagrid::result_of::const_coboundary_range<MeshType, FacetType, CellType>::type    CellOnFacetContainer;
-        typedef typename viennagrid::result_of::iterator<CellOnFacetContainer>::type                           CellOnFacetIterator;
-
         typename viennashe::contact_carrier_density_accessor<DeviceType> bnd_carrier_density(device_, carrier_type_id_);
 
         scharfetter_gummel flux_approximator(carrier_type_id_);
 
-        CellOnFacetContainer cells_on_facet(device_.mesh(), viennagrid::handle(device_.mesh(), facet));
+        viennagrid_dimension cell_dim;
+        viennagrid_mesh_cell_dimension_get(device_.mesh(), &cell_dim);
 
-        if (cells_on_facet.size() < 2)
+        viennagrid_element_id *cells_begin, *cells_end;
+        viennagrid_element_coboundary_elements(device_.mesh(), facet, cell_dim, &cells_begin, &cells_end);
+
+        if (cells_end == cells_begin + 1) // facet on surface
           return 0;
 
-        CellOnFacetIterator cofit = cells_on_facet.begin();
-        CellType const & c1 = *cofit;
-        ++cofit;
-        CellType const & c2 = *cofit;
+        viennagrid_element_id c1 = cells_begin[0];
+        viennagrid_element_id c2 = cells_begin[1];
 
         if (viennashe::materials::is_insulator(device_.get_material(c1)) || viennashe::materials::is_insulator(device_.get_material(c2))) // no current into insulator
           return 0;
@@ -102,7 +99,15 @@ namespace viennashe
 
         const double mobility = mobility_(c1, c2, potential_);
 
-        const double connection_len  = viennagrid::norm_2(viennagrid::centroid(c2) - viennagrid::centroid(c1));
+        std::vector<viennagrid_numeric> centroid_1(3);
+        std::vector<viennagrid_numeric> centroid_2(3);
+
+        viennagrid_element_centroid(device_.mesh(), c1, &(centroid_1[0]));
+        viennagrid_element_centroid(device_.mesh(), c2, &(centroid_2[0]));
+
+        viennagrid_numeric distance;
+        viennagrid_distance_2(cell_dim, &(centroid_1[0]), &(centroid_2[0]), &distance);
+
         const double potential_outer = potential_(c2);
         const double carrier_outer   = viennashe::materials::is_conductor(device_.get_material(c2))
                                        ? bnd_carrier_density(c1, device_.get_lattice_temperature(c1))
@@ -111,13 +116,10 @@ namespace viennashe
         if ( carrier_outer <= 0 || carrier_center <= 0 ) return 0;
 
         const double polarity = (carrier_type_id_ == viennashe::ELECTRON_TYPE_ID) ? -1.0 : 1.0;
-        const double charge_flux = flux_approximator(carrier_center, carrier_outer, potential_center, potential_outer, connection_len, mobility, T);
+        const double charge_flux = flux_approximator(carrier_center, carrier_outer, potential_center, potential_outer, distance, mobility, T);
         const double Jmag = polarity * mobility * charge_flux;
 
-        return Jmag; */
-
-        throw std::runtime_error("current_density_on_edge(): TODO: implement");
-        return 0;
+        return Jmag;
       } // operator()
 
     private:
@@ -165,37 +167,39 @@ namespace viennashe
                               MobilityModel const & mobility_model)
         : device_(device), carrier_type_id_(ctype), potential_(potential), carrier_(carrier), mobility_(mobility_model) { }
 
-        /*double operator()(FacetType const & facet) const
+        value_type operator()(viennagrid_element_id cell_or_facet) const
         {
-          typedef detail::current_density_on_facet<DeviceType, PotentialQuantityType, CarrierQuantityType, MobilityModel> current_density_evaluator;
-          current_density_evaluator edge_evaluator(device_, carrier_type_id_, potential_, carrier_, mobility_);
-          return edge_evaluator(facet);
-        }*/
+          viennagrid_dimension cell_dim;
+          viennagrid_mesh_cell_dimension_get(device_.mesh(), &cell_dim);
 
-        value_type operator()(viennagrid_element_id cell) const
-        {
-          /*
-          typedef typename viennagrid::result_of::const_facet_range<CellType>::type   FacetOnCellContainer;
-          typedef detail::current_density_on_facet<DeviceType, PotentialQuantityType, CarrierQuantityType, MobilityModel> current_density_evaluator;
+          viennagrid_dimension element_dim = viennagrid_topological_dimension_from_element_id(cell_or_facet);
 
-          detail::macroscopic_carrier_mask_filter<DeviceType, CarrierQuantityType>    carrier_contribution_filter(carrier_);
+          if (cell_dim == element_dim) // cell provided
+          {
+            typedef detail::current_density_on_facet<DeviceType, PotentialQuantityType, CarrierQuantityType, MobilityModel> current_density_evaluator;
 
-          std::vector<double> J(3);
+            detail::macroscopic_carrier_mask_filter<DeviceType, CarrierQuantityType>    carrier_contribution_filter(carrier_);
 
-          if (!carrier_contribution_filter(cell)) return J;
+            std::vector<double> J(3);
 
-          viennashe::util::value_holder_functor<std::vector<double> > result;
+            if (!carrier_contribution_filter(cell_or_facet)) return J;
 
-          current_density_evaluator facet_evaluator(device_, carrier_type_id_, potential_, carrier_, mobility_);
+            viennashe::util::value_holder_functor<std::vector<double> > result;
 
-          FacetOnCellContainer facets_on_cell(cell);
-          viennashe::util::dual_box_flux_to_cell(device_,
-                                                 cell, facets_on_cell,
-                                                 result, facet_evaluator);
+            current_density_evaluator facet_evaluator(device_, carrier_type_id_, potential_, carrier_, mobility_);
 
-          return result(); */
+            viennashe::util::dual_box_flux_to_cell(device_, cell_or_facet, result, facet_evaluator);
 
-          throw std::runtime_error("current_density_wrapper::operator(): TODO: implement!");
+            return result();
+          }
+          else if (cell_dim == element_dim + 1) // facet provided
+          {
+            detail::current_density_on_facet<DeviceType, PotentialQuantityType, CarrierQuantityType, MobilityModel> edge_evaluator(device_, carrier_type_id_, potential_, carrier_, mobility_);
+
+            value_type ret(3);
+            ret[0] = edge_evaluator(cell_or_facet);
+            return ret;
+          }
 
           return value_type();
         }

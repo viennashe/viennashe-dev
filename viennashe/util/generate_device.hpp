@@ -139,6 +139,13 @@ namespace viennashe
 
         typedef double   PointType;
 
+        viennagrid_mesh_create(&mesh);
+
+        viennagrid_dimension geo_dim = 1;
+        if (conf.at(0).get_length_y() > 0)
+          geo_dim = 2;
+        viennagrid_mesh_geometric_dimension_set(mesh, geo_dim);
+
         //
         // Prepare vertices at segment boundaries (note that this is O(N^2) with respect to the number of segments N. Not expected to hurt in practice, though...):
         //
@@ -241,12 +248,17 @@ namespace viennashe
         {
           SegmentDescriptionType const & seg_desc = conf.at(i);
 
+          viennagrid_region region;
+          viennagrid_mesh_region_get_or_create(mesh, i, &region);
+
           for (std::size_t j = 0; j<seg_desc.get_points_x() - 1; ++j)
           {
             vertices_of_cell[0] = segment_vertex_ids[i][j];
             vertices_of_cell[1] = segment_vertex_ids[i][j+1];
 
-            viennagrid_mesh_element_create(mesh, VIENNAGRID_ELEMENT_TYPE_LINE, 2, &(vertices_of_cell[0]), NULL);
+            viennagrid_element_id new_cell;
+            viennagrid_mesh_element_create(mesh, VIENNAGRID_ELEMENT_TYPE_LINE, 2, &(vertices_of_cell[0]), &new_cell);
+            viennagrid_region_element_add(region, new_cell);
           }
         }
 
@@ -442,13 +454,10 @@ namespace viennashe
     template <typename MeshT>
     void generate_device(MeshT & mesh, device_generation_config const & conf)
     {
-      viennagrid_dimension dim;
-      viennagrid_mesh_geometric_dimension_get(mesh, &dim);
-
-      if (dim == 1)
+      if (conf.at(0).get_length_y() <= 0)
         viennashe::util::detail::generate_device_1d(mesh, conf);
       else
-        throw std::runtime_error("generate_device(): Mesh generation only implemented for 1d");
+        throw std::runtime_error("Geometric dimension not supported!");
     }
 
     /**
