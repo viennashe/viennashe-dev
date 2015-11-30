@@ -60,10 +60,10 @@ namespace viennashe
       viennagrid_mesh mesh = device.mesh();
 
       viennagrid_dimension cell_dim;
-      viennagrid_mesh_cell_dimension_get(mesh, &cell_dim);
+      VIENNASHE_VIENNAGRID_CHECK(viennagrid_mesh_cell_dimension_get(mesh, &cell_dim));
 
       viennagrid_element_id *cells_begin, *cells_end;
-      viennagrid_mesh_elements_get(mesh, cell_dim, &cells_begin, &cells_end);
+      VIENNASHE_VIENNAGRID_CHECK(viennagrid_mesh_elements_get(mesh, cell_dim, &cells_begin, &cells_end));
       for (viennagrid_element_id *cit  = cells_begin;
                                   cit != cells_end;
                                 ++cit)
@@ -86,7 +86,7 @@ namespace viennashe
 
           //bring all neighbors of the vertex to order 1
           viennagrid_element_id *facets_on_cell_begin, *facets_on_cell_end;
-          viennagrid_element_boundary_elements(mesh, *cit, cell_dim - 1, &facets_on_cell_begin, &facets_on_cell_end);
+          VIENNASHE_VIENNAGRID_CHECK(viennagrid_element_boundary_elements(mesh, *cit, cell_dim - 1, &facets_on_cell_begin, &facets_on_cell_end));
           for (viennagrid_element_id *focit  = facets_on_cell_begin;
                                       focit != facets_on_cell_end;
                                     ++focit)
@@ -211,16 +211,16 @@ namespace viennashe
       viennagrid_mesh mesh = device.mesh();
 
       viennagrid_dimension cell_dim;
-      viennagrid_mesh_cell_dimension_get(mesh, &cell_dim);
+      VIENNASHE_VIENNAGRID_CHECK(viennagrid_mesh_cell_dimension_get(mesh, &cell_dim));
 
       viennagrid_element_id *facets_begin, *facets_end;
-      viennagrid_mesh_elements_get(mesh, cell_dim - 1, &facets_begin, &facets_end);
+      VIENNASHE_VIENNAGRID_CHECK(viennagrid_mesh_elements_get(mesh, cell_dim - 1, &facets_begin, &facets_end));
       for (viennagrid_element_id *fit = facets_begin;
                                   fit != facets_end;
                                 ++fit)
       {
         viennagrid_element_id *cells_on_facet_begin, *cells_on_facet_end;
-        viennagrid_element_coboundary_elements(mesh, *fit, cell_dim, &cells_on_facet_begin, &cells_on_facet_end);
+        VIENNASHE_VIENNAGRID_CHECK(viennagrid_element_coboundary_elements(mesh, *fit, cell_dim, &cells_on_facet_begin, &cells_on_facet_end));
 
         for (size_t index_H = 0; index_H < quan.get_value_H_size(); ++index_H)
         {
@@ -258,10 +258,10 @@ namespace viennashe
         //
 
         viennagrid_dimension cell_dim;
-        viennagrid_mesh_cell_dimension_get(mesh, &cell_dim);
+        VIENNASHE_VIENNAGRID_CHECK(viennagrid_mesh_cell_dimension_get(mesh, &cell_dim));
 
         viennagrid_element_id *cells_begin, *cells_end;
-        viennagrid_mesh_elements_get(mesh, cell_dim, &cells_begin, &cells_end);
+        VIENNASHE_VIENNAGRID_CHECK(viennagrid_mesh_elements_get(mesh, cell_dim, &cells_begin, &cells_end));
         for (viennagrid_element_id *cit  = cells_begin;
                                     cit != cells_end;
                                   ++cit)
@@ -278,13 +278,13 @@ namespace viennashe
         // Write expansion order on facets (odd unknowns)
         //
         viennagrid_element_id *facets_begin, *facets_end;
-        viennagrid_mesh_elements_get(mesh, cell_dim - 1, &facets_begin, &facets_end);
+        VIENNASHE_VIENNAGRID_CHECK(viennagrid_mesh_elements_get(mesh, cell_dim - 1, &facets_begin, &facets_end));
         for (viennagrid_element_id *fit = facets_begin;
                                     fit != facets_end;
                                   ++fit)
         {
           viennagrid_element_id *cells_on_facet_begin, *cells_on_facet_end;
-          viennagrid_element_coboundary_elements(mesh, *fit, cell_dim, &cells_on_facet_begin, &cells_on_facet_end);
+          VIENNASHE_VIENNAGRID_CHECK(viennagrid_element_coboundary_elements(mesh, *fit, cell_dim, &cells_on_facet_begin, &cells_on_facet_end));
 
           for (std::size_t index_H = 0; index_H < quan.get_value_H_size(); ++index_H)
           {

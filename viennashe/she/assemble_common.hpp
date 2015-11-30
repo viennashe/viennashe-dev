@@ -61,7 +61,7 @@ namespace viennashe
         {
 
           viennagrid_element_id *vertices_begin, *vertices_end;
-          viennagrid_mesh_elements_get(mesh, 0, &vertices_begin, &vertices_end);
+          VIENNASHE_VIENNAGRID_CHECK(viennagrid_mesh_elements_get(mesh, 0, &vertices_begin, &vertices_end));
 
           for (viennagrid_element_id *it=vertices_begin; it != vertices_end; ++it)
           {
@@ -108,10 +108,10 @@ namespace viennashe
       double cell_connection_length(MeshT const & mesh, FacetT const & facet, CellT const &)
       {
         viennagrid_dimension cell_dim;
-        viennagrid_mesh_cell_dimension_get(mesh, &cell_dim);
+        VIENNASHE_VIENNAGRID_CHECK(viennagrid_mesh_cell_dimension_get(mesh, &cell_dim));
 
         viennagrid_element_id *cells_begin, *cells_end;
-        viennagrid_element_coboundary_elements(mesh, facet, cell_dim, &cells_begin, &cells_end);
+        VIENNASHE_VIENNAGRID_CHECK(viennagrid_element_coboundary_elements(mesh, facet, cell_dim, &cells_begin, &cells_end));
 
         if (cells_end == cells_begin + 1)
         {
@@ -119,11 +119,11 @@ namespace viennashe
         }
 
         std::vector<double> centroid1(3), centroid2(3);
-        viennagrid_element_centroid(mesh, cells_begin[0], &(centroid1[0]));
-        viennagrid_element_centroid(mesh, cells_begin[1], &(centroid2[0]));
+        VIENNASHE_VIENNAGRID_CHECK(viennagrid_element_centroid(mesh, cells_begin[0], &(centroid1[0])));
+        VIENNASHE_VIENNAGRID_CHECK(viennagrid_element_centroid(mesh, cells_begin[1], &(centroid2[0])));
 
         viennagrid_dimension geo_dim;
-        viennagrid_mesh_geometric_dimension_get(mesh, &geo_dim);
+        VIENNASHE_VIENNAGRID_CHECK(viennagrid_mesh_geometric_dimension_get(mesh, &geo_dim));
 
         // compute 2-norm of distance between centroids
         double ret = 0;
@@ -182,8 +182,8 @@ namespace viennashe
       (void)m2; (void)m3; //prevent unused variable warnings
 
       std::vector<double> centroid1(3), centroid2(3);
-      viennagrid_element_centroid(mesh, c1, &(centroid1[0]));
-      viennagrid_element_centroid(mesh, c2, &(centroid2[0]));
+      VIENNASHE_VIENNAGRID_CHECK(viennagrid_element_centroid(mesh, c1, &(centroid1[0])));
+      VIENNASHE_VIENNAGRID_CHECK(viennagrid_element_centroid(mesh, c2, &(centroid2[0])));
 
       double norm = 0;
       for (std::size_t i=0; i<3; ++i)
@@ -331,10 +331,10 @@ namespace viennashe
                                          std::size_t index_H)
     {
       viennagrid_dimension cell_dim;
-      viennagrid_mesh_cell_dimension_get(device.mesh(), &cell_dim);
+      VIENNASHE_VIENNAGRID_CHECK(viennagrid_mesh_cell_dimension_get(device.mesh(), &cell_dim));
 
       viennagrid_element_id *cells_begin, *cells_end;
-      viennagrid_element_coboundary_elements(device.mesh(), facet, cell_dim, &cells_begin, &cells_end);
+      VIENNASHE_VIENNAGRID_CHECK(viennagrid_element_coboundary_elements(device.mesh(), facet, cell_dim, &cells_begin, &cells_end));
 
       if (cells_begin + 1 == cells_end)
         return quan.get_kinetic_energy(cells_begin[0], index_H);
@@ -356,10 +356,10 @@ namespace viennashe
                                          std::size_t index_H)
     {
       viennagrid_dimension cell_dim;
-      viennagrid_mesh_cell_dimension_get(device.mesh(), &cell_dim);
+      VIENNASHE_VIENNAGRID_CHECK(viennagrid_mesh_cell_dimension_get(device.mesh(), &cell_dim));
 
       viennagrid_element_id *cells_begin, *cells_end;
-      viennagrid_element_coboundary_elements(device.mesh(), facet, cell_dim, &cells_begin, &cells_end);
+      VIENNASHE_VIENNAGRID_CHECK(viennagrid_element_coboundary_elements(device.mesh(), facet, cell_dim, &cells_begin, &cells_end));
 
       if (cells_begin + 1 == cells_end)
         return quan.get_kinetic_energy(cells_begin[0], index_H);
@@ -384,8 +384,8 @@ namespace viennashe
                         std::size_t index_H) const
       {
         std::vector<double> centroid1(3), centroid2(3);
-        viennagrid_element_centroid(mesh, c1, &(centroid1[0]));
-        viennagrid_element_centroid(mesh, c2, &(centroid2[0]));
+        VIENNASHE_VIENNAGRID_CHECK(viennagrid_element_centroid(mesh, c1, &(centroid1[0])));
+        VIENNASHE_VIENNAGRID_CHECK(viennagrid_element_centroid(mesh, c2, &(centroid2[0])));
 
         for (std::size_t i=0; i<centroid2.size(); ++i)
           centroid2[i] -= centroid1[i];

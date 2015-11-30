@@ -54,10 +54,10 @@ namespace viennashe
     {
 
       viennagrid_dimension cell_dim;
-      viennagrid_mesh_cell_dimension_get(device.mesh(), &cell_dim);
+      VIENNASHE_VIENNAGRID_CHECK(viennagrid_mesh_cell_dimension_get(device.mesh(), &cell_dim));
 
       viennagrid_element_id *cells_begin, *cells_end;
-      viennagrid_mesh_elements_get(device.mesh(), cell_dim, &cells_begin, &cells_end);
+      VIENNASHE_VIENNAGRID_CHECK(viennagrid_mesh_elements_get(device.mesh(), cell_dim, &cells_begin, &cells_end));
       for (viennagrid_element_id *cit  = cells_begin;
                                   cit != cells_end;
                                 ++cit)

@@ -73,10 +73,10 @@ namespace viennashe
         scharfetter_gummel flux_approximator(carrier_type_id_);
 
         viennagrid_dimension cell_dim;
-        viennagrid_mesh_cell_dimension_get(device_.mesh(), &cell_dim);
+        VIENNASHE_VIENNAGRID_CHECK(viennagrid_mesh_cell_dimension_get(device_.mesh(), &cell_dim));
 
         viennagrid_element_id *cells_begin, *cells_end;
-        viennagrid_element_coboundary_elements(device_.mesh(), facet, cell_dim, &cells_begin, &cells_end);
+        VIENNASHE_VIENNAGRID_CHECK(viennagrid_element_coboundary_elements(device_.mesh(), facet, cell_dim, &cells_begin, &cells_end));
 
         if (cells_end == cells_begin + 1) // facet on surface
           return 0;
@@ -102,11 +102,11 @@ namespace viennashe
         std::vector<viennagrid_numeric> centroid_1(3);
         std::vector<viennagrid_numeric> centroid_2(3);
 
-        viennagrid_element_centroid(device_.mesh(), c1, &(centroid_1[0]));
-        viennagrid_element_centroid(device_.mesh(), c2, &(centroid_2[0]));
+        VIENNASHE_VIENNAGRID_CHECK(viennagrid_element_centroid(device_.mesh(), c1, &(centroid_1[0])));
+        VIENNASHE_VIENNAGRID_CHECK(viennagrid_element_centroid(device_.mesh(), c2, &(centroid_2[0])));
 
         viennagrid_numeric distance;
-        viennagrid_distance_2(cell_dim, &(centroid_1[0]), &(centroid_2[0]), &distance);
+        VIENNASHE_VIENNAGRID_CHECK(viennagrid_distance_2(cell_dim, &(centroid_1[0]), &(centroid_2[0]), &distance));
 
         const double potential_outer = potential_(c2);
         const double carrier_outer   = viennashe::materials::is_conductor(device_.get_material(c2))
@@ -170,7 +170,7 @@ namespace viennashe
         value_type operator()(viennagrid_element_id cell_or_facet) const
         {
           viennagrid_dimension cell_dim;
-          viennagrid_mesh_cell_dimension_get(device_.mesh(), &cell_dim);
+          VIENNASHE_VIENNAGRID_CHECK(viennagrid_mesh_cell_dimension_get(device_.mesh(), &cell_dim));
 
           viennagrid_dimension element_dim = viennagrid_topological_dimension_from_element_id(cell_or_facet);
 

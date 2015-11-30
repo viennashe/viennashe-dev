@@ -291,7 +291,7 @@ namespace viennashe
           double hole_gen_rate = 0;
 
           const double box_volume;
-          viennagrid_element_volume(device.mesh(), el, &box_volume);
+          VIENNASHE_VIENNAGRID_CHECK(viennagrid_element_volume(device.mesh(), el, &box_volume));
 
           typedef typename viennashe::config::dispersion_relation_type  DispersionRelation;
 

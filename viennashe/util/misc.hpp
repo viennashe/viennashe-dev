@@ -196,7 +196,7 @@ namespace viennashe
       viennagrid_dimension facet_dim = viennagrid_topological_dimension_from_element_id(facet);
 
       viennagrid_element_id *cells_begin, *cells_end;
-      viennagrid_element_coboundary_elements(mesh, facet, facet_dim + 1, &cells_begin, &cells_end);
+      VIENNASHE_VIENNAGRID_CHECK(viennagrid_element_coboundary_elements(mesh, facet, facet_dim + 1, &cells_begin, &cells_end));
 
       *other_cell = cells_begin;
 
@@ -270,16 +270,16 @@ namespace viennashe
                                  BoundaryValueAccessor const & bnd_accessor)
         {
           viennagrid_dimension cell_dim;
-          viennagrid_mesh_cell_dimension_get(device.mesh(), &cell_dim);
+          VIENNASHE_VIENNAGRID_CHECK(viennagrid_mesh_cell_dimension_get(device.mesh(), &cell_dim));
 
           viennagrid_int cell_count;
-          viennagrid_mesh_element_count(device.mesh(), cell_dim, &cell_count);
+          VIENNASHE_VIENNAGRID_CHECK(viennagrid_mesh_element_count(device.mesh(), cell_dim, &cell_count));
           values_.resize(cell_count);
 
 
           // Iterate over all elements and copy values over
           viennagrid_element_id *cells_begin, *cells_end;
-          viennagrid_mesh_elements_get(device.mesh(), cell_dim, &cells_begin, &cells_end);
+          VIENNASHE_VIENNAGRID_CHECK(viennagrid_mesh_elements_get(device.mesh(), cell_dim, &cells_begin, &cells_end));
           for (viennagrid_element_id *cit = cells_begin; cit != cells_end; ++cit)
           {
             viennagrid_element_id element_index = viennagrid_index_from_element_id(*cit);
@@ -322,10 +322,10 @@ namespace viennashe
         spatial_quantity(DeviceType const & device, ValueType default_value = ValueType())
         {
           viennagrid_dimension cell_dim;
-          viennagrid_mesh_cell_dimension_get(device.mesh(), &cell_dim);
+          VIENNASHE_VIENNAGRID_CHECK(viennagrid_mesh_cell_dimension_get(device.mesh(), &cell_dim));
 
           viennagrid_int cell_count;
-          viennagrid_mesh_element_count(device.mesh(), cell_dim, &cell_count);
+          VIENNASHE_VIENNAGRID_CHECK(viennagrid_mesh_element_count(device.mesh(), cell_dim, &cell_count));
           values_.resize(cell_count);
         }
 

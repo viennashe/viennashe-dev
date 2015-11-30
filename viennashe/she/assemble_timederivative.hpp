@@ -93,7 +93,7 @@ namespace viennashe
       {
         const long expansion_order = static_cast<long>(quan.get_expansion_order(elem, index_H));
         double box_volume;
-        viennagrid_element_volume(device.mesh(), elem, &box_volume);
+        VIENNASHE_VIENNAGRID_CHECK(viennagrid_element_volume(device.mesh(), elem, &box_volume));
         //if (odd_assembly)
         //  box_volume *= detail::cell_connection_length(device.mesh(), elem, viennagrid::cells(device.mesh())[0]) / PointType::dim;
 

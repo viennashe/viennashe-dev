@@ -39,7 +39,7 @@ namespace viennashe
     {
 
       viennagrid_element_id *vertices_begin, *vertices_end;
-      viennagrid_mesh_elements_get(mesh, 0, &vertices_begin, &vertices_end);
+      VIENNASHE_VIENNAGRID_CHECK(viennagrid_mesh_elements_get(mesh, 0, &vertices_begin, &vertices_end));
 
       std::vector<double> vtk_data(vertices_end - vertices_begin);
       for(viennagrid_element_id *vit = vertices_begin; vit != vertices_end; vit++)

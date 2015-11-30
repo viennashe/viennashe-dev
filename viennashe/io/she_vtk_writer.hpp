@@ -100,7 +100,7 @@ namespace viennashe
         // Step 1: init write flag on vertices:
         //
         viennagrid_element_id *vertices_begin, *vertices_end;
-        viennagrid_mesh_elements_get(device.mesh(), 0, &vertices_begin, &vertices_end);
+        VIENNASHE_VIENNAGRID_CHECK(viennagrid_mesh_elements_get(device.mesh(), 0, &vertices_begin, &vertices_end));
 
         vertex_write_mask_.resize(vertices_end - vertices_begin);
 
@@ -121,10 +121,10 @@ namespace viennashe
         // Step 2: Now tag all cells where all vertices are in the conduction or valence band
         //
         viennagrid_dimension cell_dim;
-        viennagrid_mesh_cell_dimension_get(device.mesh(), &cell_dim);
+        VIENNASHE_VIENNAGRID_CHECK(viennagrid_mesh_cell_dimension_get(device.mesh(), &cell_dim));
 
         viennagrid_element_id *cells_begin, *cells_end;
-        viennagrid_mesh_elements_get(device.mesh(), cell_dim, &cells_begin, &cells_end);
+        VIENNASHE_VIENNAGRID_CHECK(viennagrid_mesh_elements_get(device.mesh(), cell_dim, &cells_begin, &cells_end));
 
         for (viennagrid_element_id *cit  = cells_begin;
                                     cit != cells_end;
@@ -139,7 +139,7 @@ namespace viennashe
 
               //tag all vertices:
               viennagrid_element_id *vertices_on_cell_begin, *vertices_on_cell_end;
-              viennagrid_element_boundary_elements(device.mesh(), *cit, 0, &vertices_on_cell_begin, &vertices_on_cell_end);
+              VIENNASHE_VIENNAGRID_CHECK(viennagrid_element_boundary_elements(device.mesh(), *cit, 0, &vertices_on_cell_begin, &vertices_on_cell_end));
 
               for (viennagrid_element_id *vocit  = vertices_on_cell_begin;
                                           vocit != vertices_on_cell_end;
@@ -164,7 +164,7 @@ namespace viennashe
         long point_num = 0;
 
         viennagrid_element_id *vertices_begin, *vertices_end;
-        viennagrid_mesh_elements_get(device.mesh(), 0, &vertices_begin, &vertices_end);
+        VIENNASHE_VIENNAGRID_CHECK(viennagrid_mesh_elements_get(device.mesh(), 0, &vertices_begin, &vertices_end));
 
         for (viennagrid_element_id *vit  = vertices_begin;
                                     vit != vertices_end;
@@ -203,17 +203,17 @@ namespace viennashe
         writer << "    <DataArray type=\"Float32\" NumberOfComponents=\"3\" format=\"ascii\">" << std::endl;
 
         viennagrid_element_id *vertices_begin, *vertices_end;
-        viennagrid_mesh_elements_get(device.mesh(), 0, &vertices_begin, &vertices_end);
+        VIENNASHE_VIENNAGRID_CHECK(viennagrid_mesh_elements_get(device.mesh(), 0, &vertices_begin, &vertices_end));
 
         for (viennagrid_element_id *vit  = vertices_begin;
                                     vit != vertices_end;
                                   ++vit)
         {
           viennagrid_numeric *coords;
-          viennagrid_mesh_vertex_coords_get(device.mesh(), *vit, &coords);
+          VIENNASHE_VIENNAGRID_CHECK(viennagrid_mesh_vertex_coords_get(device.mesh(), *vit, &coords));
 
           viennagrid_dimension geo_dim;
-          viennagrid_mesh_geometric_dimension_get(device.mesh(), &geo_dim);
+          VIENNASHE_VIENNAGRID_CHECK(viennagrid_mesh_geometric_dimension_get(device.mesh(), &geo_dim));
 
           for (std::size_t index_H = 0; index_H < quan.get_value_H_size(); ++index_H)
           {
@@ -242,10 +242,10 @@ namespace viennashe
         writer << "    <DataArray type=\"Int32\" Name=\"connectivity\" format=\"ascii\">" << std::endl;
 
         viennagrid_dimension cell_dim;
-        viennagrid_mesh_cell_dimension_get(device.mesh(), &cell_dim);
+        VIENNASHE_VIENNAGRID_CHECK(viennagrid_mesh_cell_dimension_get(device.mesh(), &cell_dim));
 
         viennagrid_element_id *cells_begin, *cells_end;
-        viennagrid_mesh_elements_get(device.mesh(), cell_dim, &cells_begin, &cells_end);
+        VIENNASHE_VIENNAGRID_CHECK(viennagrid_mesh_elements_get(device.mesh(), cell_dim, &cells_begin, &cells_end));
 
         std::vector<std::size_t> offsets(1);
         std::vector<std::size_t> types;
@@ -264,12 +264,12 @@ namespace viennashe
               continue;
 
             viennagrid_element_id *vertices_on_cell_begin, *vertices_on_cell_end;
-            viennagrid_element_boundary_elements(device.mesh(), *cit, 0, &vertices_on_cell_begin, &vertices_on_cell_end);
+            VIENNASHE_VIENNAGRID_CHECK(viennagrid_element_boundary_elements(device.mesh(), *cit, 0, &vertices_on_cell_begin, &vertices_on_cell_end));
 
             offsets.push_back(offsets.back() + 2 * (vertices_on_cell_end - vertices_on_cell_begin));
 
             viennagrid_element_type element_type;
-            viennagrid_element_type_get(device.mesh(), *cit, &element_type);
+            VIENNASHE_VIENNAGRID_CHECK(viennagrid_element_type_get(device.mesh(), *cit, &element_type));
             types.push_back(viennagrid_to_vtk_type(element_type));
 
             if (vertices_on_cell_end - vertices_on_cell_begin == 2) //line segments need special treatment
@@ -345,7 +345,7 @@ namespace viennashe
         writer << "    <DataArray type=\"Float64\" Name=\"" << name_in_file << "\" format=\"ascii\">" << std::endl;
 
         viennagrid_element_id *vertices_begin, *vertices_end;
-        viennagrid_mesh_elements_get(device.mesh(), 0, &vertices_begin, &vertices_end);
+        VIENNASHE_VIENNAGRID_CHECK(viennagrid_mesh_elements_get(device.mesh(), 0, &vertices_begin, &vertices_end));
 
         for (viennagrid_element_id *vit  = vertices_begin;
                                     vit != vertices_end;
@@ -407,10 +407,10 @@ namespace viennashe
         writer << "    <DataArray type=\"Float64\" Name=\"Generalized " << quantity_name << "\" format=\"ascii\">" << std::endl;
 
         viennagrid_dimension cell_dim;
-        viennagrid_mesh_cell_dimension_get(device.mesh(), &cell_dim);
+        VIENNASHE_VIENNAGRID_CHECK(viennagrid_mesh_cell_dimension_get(device.mesh(), &cell_dim));
 
         viennagrid_element_id *cells_begin, *cells_end;
-        viennagrid_mesh_elements_get(device.mesh(), cell_dim, &cells_begin, &cells_end);
+        VIENNASHE_VIENNAGRID_CHECK(viennagrid_mesh_elements_get(device.mesh(), cell_dim, &cells_begin, &cells_end));
 
         //write prisms:
         for (std::size_t index_H = 0; index_H < quan.get_value_H_size() - 1; ++index_H)
@@ -642,20 +642,20 @@ namespace viennashe
       viennagrid_mesh mesh = device.mesh();
 
       viennagrid_element_id *elements_begin, *elements_end;
-      viennagrid_mesh_elements_get(device.mesh(), topologic_dimension, &elements_begin, &elements_end);
+      VIENNASHE_VIENNAGRID_CHECK(viennagrid_mesh_elements_get(device.mesh(), topologic_dimension, &elements_begin, &elements_end));
 
       viennagrid_quantity_field field;
-      viennagrid_quantity_field_create(&field);
-      viennagrid_quantity_field_init(field, topologic_dimension, VIENNAGRID_QUANTITY_FIELD_TYPE_NUMERIC, 1, VIENNAGRID_QUANTITY_FIELD_STORAGE_DENSE);
-      viennagrid_quantity_field_resize(field, elements_end - elements_begin);
-      viennagrid_quantity_field_name_set(field, name_in_file.c_str());
+      VIENNASHE_VIENNAGRID_CHECK(viennagrid_quantity_field_create(&field));
+      VIENNASHE_VIENNAGRID_CHECK(viennagrid_quantity_field_init(field, topologic_dimension, VIENNAGRID_QUANTITY_FIELD_TYPE_NUMERIC, 1, VIENNAGRID_QUANTITY_FIELD_STORAGE_DENSE));
+      VIENNASHE_VIENNAGRID_CHECK(viennagrid_quantity_field_resize(field, elements_end - elements_begin));
+      VIENNASHE_VIENNAGRID_CHECK(viennagrid_quantity_field_name_set(field, name_in_file.c_str()));
 
       for (viennagrid_element_id *eit  = elements_begin;
                                   eit != elements_end;
                                 ++eit)
       {
         viennagrid_numeric value = quantity(*eit);
-        viennagrid_quantity_field_value_set(field, *eit, &value);
+        VIENNASHE_VIENNAGRID_CHECK(viennagrid_quantity_field_value_set(field, *eit, &value));
       }
 
       log::info<log_she_vtk_writer>() << "* write_quantity_to_VTK_file(): Writing data to '"
@@ -663,13 +663,13 @@ namespace viennashe
                 << "' (can be viewed with e.g. ParaView)" << std::endl;
 
       viennagrid_mesh_io mesh_io;
-      viennagrid_mesh_io_create(&mesh_io);
-      viennagrid_mesh_io_mesh_set(mesh_io, mesh);
-      viennagrid_mesh_io_quantity_field_set(mesh_io, field);
-      viennagrid_mesh_io_write(mesh_io, filename.c_str());
+      VIENNASHE_VIENNAGRID_CHECK(viennagrid_mesh_io_create(&mesh_io));
+      VIENNASHE_VIENNAGRID_CHECK(viennagrid_mesh_io_mesh_set(mesh_io, mesh));
+      VIENNASHE_VIENNAGRID_CHECK(viennagrid_mesh_io_quantity_field_set(mesh_io, field));
+      VIENNASHE_VIENNAGRID_CHECK(viennagrid_mesh_io_write(mesh_io, filename.c_str()));
 
-      viennagrid_mesh_io_release(mesh_io);
-      viennagrid_quantity_field_release(field);
+      VIENNASHE_VIENNAGRID_CHECK(viennagrid_mesh_io_release(mesh_io));
+      VIENNASHE_VIENNAGRID_CHECK(viennagrid_quantity_field_release(field));
     }
 
 
@@ -684,7 +684,7 @@ namespace viennashe
                                     std::string name_in_file = "viennashe_quantity")
     {
       viennagrid_dimension cell_dim;
-      viennagrid_mesh_cell_dimension_get(device.mesh(), &cell_dim);
+      VIENNASHE_VIENNAGRID_CHECK(viennagrid_mesh_cell_dimension_get(device.mesh(), &cell_dim));
 
       write_quantity_to_VTK_file(quantity, device, cell_dim, filename, name_in_file);
     }
@@ -703,113 +703,113 @@ namespace viennashe
       DeviceType const & device = simulator_obj.device();
 
       viennagrid_dimension cell_dim;
-      viennagrid_mesh_cell_dimension_get(device.mesh(), &cell_dim);
+      VIENNASHE_VIENNAGRID_CHECK(viennagrid_mesh_cell_dimension_get(device.mesh(), &cell_dim));
 
       viennagrid_int cell_count;
-      viennagrid_mesh_element_count(device.mesh(), cell_dim, &cell_count);
+      VIENNASHE_VIENNAGRID_CHECK(viennagrid_mesh_element_count(device.mesh(), cell_dim, &cell_count));
 
       viennagrid_mesh_io mesh_io;
-      viennagrid_mesh_io_create(&mesh_io);
-      viennagrid_mesh_io_mesh_set(mesh_io, device.mesh());
+      VIENNASHE_VIENNAGRID_CHECK(viennagrid_mesh_io_create(&mesh_io));
+      VIENNASHE_VIENNAGRID_CHECK(viennagrid_mesh_io_mesh_set(mesh_io, device.mesh()));
 
       viennagrid_quantity_field electric_field;
-      viennagrid_quantity_field_create(&electric_field);
-      viennagrid_quantity_field_init(electric_field, cell_dim, VIENNAGRID_QUANTITY_FIELD_TYPE_NUMERIC, 3, VIENNAGRID_QUANTITY_FIELD_STORAGE_DENSE);
-      viennagrid_quantity_field_name_set(electric_field, "Electric Field");
+      VIENNASHE_VIENNAGRID_CHECK(viennagrid_quantity_field_create(&electric_field));
+      VIENNASHE_VIENNAGRID_CHECK(viennagrid_quantity_field_init(electric_field, cell_dim, VIENNAGRID_QUANTITY_FIELD_TYPE_NUMERIC, 3, VIENNAGRID_QUANTITY_FIELD_STORAGE_DENSE));
+      VIENNASHE_VIENNAGRID_CHECK(viennagrid_quantity_field_name_set(electric_field, "Electric Field"));
 
       viennagrid_quantity_field current_n;
-      viennagrid_quantity_field_create(&current_n);
-      viennagrid_quantity_field_init(current_n, cell_dim, VIENNAGRID_QUANTITY_FIELD_TYPE_NUMERIC, 3, VIENNAGRID_QUANTITY_FIELD_STORAGE_DENSE);
-      viennagrid_quantity_field_name_set(current_n, "Electron current density");
+      VIENNASHE_VIENNAGRID_CHECK(viennagrid_quantity_field_create(&current_n));
+      VIENNASHE_VIENNAGRID_CHECK(viennagrid_quantity_field_init(current_n, cell_dim, VIENNAGRID_QUANTITY_FIELD_TYPE_NUMERIC, 3, VIENNAGRID_QUANTITY_FIELD_STORAGE_DENSE));
+      VIENNASHE_VIENNAGRID_CHECK(viennagrid_quantity_field_name_set(current_n, "Electron current density"));
 
       viennagrid_quantity_field current_p;
-      viennagrid_quantity_field_create(&current_p);
-      viennagrid_quantity_field_init(current_p, cell_dim, VIENNAGRID_QUANTITY_FIELD_TYPE_NUMERIC, 3, VIENNAGRID_QUANTITY_FIELD_STORAGE_DENSE);
-      viennagrid_quantity_field_name_set(current_p, "Hole current density");
+      VIENNASHE_VIENNAGRID_CHECK(viennagrid_quantity_field_create(&current_p));
+      VIENNASHE_VIENNAGRID_CHECK(viennagrid_quantity_field_init(current_p, cell_dim, VIENNAGRID_QUANTITY_FIELD_TYPE_NUMERIC, 3, VIENNAGRID_QUANTITY_FIELD_STORAGE_DENSE));
+      VIENNASHE_VIENNAGRID_CHECK(viennagrid_quantity_field_name_set(current_p, "Hole current density"));
 
       viennagrid_quantity_field carrier_velocity_n;
-      viennagrid_quantity_field_create(&carrier_velocity_n);
-      viennagrid_quantity_field_init(carrier_velocity_n, cell_dim, VIENNAGRID_QUANTITY_FIELD_TYPE_NUMERIC, 3, VIENNAGRID_QUANTITY_FIELD_STORAGE_DENSE);
-      viennagrid_quantity_field_name_set(carrier_velocity_n, "Electron avg. carrier drift velocity");
+      VIENNASHE_VIENNAGRID_CHECK(viennagrid_quantity_field_create(&carrier_velocity_n));
+      VIENNASHE_VIENNAGRID_CHECK(viennagrid_quantity_field_init(carrier_velocity_n, cell_dim, VIENNAGRID_QUANTITY_FIELD_TYPE_NUMERIC, 3, VIENNAGRID_QUANTITY_FIELD_STORAGE_DENSE));
+      VIENNASHE_VIENNAGRID_CHECK(viennagrid_quantity_field_name_set(carrier_velocity_n, "Electron avg. carrier drift velocity"));
 
       viennagrid_quantity_field carrier_velocity_p;
-      viennagrid_quantity_field_create(&carrier_velocity_p);
-      viennagrid_quantity_field_init(carrier_velocity_p, cell_dim, VIENNAGRID_QUANTITY_FIELD_TYPE_NUMERIC, 3, VIENNAGRID_QUANTITY_FIELD_STORAGE_DENSE);
-      viennagrid_quantity_field_name_set(carrier_velocity_p, "Hole avg. carrier drift velocity");
+      VIENNASHE_VIENNAGRID_CHECK(viennagrid_quantity_field_create(&carrier_velocity_p));
+      VIENNASHE_VIENNAGRID_CHECK(viennagrid_quantity_field_init(carrier_velocity_p, cell_dim, VIENNAGRID_QUANTITY_FIELD_TYPE_NUMERIC, 3, VIENNAGRID_QUANTITY_FIELD_STORAGE_DENSE));
+      VIENNASHE_VIENNAGRID_CHECK(viennagrid_quantity_field_name_set(carrier_velocity_p, "Hole avg. carrier drift velocity"));
 
       viennagrid_quantity_field pwr_density_container;
-      viennagrid_quantity_field_create(&pwr_density_container);
-      viennagrid_quantity_field_init(pwr_density_container, cell_dim, VIENNAGRID_QUANTITY_FIELD_TYPE_NUMERIC, 1, VIENNAGRID_QUANTITY_FIELD_STORAGE_DENSE);
-      viennagrid_quantity_field_name_set(pwr_density_container, "Joule heating power density");
+      VIENNASHE_VIENNAGRID_CHECK(viennagrid_quantity_field_create(&pwr_density_container));
+      VIENNASHE_VIENNAGRID_CHECK(viennagrid_quantity_field_init(pwr_density_container, cell_dim, VIENNAGRID_QUANTITY_FIELD_TYPE_NUMERIC, 1, VIENNAGRID_QUANTITY_FIELD_STORAGE_DENSE));
+      VIENNASHE_VIENNAGRID_CHECK(viennagrid_quantity_field_name_set(pwr_density_container, "Joule heating power density"));
 
       viennagrid_quantity_field avg_energy_n;
-      viennagrid_quantity_field_create(&avg_energy_n);
-      viennagrid_quantity_field_init(avg_energy_n, cell_dim, VIENNAGRID_QUANTITY_FIELD_TYPE_NUMERIC, 1, VIENNAGRID_QUANTITY_FIELD_STORAGE_DENSE);
-      viennagrid_quantity_field_name_set(avg_energy_n, "Electron avg. energy");
+      VIENNASHE_VIENNAGRID_CHECK(viennagrid_quantity_field_create(&avg_energy_n));
+      VIENNASHE_VIENNAGRID_CHECK(viennagrid_quantity_field_init(avg_energy_n, cell_dim, VIENNAGRID_QUANTITY_FIELD_TYPE_NUMERIC, 1, VIENNAGRID_QUANTITY_FIELD_STORAGE_DENSE));
+      VIENNASHE_VIENNAGRID_CHECK(viennagrid_quantity_field_name_set(avg_energy_n, "Electron avg. energy"));
 
       viennagrid_quantity_field avg_energy_p;
-      viennagrid_quantity_field_create(&avg_energy_p);
-      viennagrid_quantity_field_init(avg_energy_p, cell_dim, VIENNAGRID_QUANTITY_FIELD_TYPE_NUMERIC, 1, VIENNAGRID_QUANTITY_FIELD_STORAGE_DENSE);
-      viennagrid_quantity_field_name_set(avg_energy_p, "Hole avg. energy");
+      VIENNASHE_VIENNAGRID_CHECK(viennagrid_quantity_field_create(&avg_energy_p));
+      VIENNASHE_VIENNAGRID_CHECK(viennagrid_quantity_field_init(avg_energy_p, cell_dim, VIENNAGRID_QUANTITY_FIELD_TYPE_NUMERIC, 1, VIENNAGRID_QUANTITY_FIELD_STORAGE_DENSE));
+      VIENNASHE_VIENNAGRID_CHECK(viennagrid_quantity_field_name_set(avg_energy_p, "Hole avg. energy"));
 
       viennagrid_quantity_field avg_trap_occupancy;
-      viennagrid_quantity_field_create(&avg_trap_occupancy);
-      viennagrid_quantity_field_init(avg_trap_occupancy, cell_dim, VIENNAGRID_QUANTITY_FIELD_TYPE_NUMERIC, 1, VIENNAGRID_QUANTITY_FIELD_STORAGE_DENSE);
-      viennagrid_quantity_field_name_set(avg_trap_occupancy, "Average trap occupancy");
+      VIENNASHE_VIENNAGRID_CHECK(viennagrid_quantity_field_create(&avg_trap_occupancy));
+      VIENNASHE_VIENNAGRID_CHECK(viennagrid_quantity_field_init(avg_trap_occupancy, cell_dim, VIENNAGRID_QUANTITY_FIELD_TYPE_NUMERIC, 1, VIENNAGRID_QUANTITY_FIELD_STORAGE_DENSE));
+      VIENNASHE_VIENNAGRID_CHECK(viennagrid_quantity_field_name_set(avg_trap_occupancy, "Average trap occupancy"));
 
       //
       // Device data
       //
 
       viennagrid_element_id *cells_begin, *cells_end;
-      viennagrid_mesh_elements_get(device.mesh(), cell_dim, &cells_begin, &cells_end);
+      VIENNASHE_VIENNAGRID_CHECK(viennagrid_mesh_elements_get(device.mesh(), cell_dim, &cells_begin, &cells_end));
 
       {
         viennagrid_quantity_field doping_n;
-        viennagrid_quantity_field_create(&doping_n);
-        viennagrid_quantity_field_init(doping_n, cell_dim, VIENNAGRID_QUANTITY_FIELD_TYPE_NUMERIC, 1, VIENNAGRID_QUANTITY_FIELD_STORAGE_DENSE);
-        viennagrid_quantity_field_name_set(doping_n, "Donator Doping");
+        VIENNASHE_VIENNAGRID_CHECK(viennagrid_quantity_field_create(&doping_n));
+        VIENNASHE_VIENNAGRID_CHECK(viennagrid_quantity_field_init(doping_n, cell_dim, VIENNAGRID_QUANTITY_FIELD_TYPE_NUMERIC, 1, VIENNAGRID_QUANTITY_FIELD_STORAGE_DENSE));
+        VIENNASHE_VIENNAGRID_CHECK(viennagrid_quantity_field_name_set(doping_n, "Donator Doping"));
         for (viennagrid_element_id *cit  = cells_begin;
                                     cit != cells_end;
                                   ++cit)
         {
           viennagrid_numeric value = device.get_doping_n(*cit);
-          viennagrid_quantity_field_value_set(doping_n, *cit, &value);
+          VIENNASHE_VIENNAGRID_CHECK(viennagrid_quantity_field_value_set(doping_n, *cit, &value));
         }
-        viennagrid_mesh_io_quantity_field_set(mesh_io, doping_n);
-        viennagrid_quantity_field_release(doping_n);
+        VIENNASHE_VIENNAGRID_CHECK(viennagrid_mesh_io_quantity_field_set(mesh_io, doping_n));
+        VIENNASHE_VIENNAGRID_CHECK(viennagrid_quantity_field_release(doping_n));
       }
 
       {
         viennagrid_quantity_field doping_p;
-        viennagrid_quantity_field_create(&doping_p);
-        viennagrid_quantity_field_init(doping_p, cell_dim, VIENNAGRID_QUANTITY_FIELD_TYPE_NUMERIC, 1, VIENNAGRID_QUANTITY_FIELD_STORAGE_DENSE);
-        viennagrid_quantity_field_name_set(doping_p, "Acceptor Doping");
+        VIENNASHE_VIENNAGRID_CHECK(viennagrid_quantity_field_create(&doping_p));
+        VIENNASHE_VIENNAGRID_CHECK(viennagrid_quantity_field_init(doping_p, cell_dim, VIENNAGRID_QUANTITY_FIELD_TYPE_NUMERIC, 1, VIENNAGRID_QUANTITY_FIELD_STORAGE_DENSE));
+        VIENNASHE_VIENNAGRID_CHECK(viennagrid_quantity_field_name_set(doping_p, "Acceptor Doping"));
         for (viennagrid_element_id *cit  = cells_begin;
                                     cit != cells_end;
                                   ++cit)
         {
           viennagrid_numeric value = device.get_doping_p(*cit);
-          viennagrid_quantity_field_value_set(doping_p, *cit, &value);
+          VIENNASHE_VIENNAGRID_CHECK(viennagrid_quantity_field_value_set(doping_p, *cit, &value));
         }
-        viennagrid_mesh_io_quantity_field_set(mesh_io, doping_p);
-        viennagrid_quantity_field_release(doping_p);
+        VIENNASHE_VIENNAGRID_CHECK(viennagrid_mesh_io_quantity_field_set(mesh_io, doping_p));
+        VIENNASHE_VIENNAGRID_CHECK(viennagrid_quantity_field_release(doping_p));
       }
 
       {
         viennagrid_quantity_field material;
-        viennagrid_quantity_field_create(&material);
-        viennagrid_quantity_field_init(material, cell_dim, VIENNAGRID_QUANTITY_FIELD_TYPE_NUMERIC, 1, VIENNAGRID_QUANTITY_FIELD_STORAGE_DENSE);
-        viennagrid_quantity_field_name_set(material, "Material IDs");
+        VIENNASHE_VIENNAGRID_CHECK(viennagrid_quantity_field_create(&material));
+        VIENNASHE_VIENNAGRID_CHECK(viennagrid_quantity_field_init(material, cell_dim, VIENNAGRID_QUANTITY_FIELD_TYPE_NUMERIC, 1, VIENNAGRID_QUANTITY_FIELD_STORAGE_DENSE));
+        VIENNASHE_VIENNAGRID_CHECK(viennagrid_quantity_field_name_set(material, "Material IDs"));
         for (viennagrid_element_id *cit  = cells_begin;
                                     cit != cells_end;
                                   ++cit)
         {
           viennagrid_numeric value = device.get_material(*cit);
-          viennagrid_quantity_field_value_set(material, *cit, &value);
+          VIENNASHE_VIENNAGRID_CHECK(viennagrid_quantity_field_value_set(material, *cit, &value));
         }
-        viennagrid_mesh_io_quantity_field_set(mesh_io, material);
-        viennagrid_quantity_field_release(material);
+        VIENNASHE_VIENNAGRID_CHECK(viennagrid_mesh_io_quantity_field_set(mesh_io, material));
+        VIENNASHE_VIENNAGRID_CHECK(viennagrid_quantity_field_release(material));
       }
 
 
@@ -818,7 +818,6 @@ namespace viennashe
       //
       std::deque<UnknownQuantityType> const & unknown_quans = simulator_obj.quantity_history(0).unknown_quantities();
 
-      std::cout << unknown_quans.size() << " quantities to output!" << std::endl;
       for (std::size_t quan_index = 0; quan_index < unknown_quans.size(); ++quan_index)
       {
         UnknownQuantityType const & quan = unknown_quans.at(quan_index);
@@ -827,7 +826,7 @@ namespace viennashe
         if (quan.get_name() == viennashe::quantity::potential())
         {
           viennashe::write_electric_field_to_quantity_field(device, simulator_obj.quantities().potential(), electric_field);
-          viennagrid_mesh_io_quantity_field_set(mesh_io, electric_field);
+          VIENNASHE_VIENNAGRID_CHECK(viennagrid_mesh_io_quantity_field_set(mesh_io, electric_field));
         }
 
         // electron current
@@ -836,18 +835,18 @@ namespace viennashe
           if (simulator_obj.config().get_electron_equation() == viennashe::EQUATION_SHE)
           {
             viennashe::she::write_current_density_to_quantity_field(device, simulator_obj.config(), simulator_obj.quantities().electron_distribution_function(), current_n);
-            viennagrid_mesh_io_quantity_field_set(mesh_io, current_n);
+            VIENNASHE_VIENNAGRID_CHECK(viennagrid_mesh_io_quantity_field_set(mesh_io, current_n));
 
             viennashe::she::write_carrier_velocity_to_quantity_field(device, simulator_obj.config(), simulator_obj.quantities().electron_distribution_function(), carrier_velocity_n);
-            viennagrid_mesh_io_quantity_field_set(mesh_io, carrier_velocity_n);
+            VIENNASHE_VIENNAGRID_CHECK(viennagrid_mesh_io_quantity_field_set(mesh_io, carrier_velocity_n));
 
             viennashe::she::write_kinetic_carrier_energy_to_quantity_field(device, simulator_obj.config(), simulator_obj.quantities().electron_distribution_function(), avg_energy_n);
-            viennagrid_mesh_io_quantity_field_set(mesh_io, avg_energy_n);
+            VIENNASHE_VIENNAGRID_CHECK(viennagrid_mesh_io_quantity_field_set(mesh_io, avg_energy_n));
           }
           else
           {
             viennashe::write_current_density_to_quantity_field(device, simulator_obj.potential(), quan, viennashe::ELECTRON_TYPE_ID, viennashe::models::create_constant_mobility_model(device, 0.1430), current_n);
-            viennagrid_mesh_io_quantity_field_set(mesh_io, current_n);
+            VIENNASHE_VIENNAGRID_CHECK(viennagrid_mesh_io_quantity_field_set(mesh_io, current_n));
           }
         }
 
@@ -857,18 +856,18 @@ namespace viennashe
           if (simulator_obj.config().get_hole_equation() == viennashe::EQUATION_SHE)
           {
             viennashe::she::write_current_density_to_quantity_field(device, simulator_obj.config(), simulator_obj.quantities().hole_distribution_function(), current_p);
-            viennagrid_mesh_io_quantity_field_set(mesh_io, current_p);
+            VIENNASHE_VIENNAGRID_CHECK(viennagrid_mesh_io_quantity_field_set(mesh_io, current_p));
 
             viennashe::she::write_carrier_velocity_to_quantity_field(device, simulator_obj.config(), simulator_obj.quantities().hole_distribution_function(), carrier_velocity_p);
-            viennagrid_mesh_io_quantity_field_set(mesh_io, carrier_velocity_p);
+            VIENNASHE_VIENNAGRID_CHECK(viennagrid_mesh_io_quantity_field_set(mesh_io, carrier_velocity_p));
 
             viennashe::she::write_kinetic_carrier_energy_to_quantity_field(device, simulator_obj.config(), simulator_obj.quantities().hole_distribution_function(), avg_energy_p);
-            viennagrid_mesh_io_quantity_field_set(mesh_io, avg_energy_p);
+            VIENNASHE_VIENNAGRID_CHECK(viennagrid_mesh_io_quantity_field_set(mesh_io, avg_energy_p));
           }
           else
           {
             viennashe::write_current_density_to_quantity_field(device, simulator_obj.potential(), quan, viennashe::HOLE_TYPE_ID, viennashe::models::create_constant_mobility_model(device, 0.0460), current_p);
-            viennagrid_mesh_io_quantity_field_set(mesh_io, current_p);
+            VIENNASHE_VIENNAGRID_CHECK(viennagrid_mesh_io_quantity_field_set(mesh_io, current_p));
           }
         }
 
@@ -882,7 +881,7 @@ namespace viennashe
           PowerDensityAccessorType pdacc(device, simulator_obj.quantities(), simulator_obj.config());
 
           viennashe::write_macroscopic_quantity_to_quantity_field(device, pdacc, pwr_density_container);
-          viennagrid_mesh_io_quantity_field_set(mesh_io, pwr_density_container);
+          VIENNASHE_VIENNAGRID_CHECK(viennagrid_mesh_io_quantity_field_set(mesh_io, pwr_density_container));
         }
 
       } // for unknown quans
@@ -921,26 +920,19 @@ namespace viennashe
 
       std::string filename_with_extension(filename);
       filename_with_extension += ".vtu";
-      std::cout << "Mesh IO: Writing to " << filename_with_extension << std::endl;
 
-      viennagrid_int quantity_count;
-      viennagrid_mesh_io_quantity_field_count(mesh_io, &quantity_count);
-      std::cout << quantity_count << " quantities registered!" << std::endl;
+      VIENNASHE_VIENNAGRID_CHECK(viennagrid_mesh_io_write_with_filetype(mesh_io, filename_with_extension.c_str(), VIENNAGRID_FILETYPE_VTK_MESH));
+      VIENNASHE_VIENNAGRID_CHECK(viennagrid_mesh_io_release(mesh_io));
 
-      viennagrid_error err = viennagrid_mesh_io_write_with_filetype(mesh_io, filename_with_extension.c_str(), VIENNAGRID_FILETYPE_VTK_MESH);
-      std::cout << "Status: " << err << std::endl;
-      viennagrid_mesh_io_release(mesh_io);
-
-      viennagrid_quantity_field_release(electric_field);
-      viennagrid_quantity_field_release(current_n);
-      viennagrid_quantity_field_release(current_p);
-      viennagrid_quantity_field_release(carrier_velocity_n);
-      viennagrid_quantity_field_release(carrier_velocity_p);
-      viennagrid_quantity_field_release(pwr_density_container);
-      viennagrid_quantity_field_release(avg_energy_n);
-      viennagrid_quantity_field_release(avg_energy_p);
-      viennagrid_quantity_field_release(avg_trap_occupancy);
-
+      VIENNASHE_VIENNAGRID_CHECK(viennagrid_quantity_field_release(electric_field));
+      VIENNASHE_VIENNAGRID_CHECK(viennagrid_quantity_field_release(current_n));
+      VIENNASHE_VIENNAGRID_CHECK(viennagrid_quantity_field_release(current_p));
+      VIENNASHE_VIENNAGRID_CHECK(viennagrid_quantity_field_release(carrier_velocity_n));
+      VIENNASHE_VIENNAGRID_CHECK(viennagrid_quantity_field_release(carrier_velocity_p));
+      VIENNASHE_VIENNAGRID_CHECK(viennagrid_quantity_field_release(pwr_density_container));
+      VIENNASHE_VIENNAGRID_CHECK(viennagrid_quantity_field_release(avg_energy_n));
+      VIENNASHE_VIENNAGRID_CHECK(viennagrid_quantity_field_release(avg_energy_p));
+      VIENNASHE_VIENNAGRID_CHECK(viennagrid_quantity_field_release(avg_trap_occupancy));
     }
 
   } //namespace io

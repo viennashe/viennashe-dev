@@ -42,10 +42,10 @@ namespace viennashe
       viennagrid_mesh mesh = d.mesh();
 
       viennagrid_dimension cell_dim;
-      viennagrid_mesh_cell_dimension_get(mesh, &cell_dim);
+      VIENNASHE_VIENNAGRID_CHECK(viennagrid_mesh_cell_dimension_get(mesh, &cell_dim));
 
       viennagrid_element_id *cells_begin, *cells_end;
-      viennagrid_mesh_elements_get(mesh, cell_dim, &cells_begin, &cells_end);
+      VIENNASHE_VIENNAGRID_CHECK(viennagrid_mesh_elements_get(mesh, cell_dim, &cells_begin, &cells_end));
 
       //
       // Step 1: Enumerate contacts (not relying on segments)
@@ -91,7 +91,7 @@ namespace viennashe
               cells_queue.pop();
 
               viennagrid_element_id *neighbors_begin, *neighbors_end;
-              viennagrid_element_neighbor_elements(mesh, current_cell, cell_dim - 1, cell_dim, &neighbors_begin, &neighbors_end);
+              VIENNASHE_VIENNAGRID_CHECK(viennagrid_element_neighbor_elements(mesh, current_cell, cell_dim - 1, cell_dim, &neighbors_begin, &neighbors_end));
               for (viennagrid_element_id *nit = neighbors_begin; nit != neighbors_end; ++nit)
               {
                 // conductor cells are added to the queue to be revisited later

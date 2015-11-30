@@ -44,15 +44,15 @@ namespace viennashe
       {
         mesh_generator_vtk(std::string filename) : filename_(filename)
         {
-          viennagrid_mesh_io_create(&mesh_reader_);
+          VIENNASHE_VIENNAGRID_CHECK(viennagrid_mesh_io_create(&mesh_reader_));
         }
 
-        ~mesh_generator_vtk() { viennagrid_mesh_io_release(mesh_reader_); }
+        ~mesh_generator_vtk() { VIENNASHE_VIENNAGRID_CHECK(viennagrid_mesh_io_release(mesh_reader_)); }
 
         void operator()(viennagrid_mesh mesh)
         {
-          viennagrid_mesh_io_mesh_set(mesh_reader_, mesh);
-          viennagrid_mesh_io_read(mesh_reader_, filename_.c_str());
+          VIENNASHE_VIENNAGRID_CHECK(viennagrid_mesh_io_mesh_set(mesh_reader_, mesh));
+          VIENNASHE_VIENNAGRID_CHECK(viennagrid_mesh_io_read(mesh_reader_, filename_.c_str()));
         }
 
         viennagrid_mesh_io & reader() { return this->mesh_reader_; }

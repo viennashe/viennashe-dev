@@ -47,8 +47,8 @@ namespace viennashe
         std::vector<viennagrid_numeric> centroid_cell(3);
         std::vector<viennagrid_numeric> centroid_facet(3);
 
-        viennagrid_element_centroid(mesh,  cell, &(centroid_cell[0]));
-        viennagrid_element_centroid(mesh, facet, &(centroid_facet[0]));
+        VIENNASHE_VIENNAGRID_CHECK(viennagrid_element_centroid(mesh,  cell, &(centroid_cell[0])));
+        VIENNASHE_VIENNAGRID_CHECK(viennagrid_element_centroid(mesh, facet, &(centroid_facet[0])));
 
         std::vector<viennagrid_numeric> ret(3);
         if (centroid_cell[0] < centroid_facet[0])
@@ -133,7 +133,7 @@ namespace viennashe
                                viennagrid_element_id facet)
     {
       viennagrid_dimension cell_dim;
-      viennagrid_mesh_cell_dimension_get(mesh, &cell_dim);
+      VIENNASHE_VIENNAGRID_CHECK(viennagrid_mesh_cell_dimension_get(mesh, &cell_dim));
 
       if (cell_dim == 1)
         return detail::outer_cell_normal_at_facet(mesh, cell, facet);
@@ -160,13 +160,13 @@ namespace viennashe
                                CellSetterT       & cell_setter, FacetAccessorT  const & facet_access)
     {
       viennagrid_dimension geo_dim;
-      viennagrid_mesh_geometric_dimension_get(device.mesh(), &geo_dim);
+      VIENNASHE_VIENNAGRID_CHECK(viennagrid_mesh_geometric_dimension_get(device.mesh(), &geo_dim));
 
       viennagrid_dimension cell_dim;
-      viennagrid_mesh_cell_dimension_get(device.mesh(), &cell_dim);
+      VIENNASHE_VIENNAGRID_CHECK(viennagrid_mesh_cell_dimension_get(device.mesh(), &cell_dim));
 
       viennagrid_element_id *facets_begin, *facets_end;
-      viennagrid_element_boundary_elements(device.mesh(), cell, cell_dim - 1, &facets_begin, &facets_end);
+      VIENNASHE_VIENNAGRID_CHECK(viennagrid_element_boundary_elements(device.mesh(), cell, cell_dim - 1, &facets_begin, &facets_end));
 
       viennagrid_int facet_num = facets_end - facets_begin;
 
@@ -188,7 +188,7 @@ namespace viennashe
 
         // flip orientation of flux contribution if global orientation is different:
         viennagrid_element_id *cells_on_facet_begin, *cells_on_facet_end;
-        viennagrid_element_coboundary_elements(device.mesh(), *focit, cell_dim, &cells_on_facet_begin, &cells_on_facet_end);
+        VIENNASHE_VIENNAGRID_CHECK(viennagrid_element_coboundary_elements(device.mesh(), *focit, cell_dim, &cells_on_facet_begin, &cells_on_facet_end));
         if (cells_on_facet_begin[0] != cell)
           flux_contributions[facet_ctr] *= -1.0;
       }

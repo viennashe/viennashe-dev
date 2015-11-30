@@ -64,10 +64,10 @@ namespace viennashe
         writer << "## ViennaSHE - gnuplot output " << std::endl;
 
         viennagrid_dimension cell_dim;
-        viennagrid_mesh_cell_dimension_get(device.mesh(), &cell_dim);
+        VIENNASHE_VIENNAGRID_CHECK(viennagrid_mesh_cell_dimension_get(device.mesh(), &cell_dim));
 
         viennagrid_element_id *cells_begin, *cells_end;
-        viennagrid_mesh_elements_get(device.mesh(), cell_dim, &cells_begin, &cells_end);
+        VIENNASHE_VIENNAGRID_CHECK(viennagrid_mesh_elements_get(device.mesh(), cell_dim, &cells_begin, &cells_end));
         for (viennagrid_element_id *cit  = cells_begin;
                                     cit != cells_end;
                                   ++cit)
@@ -77,7 +77,7 @@ namespace viennashe
 
           //write values at point
           std::vector<double> p(3);
-          viennagrid_element_centroid(device.mesh(), *cit, &(p[0]));
+          VIENNASHE_VIENNAGRID_CHECK(viennagrid_element_centroid(device.mesh(), *cit, &(p[0])));
           for (std::size_t i = 0; i < p.size(); ++i) writer << p[i] << " ";
           this->write_value(writer, quan(*cit));
           writer << std::endl;

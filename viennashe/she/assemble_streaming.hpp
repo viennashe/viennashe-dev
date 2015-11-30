@@ -56,12 +56,12 @@ namespace viennashe
       std::vector<double> centroid_1(3), centroid_2(3);
 
       double connection_len;
-      viennagrid_element_centroid(mesh, cell,       &(centroid_1[0]));
-      viennagrid_element_centroid(mesh, other_cell, &(centroid_2[0]));
+      VIENNASHE_VIENNAGRID_CHECK(viennagrid_element_centroid(mesh, cell,       &(centroid_1[0])));
+      VIENNASHE_VIENNAGRID_CHECK(viennagrid_element_centroid(mesh, other_cell, &(centroid_2[0])));
 
       for (std::size_t i=0; i<centroid_1.size(); ++i)
         centroid_1[i] -= centroid_2[i];
-      viennagrid_norm_2(3, &(centroid_1[0]), &connection_len);
+      VIENNASHE_VIENNAGRID_CHECK(viennagrid_norm_2(3, &(centroid_1[0]), &connection_len));
 
       std::vector<double> cell_connection_normalized(3);
       for (std::size_t i=0; i<cell_connection_normalized.size(); ++i)
@@ -70,9 +70,9 @@ namespace viennashe
       std::vector<double> facet_unit_normal = viennashe::util::outer_cell_normal_at_facet(mesh, cell, facet);
 
       double facet_volume;
-      viennagrid_element_volume(mesh, facet, &facet_volume);
+      VIENNASHE_VIENNAGRID_CHECK(viennagrid_element_volume(mesh, facet, &facet_volume));
       double normal_share;
-      viennagrid_inner_prod(3, &(facet_unit_normal[0]), &(cell_connection_normalized[0]), &normal_share);
+      VIENNASHE_VIENNAGRID_CHECK(viennagrid_inner_prod(3, &(facet_unit_normal[0]), &(cell_connection_normalized[0]), &normal_share));
 
       return facet_volume * normal_share;
     }
@@ -260,12 +260,12 @@ namespace viennashe
       double connection_len;
       {
         std::vector<double> centroid_1(3), centroid_2(3);
-        viennagrid_element_centroid(device.mesh(), cell,            &(centroid_1[0]));
-        viennagrid_element_centroid(device.mesh(), *other_cell_ptr, &(centroid_2[0]));
+        VIENNASHE_VIENNAGRID_CHECK(viennagrid_element_centroid(device.mesh(), cell,            &(centroid_1[0])));
+        VIENNASHE_VIENNAGRID_CHECK(viennagrid_element_centroid(device.mesh(), *other_cell_ptr, &(centroid_2[0])));
 
         for (std::size_t i=0; i<centroid_1.size(); ++i)
           centroid_1[i] -= centroid_2[i];
-        viennagrid_norm_2(3, &(centroid_1[0]), &connection_len);
+        VIENNASHE_VIENNAGRID_CHECK(viennagrid_norm_2(3, &(centroid_1[0]), &connection_len));
       }
 
 

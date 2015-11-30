@@ -64,10 +64,10 @@ namespace viennashe
     void load_mesh(std::string filename)
     {
       viennagrid_mesh_io mesh_io;
-      viennagrid_mesh_io_create(&mesh_io);
-      viennagrid_mesh_io_mesh_set(mesh_io, mesh_);
+      VIENNASHE_VIENNAGRID_CHECK(viennagrid_mesh_io_create(&mesh_io));
+      VIENNASHE_VIENNAGRID_CHECK(viennagrid_mesh_io_mesh_set(mesh_io, mesh_));
 
-      viennagrid_mesh_io_read(mesh_io, filename.c_str());
+      VIENNASHE_VIENNAGRID_CHECK(viennagrid_mesh_io_read(mesh_io, filename.c_str()));
 
       init_datastructures();
     }
@@ -100,13 +100,13 @@ namespace viennashe
     segment_type segment(segment_id_type seg_id)
     {
       segment_type seg;
-      viennagrid_mesh_region_get(mesh_, seg_id, &seg);
+      VIENNASHE_VIENNAGRID_CHECK(viennagrid_mesh_region_get(mesh_, seg_id, &seg));
       return seg;
     }
 
     void scale(double factor)
     {
-      viennagrid_mesh_scale(mesh_, factor, NULL);
+      VIENNASHE_VIENNAGRID_CHECK(viennagrid_mesh_scale(mesh_, factor, NULL));
       init_datastructures(); //for Voronoi quantities
     }
 
@@ -143,10 +143,10 @@ namespace viennashe
     {
 
       viennagrid_dimension cell_dim;
-      viennagrid_mesh_cell_dimension_get(mesh_, &cell_dim);
+      VIENNASHE_VIENNAGRID_CHECK(viennagrid_mesh_cell_dimension_get(mesh_, &cell_dim));
 
       viennagrid_element_id *cells_begin, *cells_end;
-      viennagrid_element_coboundary_elements(mesh_, facet, cell_dim, &cells_begin, &cells_end);
+      VIENNASHE_VIENNAGRID_CHECK(viennagrid_element_coboundary_elements(mesh_, facet, cell_dim, &cells_begin, &cells_end));
 
       if (cells_begin + 1 == cells_end)
         return get_lattice_temperature(*cells_begin);
@@ -335,10 +335,10 @@ namespace viennashe
     void init_datastructures()
     {
       viennagrid_dimension cell_dim;
-      viennagrid_mesh_cell_dimension_get(mesh_, &cell_dim);
+      VIENNASHE_VIENNAGRID_CHECK(viennagrid_mesh_cell_dimension_get(mesh_, &cell_dim));
 
       viennagrid_int num_cells;
-      viennagrid_mesh_element_count(mesh_, cell_dim, &num_cells);
+      VIENNASHE_VIENNAGRID_CHECK(viennagrid_mesh_element_count(mesh_, cell_dim, &num_cells));
 
       cell_doping_n_.resize(std::size_t(num_cells));
       cell_doping_p_.resize(std::size_t(num_cells));
@@ -367,16 +367,16 @@ namespace viennashe
     void set_contact_potential(double pot, segment_type seg)
     {
       viennagrid_dimension cell_dim;
-      viennagrid_mesh_cell_dimension_get(mesh_, &cell_dim);
+      VIENNASHE_VIENNAGRID_CHECK(viennagrid_mesh_cell_dimension_get(mesh_, &cell_dim));
 
       viennagrid_element_id *cells_begin, *cells_end;
-      viennagrid_mesh_elements_get(mesh_, cell_dim, &cells_begin, &cells_end);
+      VIENNASHE_VIENNAGRID_CHECK(viennagrid_mesh_elements_get(mesh_, cell_dim, &cells_begin, &cells_end));
       for (viennagrid_element_id *cit  = cells_begin;
                                   cit != cells_end;
                                 ++cit)
       {
         viennagrid_bool cell_in_segment;
-        viennagrid_region_contains_element(seg, *cit, &cell_in_segment);
+        VIENNASHE_VIENNAGRID_CHECK(viennagrid_region_contains_element(seg, *cit, &cell_in_segment));
         if (cell_in_segment)
           set_contact_potential(pot, *cit);
       }
@@ -476,17 +476,17 @@ protected:
       if (value <= 0.0) { throw viennashe::invalid_value_exception("device.set_lattice_temp*: Lattice temperatures have to be greater 0 K!", value); }
 
       viennagrid_dimension cell_dim;
-      viennagrid_mesh_cell_dimension_get(mesh_, &cell_dim);
+      VIENNASHE_VIENNAGRID_CHECK(viennagrid_mesh_cell_dimension_get(mesh_, &cell_dim));
 
       viennagrid_element_id *cells_begin, *cells_end;
-      viennagrid_mesh_elements_get(mesh_, cell_dim, &cells_begin, &cells_end);
+      VIENNASHE_VIENNAGRID_CHECK(viennagrid_mesh_elements_get(mesh_, cell_dim, &cells_begin, &cells_end));
       for (viennagrid_element_id *cit  = cells_begin;
                                   cit != cells_end;
                                 ++cit)
       {
         viennagrid_bool cell_in_segment = true;
         if (seg)
-          viennagrid_region_contains_element(seg, *cit, &cell_in_segment);
+          VIENNASHE_VIENNAGRID_CHECK(viennagrid_region_contains_element(seg, *cit, &cell_in_segment));
         if (cell_in_segment)
           set_lattice_temp_impl(value, *cit);
       }
@@ -514,17 +514,17 @@ protected:
       if (value <= 0.0) { throw viennashe::invalid_value_exception("device.set_doping*: Concentrations have to be greater 0 !", value); }
 
       viennagrid_dimension cell_dim;
-      viennagrid_mesh_cell_dimension_get(mesh_, &cell_dim);
+      VIENNASHE_VIENNAGRID_CHECK(viennagrid_mesh_cell_dimension_get(mesh_, &cell_dim));
 
       viennagrid_element_id *cells_begin, *cells_end;
-      viennagrid_mesh_elements_get(mesh_, cell_dim, &cells_begin, &cells_end);
+      VIENNASHE_VIENNAGRID_CHECK(viennagrid_mesh_elements_get(mesh_, cell_dim, &cells_begin, &cells_end));
       for (viennagrid_element_id *cit  = cells_begin;
                                   cit != cells_end;
                                 ++cit)
       {
         viennagrid_bool cell_in_segment = true;
         if (seg)
-          viennagrid_region_contains_element(seg, *cit, &cell_in_segment);
+          VIENNASHE_VIENNAGRID_CHECK(viennagrid_region_contains_element(seg, *cit, &cell_in_segment));
         if (cell_in_segment)
         {
           if (doping_type == DONATOR_DOPING_TYPE_ID)
@@ -542,17 +542,17 @@ protected:
     void set_material_on_complex(long material_id, segment_type seg)
     {
       viennagrid_dimension cell_dim;
-      viennagrid_mesh_cell_dimension_get(mesh_, &cell_dim);
+      VIENNASHE_VIENNAGRID_CHECK(viennagrid_mesh_cell_dimension_get(mesh_, &cell_dim));
 
       viennagrid_element_id *cells_begin, *cells_end;
-      viennagrid_mesh_elements_get(mesh_, cell_dim, &cells_begin, &cells_end);
+      VIENNASHE_VIENNAGRID_CHECK(viennagrid_mesh_elements_get(mesh_, cell_dim, &cells_begin, &cells_end));
       for (viennagrid_element_id *cit  = cells_begin;
                                   cit != cells_end;
                                 ++cit)
       {
         viennagrid_bool cell_in_segment = true;
         if (seg)
-          viennagrid_region_contains_element(seg, *cit, &cell_in_segment);
+          VIENNASHE_VIENNAGRID_CHECK(viennagrid_region_contains_element(seg, *cit, &cell_in_segment));
         if (cell_in_segment)
           set_material(material_id, *cit);
       }
@@ -567,17 +567,17 @@ protected:
     void add_trap_level_on_complex(trap_level_type trap, segment_type seg)
     {
       viennagrid_dimension cell_dim;
-      viennagrid_mesh_cell_dimension_get(mesh_, &cell_dim);
+      VIENNASHE_VIENNAGRID_CHECK(viennagrid_mesh_cell_dimension_get(mesh_, &cell_dim));
 
       viennagrid_element_id *cells_begin, *cells_end;
-      viennagrid_mesh_elements_get(mesh_, cell_dim, &cells_begin, &cells_end);
+      VIENNASHE_VIENNAGRID_CHECK(viennagrid_mesh_elements_get(mesh_, cell_dim, &cells_begin, &cells_end));
       for (viennagrid_element_id *cit  = cells_begin;
                                   cit != cells_end;
                                 ++cit)
       {
         viennagrid_bool cell_in_segment = true;
         if (seg)
-          viennagrid_region_contains_element(seg, *cit, &cell_in_segment);
+          VIENNASHE_VIENNAGRID_CHECK(viennagrid_region_contains_element(seg, *cit, &cell_in_segment));
         if (cell_in_segment)
           add_trap_level(trap, *cit);
       }

@@ -64,7 +64,7 @@ namespace viennashe
       typedef typename DeviceType::mesh_type           MeshType;
 
       viennagrid_element_id *elements_begin, *elements_end;
-      viennagrid_mesh_elements_get(device.mesh(), topo_dim, &elements_begin, &elements_end);
+      VIENNASHE_VIENNAGRID_CHECK(viennagrid_mesh_elements_get(device.mesh(), topo_dim, &elements_begin, &elements_end));
 
       bool quantity_okay = true;
 

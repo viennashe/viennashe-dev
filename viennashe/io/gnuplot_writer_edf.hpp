@@ -69,16 +69,16 @@ namespace viennashe
 
         //iterate over edges:
         viennagrid_dimension cell_dim;
-        viennagrid_mesh_cell_dimension_get(device.mesh(), &cell_dim);
+        VIENNASHE_VIENNAGRID_CHECK(viennagrid_mesh_cell_dimension_get(device.mesh(), &cell_dim));
 
         viennagrid_element_id *cells_begin, *cells_end;
-        viennagrid_mesh_elements_get(device.mesh(), cell_dim, &cells_begin, &cells_end);
+        VIENNASHE_VIENNAGRID_CHECK(viennagrid_mesh_elements_get(device.mesh(), cell_dim, &cells_begin, &cells_end));
         for (viennagrid_element_id *cit  = cells_begin;
                                     cit != cells_end;
                                   ++cit)
         {
           std::vector<double> p(3);
-          viennagrid_element_centroid(device.mesh(), *cit, &(p[0]));
+          VIENNASHE_VIENNAGRID_CHECK(viennagrid_element_centroid(device.mesh(), *cit, &(p[0])));
 
           if ( p[0] != coordinate_x )
             continue;
@@ -139,13 +139,13 @@ namespace viennashe
         }
 
         viennagrid_dimension geo_dim;
-        viennagrid_mesh_geometric_dimension_get(device.mesh(), &geo_dim);
+        VIENNASHE_VIENNAGRID_CHECK(viennagrid_mesh_geometric_dimension_get(device.mesh(), &geo_dim));
 
         viennagrid_dimension cell_dim;
-        viennagrid_mesh_cell_dimension_get(device.mesh(), &cell_dim);
+        VIENNASHE_VIENNAGRID_CHECK(viennagrid_mesh_cell_dimension_get(device.mesh(), &cell_dim));
 
         viennagrid_element_id *cells_begin, *cells_end;
-        viennagrid_mesh_elements_get(device.mesh(), cell_dim, &cells_begin, &cells_end);
+        VIENNASHE_VIENNAGRID_CHECK(viennagrid_mesh_elements_get(device.mesh(), cell_dim, &cells_begin, &cells_end));
         for (viennagrid_element_id *cit  = cells_begin;
                                     cit != cells_end;
                                   ++cit)
@@ -154,7 +154,7 @@ namespace viennashe
           if ( !cell_filter(*cit) ) continue;
 
           std::vector<double> p(3);
-          viennagrid_element_centroid(device.mesh(), *cit, &(p[0]));
+          VIENNASHE_VIENNAGRID_CHECK(viennagrid_element_centroid(device.mesh(), *cit, &(p[0])));
 
           //write values at point
           for ( std::size_t index_H = 1;

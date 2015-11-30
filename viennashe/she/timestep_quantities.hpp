@@ -105,10 +105,10 @@ namespace viennashe
 
           long i = 0;
           viennagrid_dimension cell_dim;
-          viennagrid_mesh_cell_dimension_get(device.mesh(), &cell_dim);
+          VIENNASHE_VIENNAGRID_CHECK(viennagrid_mesh_cell_dimension_get(device.mesh(), &cell_dim));
 
           viennagrid_element_id *cells_begin, *cells_end;
-          viennagrid_mesh_elements_get(device.mesh(), cell_dim, &cells_begin, &cells_end);
+          VIENNASHE_VIENNAGRID_CHECK(viennagrid_mesh_elements_get(device.mesh(), cell_dim, &cells_begin, &cells_end));
 
           cell_trap_unknown_indices_.resize(cells_end - cells_begin);
           cell_trap_occupancies_.resize(cells_end - cells_begin);

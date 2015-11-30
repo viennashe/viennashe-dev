@@ -208,10 +208,10 @@ namespace viennashe
         log::debug<log_assemble_all>() << "* assemble_all(): Even unknowns..." << std::endl;
 
         viennagrid_dimension cell_dim;
-        viennagrid_mesh_cell_dimension_get(mesh, &cell_dim);
+        VIENNASHE_VIENNAGRID_CHECK(viennagrid_mesh_cell_dimension_get(mesh, &cell_dim));
 
         viennagrid_element_id *cells_begin, *cells_end;
-        viennagrid_mesh_elements_get(mesh, cell_dim, &cells_begin, &cells_end);
+        VIENNASHE_VIENNAGRID_CHECK(viennagrid_mesh_elements_get(mesh, cell_dim, &cells_begin, &cells_end));
         for (viennagrid_element_id *cit  = cells_begin;
                                     cit != cells_end;
                                   ++cit)
@@ -247,7 +247,7 @@ namespace viennashe
 
           // iterate over neighbor cells holding the odd unknowns:
           viennagrid_element_id *facets_on_cell_begin, *facets_on_cell_end;
-          viennagrid_element_boundary_elements(mesh, *cit, cell_dim - 1, &facets_on_cell_begin, &facets_on_cell_end);
+          VIENNASHE_VIENNAGRID_CHECK(viennagrid_element_boundary_elements(mesh, *cit, cell_dim - 1, &facets_on_cell_begin, &facets_on_cell_end));
           for (viennagrid_element_id *focit  = facets_on_cell_begin;
                                       focit != facets_on_cell_end;
                                     ++focit)
@@ -305,7 +305,7 @@ namespace viennashe
         log::info<log_assemble_all>() << "* assemble_all(): Odd unknowns..." << std::endl;
 
         viennagrid_element_id *facets_begin, *facets_end;
-        viennagrid_mesh_elements_get(mesh, cell_dim-1, &facets_begin, &facets_end);
+        VIENNASHE_VIENNAGRID_CHECK(viennagrid_mesh_elements_get(mesh, cell_dim-1, &facets_begin, &facets_end));
 
         for (viennagrid_element_id *fit  = facets_begin;
                                     fit != facets_end;
@@ -335,7 +335,7 @@ namespace viennashe
 
           // iterate over cells of facet
           viennagrid_element_id *cells_on_facet_begin, *cells_on_facet_end;
-          viennagrid_element_coboundary_elements(mesh, *fit, cell_dim, &cells_on_facet_begin, &cells_on_facet_end);
+          VIENNASHE_VIENNAGRID_CHECK(viennagrid_element_coboundary_elements(mesh, *fit, cell_dim, &cells_on_facet_begin, &cells_on_facet_end));
           for (viennagrid_element_id *cofit  = cells_on_facet_begin;
                                       cofit != cells_on_facet_end;
                                     ++cofit)

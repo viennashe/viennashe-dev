@@ -258,10 +258,10 @@ namespace viennashe
           const double total_doping_on_cell = (_device.get_doping_n(c1) + _device.get_doping_p(c1));
 
           std::vector<double> centroid_1(3), centroid_2(3);
-          viennagrid_element_centroid(_device.mesh(), c1, &(centroid_1[0]));
-          viennagrid_element_centroid(_device.mesh(), c2, &(centroid_2[0]));
+          VIENNASHE_VIENNAGRID_CHECK(viennagrid_element_centroid(_device.mesh(), c1, &(centroid_1[0])));
+          VIENNASHE_VIENNAGRID_CHECK(viennagrid_element_centroid(_device.mesh(), c2, &(centroid_2[0])));
           double edge_len;
-          viennagrid_distance_2(3, &(centroid_1[0]), &(centroid_2[0]), &edge_len);
+          VIENNASHE_VIENNAGRID_CHECK(viennagrid_distance_2(3, &(centroid_1[0]), &(centroid_2[0]), &edge_len));
 
           const double    Emag   = ( -(potential(c2) - potential(c1)) / edge_len);
 

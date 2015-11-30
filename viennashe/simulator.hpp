@@ -74,10 +74,10 @@ namespace viennashe
     void set_unknown_for_material(DeviceT const & device, QuantityT & quan, materials::checker const & material_check)
     {
       viennagrid_dimension cell_dim;
-      viennagrid_mesh_cell_dimension_get(device.mesh(), &cell_dim);
+      VIENNASHE_VIENNAGRID_CHECK(viennagrid_mesh_cell_dimension_get(device.mesh(), &cell_dim));
 
       viennagrid_element_id *cells_begin, *cells_end;
-      viennagrid_mesh_elements_get(device.mesh(), cell_dim, &cells_begin, &cells_end);
+      VIENNASHE_VIENNAGRID_CHECK(viennagrid_mesh_elements_get(device.mesh(), cell_dim, &cells_begin, &cells_end));
       for (viennagrid_element_id *cit  = cells_begin;
                                   cit != cells_end;
                                 ++cit)
@@ -93,10 +93,10 @@ namespace viennashe
     void set_she_unknown(DeviceT const & device, QuantityT & quan)
     {
       viennagrid_dimension cell_dim;
-      viennagrid_mesh_cell_dimension_get(device.mesh(), &cell_dim);
+      VIENNASHE_VIENNAGRID_CHECK(viennagrid_mesh_cell_dimension_get(device.mesh(), &cell_dim));
 
       viennagrid_element_id *cells_begin, *cells_end;
-      viennagrid_mesh_elements_get(device.mesh(), cell_dim, &cells_begin, &cells_end);
+      VIENNASHE_VIENNAGRID_CHECK(viennagrid_mesh_elements_get(device.mesh(), cell_dim, &cells_begin, &cells_end));
       for (viennagrid_element_id *cit  = cells_begin;
                                   cit != cells_end;
                                 ++cit)
@@ -134,10 +134,10 @@ namespace viennashe
                                    boundary_type_id bnd_id)
     {
       viennagrid_dimension cell_dim;
-      viennagrid_mesh_cell_dimension_get(device.mesh(), &cell_dim);
+      VIENNASHE_VIENNAGRID_CHECK(viennagrid_mesh_cell_dimension_get(device.mesh(), &cell_dim));
 
       viennagrid_element_id *cells_begin, *cells_end;
-      viennagrid_mesh_elements_get(device.mesh(), cell_dim, &cells_begin, &cells_end);
+      VIENNASHE_VIENNAGRID_CHECK(viennagrid_mesh_elements_get(device.mesh(), cell_dim, &cells_begin, &cells_end));
       for (viennagrid_element_id *cit  = cells_begin;
                                   cit != cells_end;
                                 ++cit)
@@ -169,10 +169,10 @@ namespace viennashe
                                    boundary_type_id bnd_id)
     {
       viennagrid_dimension cell_dim;
-      viennagrid_mesh_cell_dimension_get(device.mesh(), &cell_dim);
+      VIENNASHE_VIENNAGRID_CHECK(viennagrid_mesh_cell_dimension_get(device.mesh(), &cell_dim));
 
       viennagrid_element_id *cells_begin, *cells_end;
-      viennagrid_mesh_elements_get(device.mesh(), cell_dim, &cells_begin, &cells_end);
+      VIENNASHE_VIENNAGRID_CHECK(viennagrid_mesh_elements_get(device.mesh(), cell_dim, &cells_begin, &cells_end));
       for (viennagrid_element_id *cit  = cells_begin;
                                   cit != cells_end;
                                 ++cit)
@@ -196,10 +196,10 @@ namespace viennashe
                            BoundaryValueAccessorT const & initial_guess_accessor)
     {
       viennagrid_dimension cell_dim;
-      viennagrid_mesh_cell_dimension_get(device.mesh(), &cell_dim);
+      VIENNASHE_VIENNAGRID_CHECK(viennagrid_mesh_cell_dimension_get(device.mesh(), &cell_dim));
 
       viennagrid_element_id *cells_begin, *cells_end;
-      viennagrid_mesh_elements_get(device.mesh(), cell_dim, &cells_begin, &cells_end);
+      VIENNASHE_VIENNAGRID_CHECK(viennagrid_mesh_elements_get(device.mesh(), cell_dim, &cells_begin, &cells_end));
       for (viennagrid_element_id *cit  = cells_begin;
                                   cit != cells_end;
                                 ++cit)
@@ -216,14 +216,14 @@ namespace viennashe
   void transfer_quantity_to_device(DeviceT & device, UnknownQuantityListT const & quantities, viennashe::config const & conf)
   {
     viennagrid_dimension cell_dim;
-    viennagrid_mesh_cell_dimension_get(device.mesh(), &cell_dim);
+    VIENNASHE_VIENNAGRID_CHECK(viennagrid_mesh_cell_dimension_get(device.mesh(), &cell_dim));
 
     //
     // Transfer lattice temperature
     if (conf.with_hde())
     {
       viennagrid_element_id *cells_begin, *cells_end;
-      viennagrid_mesh_elements_get(device.mesh(), cell_dim, &cells_begin, &cells_end);
+      VIENNASHE_VIENNAGRID_CHECK(viennagrid_mesh_elements_get(device.mesh(), cell_dim, &cells_begin, &cells_end));
       for (viennagrid_element_id *cit  = cells_begin;
                                   cit != cells_end;
                                 ++cit)
@@ -288,11 +288,11 @@ namespace viennashe
 
     // Set bandedge shift on vertices and edges:
     viennagrid_dimension cell_dim;
-    viennagrid_mesh_cell_dimension_get(device.mesh(), &cell_dim);
+    VIENNASHE_VIENNAGRID_CHECK(viennagrid_mesh_cell_dimension_get(device.mesh(), &cell_dim));
 
     std::vector<double> tmp(3);
     viennagrid_element_id *cells_begin, *cells_end;
-    viennagrid_mesh_elements_get(device.mesh(), cell_dim, &cells_begin, &cells_end);
+    VIENNASHE_VIENNAGRID_CHECK(viennagrid_mesh_elements_get(device.mesh(), cell_dim, &cells_begin, &cells_end));
     for (viennagrid_element_id *cit  = cells_begin;
                                 cit != cells_end;
                               ++cit)
@@ -337,10 +337,10 @@ namespace viennashe
         continue;
 
       viennagrid_dimension cell_dim;
-      viennagrid_mesh_cell_dimension_get(device.mesh(), &cell_dim);
+      VIENNASHE_VIENNAGRID_CHECK(viennagrid_mesh_cell_dimension_get(device.mesh(), &cell_dim));
 
       viennagrid_element_id *cells_begin, *cells_end;
-      viennagrid_mesh_elements_get(device.mesh(), cell_dim, &cells_begin, &cells_end);
+      VIENNASHE_VIENNAGRID_CHECK(viennagrid_mesh_elements_get(device.mesh(), cell_dim, &cells_begin, &cells_end));
       for (viennagrid_element_id *cit  = cells_begin;
                                   cit != cells_end;
                                 ++cit)
@@ -400,10 +400,10 @@ namespace viennashe
       double norm_inf_current = 0;
 
       viennagrid_dimension cell_dim;
-      viennagrid_mesh_cell_dimension_get(device.mesh(), &cell_dim);
+      VIENNASHE_VIENNAGRID_CHECK(viennagrid_mesh_cell_dimension_get(device.mesh(), &cell_dim));
 
       viennagrid_element_id *cells_begin, *cells_end;
-      viennagrid_mesh_elements_get(device.mesh(), cell_dim, &cells_begin, &cells_end);
+      VIENNASHE_VIENNAGRID_CHECK(viennagrid_mesh_elements_get(device.mesh(), cell_dim, &cells_begin, &cells_end));
       for (viennagrid_element_id *cit  = cells_begin;
                                   cit != cells_end;
                                 ++cit)
@@ -522,10 +522,10 @@ namespace viennashe
 
     // Set bandedge shift on vertices and edges:
     viennagrid_dimension cell_dim;
-    viennagrid_mesh_cell_dimension_get(device.mesh(), &cell_dim);
+    VIENNASHE_VIENNAGRID_CHECK(viennagrid_mesh_cell_dimension_get(device.mesh(), &cell_dim));
 
     viennagrid_element_id *cells_begin, *cells_end;
-    viennagrid_mesh_elements_get(device.mesh(), cell_dim, &cells_begin, &cells_end);
+    VIENNASHE_VIENNAGRID_CHECK(viennagrid_mesh_elements_get(device.mesh(), cell_dim, &cells_begin, &cells_end));
     for (viennagrid_element_id *cit  = cells_begin;
                                 cit != cells_end;
                               ++cit)
@@ -565,7 +565,7 @@ namespace viennashe
     } // for vertices
 
     viennagrid_element_id *facets_begin, *facets_end;
-    viennagrid_mesh_elements_get(device.mesh(), cell_dim - 1, &facets_begin, &facets_end);
+    VIENNASHE_VIENNAGRID_CHECK(viennagrid_mesh_elements_get(device.mesh(), cell_dim - 1, &facets_begin, &facets_end));
     for (viennagrid_element_id *fit  = facets_begin;
                                 fit != facets_end;
                               ++fit)
@@ -596,10 +596,10 @@ namespace viennashe
     double update_norm = 0;
 
     viennagrid_dimension cell_dim;
-    viennagrid_mesh_cell_dimension_get(device.mesh(), &cell_dim);
+    VIENNASHE_VIENNAGRID_CHECK(viennagrid_mesh_cell_dimension_get(device.mesh(), &cell_dim));
 
     viennagrid_element_id *cells_begin, *cells_end;
-    viennagrid_mesh_elements_get(device.mesh(), cell_dim, &cells_begin, &cells_end);
+    VIENNASHE_VIENNAGRID_CHECK(viennagrid_mesh_elements_get(device.mesh(), cell_dim, &cells_begin, &cells_end));
     for (viennagrid_element_id *cit  = cells_begin;
                                 cit != cells_end;
                               ++cit)
@@ -711,12 +711,12 @@ namespace viennashe
         // push quantities
         // (note that by default all values are 'known' default values, so one has to specify the unknown regions later):
         viennagrid_dimension cell_dim;
-        viennagrid_mesh_cell_dimension_get(device.mesh(), &cell_dim);
+        VIENNASHE_VIENNAGRID_CHECK(viennagrid_mesh_cell_dimension_get(device.mesh(), &cell_dim));
 
         viennagrid_int  cell_num;
-        viennagrid_mesh_element_count(device.mesh(), cell_dim, &cell_num);
+        VIENNASHE_VIENNAGRID_CHECK(viennagrid_mesh_element_count(device.mesh(), cell_dim, &cell_num));
         viennagrid_int facet_num;
-        viennagrid_mesh_element_count(device.mesh(), cell_dim - 1, &facet_num);
+        VIENNASHE_VIENNAGRID_CHECK(viennagrid_mesh_element_count(device.mesh(), cell_dim - 1, &facet_num));
 
         // electrostatic potential:
         quantities().unknown_quantities().push_back(UnknownQuantityType(viennashe::quantity::potential(), EQUATION_POISSON_DD, cell_num));
@@ -1291,10 +1291,10 @@ namespace viennashe
             viennagrid_mesh mesh = device().mesh();
 
             viennagrid_dimension cell_dim;
-            viennagrid_mesh_cell_dimension_get(mesh, &cell_dim);
+            VIENNASHE_VIENNAGRID_CHECK(viennagrid_mesh_cell_dimension_get(mesh, &cell_dim));
 
             viennagrid_element_id *cells_begin, *cells_end;
-            viennagrid_mesh_elements_get(mesh, cell_dim, &cells_begin, &cells_end);
+            VIENNASHE_VIENNAGRID_CHECK(viennagrid_mesh_elements_get(mesh, cell_dim, &cells_begin, &cells_end));
 
             for (std::size_t i=0; i<quantities().unknown_quantities().size(); ++i)
             {

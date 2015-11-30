@@ -191,4 +191,10 @@ namespace viennashe
 }
 
 
+
+#define VIENNASHE_VIENNAGRID_CHECK( FUNCTION_CALL ) do { viennagrid_error err1337 = FUNCTION_CALL; if (err1337 != VIENNAGRID_SUCCESS) { std::stringstream ss; ss << err1337; throw std::runtime_error("ViennaGrid error encountered: " + ss.str()); } } while(0)
+
+
+
+
 #endif

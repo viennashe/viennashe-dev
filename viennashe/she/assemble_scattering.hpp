@@ -144,7 +144,7 @@ namespace viennashe
       bool odd_assembly = detail::is_odd_assembly(elem, elem);
 
       double box_volume;
-      viennagrid_element_volume(device.mesh(), elem, &box_volume);
+      VIENNASHE_VIENNAGRID_CHECK(viennagrid_element_volume(device.mesh(), elem, &box_volume));
       // TODO: Check two lines below
       //if (odd_assembly)
       //  box_volume *= detail::cell_connection_length(device.mesh(), elem, viennagrid::cells(device.mesh())[0]) / static_cast<double>(PointType::dim);

@@ -74,10 +74,10 @@ namespace viennashe
       //
 
       viennagrid_dimension cell_dim;
-      viennagrid_mesh_cell_dimension_get(mesh, &cell_dim);
+      VIENNASHE_VIENNAGRID_CHECK(viennagrid_mesh_cell_dimension_get(mesh, &cell_dim));
 
       viennagrid_element_id *cells_begin, *cells_end;
-      viennagrid_mesh_elements_get(mesh, cell_dim, &cells_begin, &cells_end);
+      VIENNASHE_VIENNAGRID_CHECK(viennagrid_mesh_elements_get(mesh, cell_dim, &cells_begin, &cells_end));
       for (viennagrid_element_id *cit  = cells_begin;
                                   cit != cells_end;
                                 ++cit)
@@ -108,7 +108,7 @@ namespace viennashe
 
       // Set total energy
       viennagrid_int facet_count;
-      viennagrid_mesh_element_count(mesh, cell_dim - 1, &facet_count);
+      VIENNASHE_VIENNAGRID_CHECK(viennagrid_mesh_element_count(mesh, cell_dim - 1, &facet_count));
       std::size_t num_energies = static_cast<std::size_t>(total_energy_range / conf.energy_spacing()) + 1;
       quan.resize(cells_end - cells_begin, facet_count, num_energies);
       for (std::size_t index_H = 0; index_H < quan.get_value_H_size(); ++index_H)
@@ -130,13 +130,13 @@ namespace viennashe
         }
 
         viennagrid_element_id *facets_begin, *facets_end;
-        viennagrid_mesh_elements_get(mesh, cell_dim - 1, &facets_begin, &facets_end);
+        VIENNASHE_VIENNAGRID_CHECK(viennagrid_mesh_elements_get(mesh, cell_dim - 1, &facets_begin, &facets_end));
         for (viennagrid_element_id *fit = facets_begin;
                                     fit != facets_end;
                                   ++fit)
         {
           viennagrid_element_id *cells_on_facet_begin, *cells_on_facet_end;
-          viennagrid_element_coboundary_elements(mesh, *fit, cell_dim, &cells_on_facet_begin, &cells_on_facet_end);
+          VIENNASHE_VIENNAGRID_CHECK(viennagrid_element_coboundary_elements(mesh, *fit, cell_dim, &cells_on_facet_begin, &cells_on_facet_end));
 
           if (cells_on_facet_begin + 1 == cells_on_facet_end)
             quan.set_bandedge_shift(*fit, quan.get_bandedge_shift(cells_on_facet_begin[0]));

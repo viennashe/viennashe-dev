@@ -139,12 +139,12 @@ namespace viennashe
 
         typedef double   PointType;
 
-        viennagrid_mesh_create(&mesh);
+        VIENNASHE_VIENNAGRID_CHECK(viennagrid_mesh_create(&mesh));
 
         viennagrid_dimension geo_dim = 1;
         if (conf.at(0).get_length_y() > 0)
           geo_dim = 2;
-        viennagrid_mesh_geometric_dimension_set(mesh, geo_dim);
+        VIENNASHE_VIENNAGRID_CHECK(viennagrid_mesh_geometric_dimension_set(mesh, geo_dim));
 
         //
         // Prepare vertices at segment boundaries (note that this is O(N^2) with respect to the number of segments N. Not expected to hurt in practice, though...):
@@ -219,7 +219,7 @@ namespace viennashe
                 {
                   if (segment_boundary_ids[k] == -1) // point hasn't been added yet, so add now:
                   {
-                    viennagrid_mesh_vertex_create(mesh, &candidate_point, &vertex_id);
+                    VIENNASHE_VIENNAGRID_CHECK(viennagrid_mesh_vertex_create(mesh, &candidate_point, &vertex_id));
                     segment_boundary_ids[k] = vertex_id;
                   }
                   segment_vertex_ids[i][j] = segment_boundary_ids[k];
@@ -232,7 +232,7 @@ namespace viennashe
             }
             else
             {
-              viennagrid_mesh_vertex_create(mesh, &candidate_point, &vertex_id);
+              VIENNASHE_VIENNAGRID_CHECK(viennagrid_mesh_vertex_create(mesh, &candidate_point, &vertex_id));
               segment_vertex_ids[i][j] = vertex_id;
             }
           }
@@ -249,7 +249,7 @@ namespace viennashe
           SegmentDescriptionType const & seg_desc = conf.at(i);
 
           viennagrid_region region;
-          viennagrid_mesh_region_get_or_create(mesh, i, &region);
+          VIENNASHE_VIENNAGRID_CHECK(viennagrid_mesh_region_get_or_create(mesh, i, &region));
 
           for (std::size_t j = 0; j<seg_desc.get_points_x() - 1; ++j)
           {
@@ -257,8 +257,8 @@ namespace viennashe
             vertices_of_cell[1] = segment_vertex_ids[i][j+1];
 
             viennagrid_element_id new_cell;
-            viennagrid_mesh_element_create(mesh, VIENNAGRID_ELEMENT_TYPE_LINE, 2, &(vertices_of_cell[0]), &new_cell);
-            viennagrid_region_element_add(region, new_cell);
+            VIENNASHE_VIENNAGRID_CHECK(viennagrid_mesh_element_create(mesh, VIENNAGRID_ELEMENT_TYPE_LINE, 2, &(vertices_of_cell[0]), &new_cell));
+            VIENNASHE_VIENNAGRID_CHECK(viennagrid_region_element_add(region, new_cell));
           }
         }
 
@@ -483,7 +483,7 @@ namespace viennashe
       /** @brief Functor interface. The mesh and the segmentation need to be given. */
       void operator()(viennagrid_mesh mesh) const
       {
-        viennagrid_mesh_geometric_dimension_set(mesh, geo_dim_);
+        VIENNASHE_VIENNAGRID_CHECK(viennagrid_mesh_geometric_dimension_set(mesh, geo_dim_));
 
         std::vector<viennagrid_element_id> vertex_ids(num_vertices_);
 
@@ -493,7 +493,7 @@ namespace viennashe
           for (std::size_t j = 0; j < std::size_t(geo_dim_); ++j)
             p[j] = vertices_[i][j];
 
-          viennagrid_mesh_vertex_create(mesh, p, &(vertex_ids[i]));
+          VIENNASHE_VIENNAGRID_CHECK(viennagrid_mesh_vertex_create(mesh, p, &(vertex_ids[i])));
         }
 
         for (int i = 0; i < static_cast<int>(num_cells_); ++i)
@@ -509,11 +509,11 @@ namespace viennashe
             element_type = VIENNAGRID_ELEMENT_TYPE_TETRAHEDRON;
 
           viennagrid_element_id new_cell;
-          viennagrid_mesh_element_create(mesh, element_type, geo_dim_ + 1, vertices_of_cell, &new_cell);
+          VIENNASHE_VIENNAGRID_CHECK(viennagrid_mesh_element_create(mesh, element_type, geo_dim_ + 1, vertices_of_cell, &new_cell));
 
           viennagrid_region region;
-          viennagrid_mesh_region_get_or_create(mesh, segmentation_[i], &region);
-          viennagrid_region_element_add(region, new_cell);
+          VIENNASHE_VIENNAGRID_CHECK(viennagrid_mesh_region_get_or_create(mesh, segmentation_[i], &region));
+          VIENNASHE_VIENNAGRID_CHECK(viennagrid_region_element_add(region, new_cell));
         }
       }
 
@@ -550,7 +550,7 @@ namespace viennashe
       /** @brief Functor interface. The mesh and the segmentation need to be given. */
       void operator()(viennagrid_mesh mesh) const
       {
-        viennagrid_mesh_geometric_dimension_set(mesh, geo_dim_);
+        VIENNASHE_VIENNAGRID_CHECK(viennagrid_mesh_geometric_dimension_set(mesh, geo_dim_));
 
         std::vector<viennagrid_element_id> vertex_ids(num_vertices_);
 
@@ -560,7 +560,7 @@ namespace viennashe
           for (std::size_t j = 0; j < std::size_t(geo_dim_); ++j)
             p[j] = vertices_[std::size_t(i)*geo_dim_ + j];
 
-          viennagrid_mesh_vertex_create(mesh, p, &(vertex_ids[i]));
+          VIENNASHE_VIENNAGRID_CHECK(viennagrid_mesh_vertex_create(mesh, p, &(vertex_ids[i])));
         }
 
         for (int i = 0; i < static_cast<int>(num_cells_); ++i )
@@ -578,11 +578,11 @@ namespace viennashe
             element_type = VIENNAGRID_ELEMENT_TYPE_TETRAHEDRON;
 
           viennagrid_element_id new_cell;
-          viennagrid_mesh_element_create(mesh, element_type, geo_dim_ + 1, vertices_of_cell, &new_cell);
+          VIENNASHE_VIENNAGRID_CHECK(viennagrid_mesh_element_create(mesh, element_type, geo_dim_ + 1, vertices_of_cell, &new_cell));
 
           viennagrid_region region;
-          viennagrid_mesh_region_get_or_create(mesh, segmentation_[i], &region);
-          viennagrid_region_element_add(region, new_cell);
+          VIENNASHE_VIENNAGRID_CHECK(viennagrid_mesh_region_get_or_create(mesh, segmentation_[i], &region));
+          VIENNASHE_VIENNAGRID_CHECK(viennagrid_region_element_add(region, new_cell));
         }
       }
 
