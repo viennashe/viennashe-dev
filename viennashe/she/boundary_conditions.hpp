@@ -52,10 +52,9 @@ namespace viennashe
      * @param quan    The unknown SHE quantities on edges and vertices
      * @param conf    The simulator configuration
      */
-    template <typename DeviceType,
-              typename VertexT, typename EdgeT>
+    template <typename DeviceType>
     void write_boundary_conditions(DeviceType const & device,
-                                   viennashe::she::unknown_she_quantity<VertexT, EdgeT> & quan,
+                                   viennashe::she::unknown_she_quantity<double> & quan,
                                    viennashe::config const & conf)
     {
       viennagrid_mesh mesh = device.mesh();

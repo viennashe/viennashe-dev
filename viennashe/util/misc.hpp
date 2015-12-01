@@ -214,7 +214,16 @@ namespace viennashe
     template <typename DeviceT, typename CellT>
     viennagrid_element_id * get_connected_semiconductor_cell(DeviceT const & device, CellT const & cell)
     {
-      throw std::runtime_error("get_connected_semiconductor_cell(): Not implemented!");
+      viennagrid_dimension cell_dim = viennagrid_topological_dimension_from_element_id(cell);
+
+      viennagrid_element_id *neighbors_begin, *neighbors_end;
+      VIENNASHE_VIENNAGRID_CHECK(viennagrid_element_neighbor_elements(device.mesh(), cell, cell_dim - 1, cell_dim, &neighbors_begin, &neighbors_end));
+
+      for (viennagrid_element_id *nit = neighbors_begin; nit != neighbors_end; ++nit)
+      {
+        if (viennashe::materials::is_semiconductor(device.get_material(*nit)))
+          return nit;
+      }
 
       return NULL;
     }

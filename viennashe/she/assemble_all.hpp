@@ -39,15 +39,13 @@ namespace viennashe
 
     template <typename DeviceType,
               typename TimeStepQuantitiesT,
-              typename VertexT,
-              typename EdgeT,
               typename MatrixType,
               typename VectorType>
     void assemble( DeviceType & device,
                    TimeStepQuantitiesT & old_quantities,
                    TimeStepQuantitiesT & quantities,
                    viennashe::config const & conf,
-                   viennashe::she::unknown_she_quantity<VertexT, EdgeT> const & quan,
+                   viennashe::she::unknown_she_quantity<double> const & quan,
                    MatrixType & A,
                    VectorType & b,
                    bool use_timedependence, bool quan_valid)
@@ -75,7 +73,7 @@ namespace viennashe
         SpatialUnknownType const &     potential =     quantities.get_unknown_quantity(viennashe::quantity::potential());
         SpatialUnknownType const & old_potential = old_quantities.get_unknown_quantity(viennashe::quantity::potential());  //TODO: Take old timestep
 
-        viennashe::she::unknown_she_quantity<VertexT, EdgeT> const & old_quan = old_quantities.she_quantity(quan.get_name());
+        viennashe::she::unknown_she_quantity<double> const & old_quan = old_quantities.she_quantity(quan.get_name());
 
         //
         // Set up scatter matrices:

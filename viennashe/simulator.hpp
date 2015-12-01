@@ -162,9 +162,9 @@ namespace viennashe
      *                       returns true if there are boundary conditions to be set on the vertices of that cell
      * @param bnd_id The id of the boundary type
      */
-    template<typename DeviceT, typename CellT, typename FacetT>
+    template<typename DeviceT>
     void set_boundary_for_material(DeviceT const & device,
-                                   viennashe::she::unknown_she_quantity<CellT, FacetT> & quan,
+                                   viennashe::she::unknown_she_quantity<double> & quan,
                                    materials::checker const & material_check,
                                    boundary_type_id bnd_id)
     {
@@ -274,13 +274,13 @@ namespace viennashe
    * @param conf The simulator configuration
    * @return An relative update norm for SHE based spatial quantities
    */
-  template<typename DeviceT, typename CellT, typename FacetT>
+  template<typename DeviceT>
   double get_relative_update_norm(DeviceT const & device,
-                       viennashe::she::unknown_she_quantity<CellT, FacetT> const & quan,
-                       viennashe::unknown_quantity<CellT> const & spatial_quan,
+                       viennashe::she::unknown_she_quantity<double> const & quan,
+                       viennashe::unknown_quantity<double> const & spatial_quan,
                        viennashe::config const & conf)
   {
-    typedef viennashe::she::unknown_she_quantity<CellT, FacetT>   SHEQuantityType;
+    typedef viennashe::she::unknown_she_quantity<double>   SHEQuantityType;
 
     viennashe::she::carrier_density_wrapper<SHEQuantityType> density_wrapper(conf, quan);
 
@@ -507,14 +507,14 @@ namespace viennashe
    * @param x The update to the SHE quantity
    * @param force_no_damping If true no damping will be applied, that is d = 1.0
    */
-  template<typename DeviceT, typename CellT, typename FacetT, typename VectorType>
+  template<typename DeviceT, typename VectorType>
   void update_quantity(DeviceT const & device,
-                       viennashe::she::unknown_she_quantity<CellT, FacetT> & quan,
-                       viennashe::unknown_quantity<CellT> & spatial_quan,
+                       viennashe::she::unknown_she_quantity<double> & quan,
+                       viennashe::unknown_quantity<double> & spatial_quan,
                        viennashe::config const & conf,
                        VectorType const & x, bool force_no_damping = false)
   {
-    typedef viennashe::she::unknown_she_quantity<CellT, FacetT>   SHEQuantityType;
+    typedef viennashe::she::unknown_she_quantity<double>   SHEQuantityType;
 
     typedef viennashe::she::detail::carrier_density_wrapper_by_reference<SHEQuantityType> density_wrapper_type;
 
@@ -587,9 +587,9 @@ namespace viennashe
    * @param alpha The damping, bounded by (0;1]
    * @param x The update to the quantity
    */
-  template<typename DeviceT, typename VertexT, typename VectorType>
+  template<typename DeviceT, typename VectorType>
   void update_quantity(DeviceT const & device,
-                       viennashe::unknown_quantity<VertexT> & unknown_quantity,
+                       viennashe::unknown_quantity<double> & unknown_quantity,
                        double alpha,
                        VectorType const & x)
   {
@@ -640,9 +640,9 @@ namespace viennashe
    * @param x The update to the quantity
    * @param force_no_damping If true no damping will be applied, that is d = 1.0
    */
-  template<typename DeviceT, typename VertexT, typename VectorType>
+  template<typename DeviceT, typename VectorType>
   void update_quantity(DeviceT const & device,
-                       viennashe::unknown_quantity<VertexT> & unknown_quantity,
+                       viennashe::unknown_quantity<double> & unknown_quantity,
                        viennashe::config const & conf,
                        VectorType const & x, bool force_no_damping = false)
   {
@@ -677,10 +677,10 @@ namespace viennashe
 
       typedef typename SHETimeStepQuantitiesT::UnknownSHEQuantityType      she_quantity_type;
 
-      typedef unknown_quantity<viennagrid_element_id>       UnknownQuantityType;
-      typedef UnknownQuantityType                           unknown_quantity_type;
+      typedef unknown_quantity<double>       UnknownQuantityType;
+      typedef UnknownQuantityType            unknown_quantity_type;
 
-      typedef const_quantity<viennagrid_element_id>         ResultQuantityType;
+      typedef const_quantity<double>         ResultQuantityType;
 
       typedef ResultQuantityType          potential_type;
       typedef ResultQuantityType   electron_density_type;
@@ -817,7 +817,7 @@ namespace viennashe
 
 
         // SHE: electron distribution function
-        quantities().unknown_she_quantities().push_back(she_quantity_type(viennashe::quantity::electron_distribution_function(), ELECTRON_TYPE_ID, EQUATION_SHE));
+        quantities().unknown_she_quantities().push_back(she_quantity_type(p_device_->mesh(), cell_dim, cell_dim - 1, viennashe::quantity::electron_distribution_function(), ELECTRON_TYPE_ID, EQUATION_SHE));
         quantities().unknown_she_quantities().back().resize(cell_num, facet_num);
         if (conf.with_electrons())
         {
@@ -828,7 +828,7 @@ namespace viennashe
         quantities().unknown_quantities().back().set_logarithmic_damping(true);
 
         // SHE: hole distribution function
-        quantities().unknown_she_quantities().push_back(she_quantity_type(viennashe::quantity::hole_distribution_function(),         HOLE_TYPE_ID, EQUATION_SHE));
+        quantities().unknown_she_quantities().push_back(she_quantity_type(p_device_->mesh(), cell_dim, cell_dim - 1, viennashe::quantity::hole_distribution_function(),         HOLE_TYPE_ID, EQUATION_SHE));
         quantities().unknown_she_quantities().back().resize(cell_num, facet_num);
         if (conf.with_holes())
         {
@@ -847,8 +847,7 @@ namespace viennashe
       template <typename QuantityAccessorT>
       void set_initial_guess(std::string quan_name, QuantityAccessorT const & quan_acc)
       {
-        throw std::runtime_error("set_initial_guess(): TODO: implement");
-        //transfer_provided_quantities(quan_acc, quantities().get_unknown_quantity(quan_name), cells);
+        transfer_provided_quantities(quan_acc, quantities().get_unknown_quantity(quan_name));
       }
 
 
@@ -1195,21 +1194,22 @@ namespace viennashe
     private:
 
       /** @brief Transfers the provided source quantities to the destination for the provided elements. */
-      template <typename QuantitySrcT,
-                typename QuantityDestT,
-                typename ElementContainer>
+      template <typename QuantitySrcT, typename QuantityDestT>
       void transfer_provided_quantities(QuantitySrcT const & src_quantity,
-                                        QuantityDestT      & dest_quantity,
-                                        ElementContainer const & elements)
+                                        QuantityDestT      & dest_quantity)
       {
         // Usage example: Transfer initial guess to SHE index space
 
-        typedef typename ElementContainer::iterator    ElementIterator;
-        for (ElementIterator elit  = elements.begin();
-                             elit != elements.end();
-                           ++elit)
+        viennagrid_dimension cell_dim;
+        VIENNASHE_VIENNAGRID_CHECK(viennagrid_mesh_cell_dimension_get(p_device_->mesh(), &cell_dim));
+
+        viennagrid_element_id *cells_begin, *cells_end;
+        VIENNASHE_VIENNAGRID_CHECK(viennagrid_mesh_elements_get(p_device_->mesh(), cell_dim, &cells_begin, &cells_end));
+        for (viennagrid_element_id *cit  = cells_begin;
+                                    cit != cells_end;
+                                  ++cit)
         {
-          dest_quantity.set_value(*elit, src_quantity.at(*elit));
+          dest_quantity.set_value(*cit, src_quantity.at(*cit));
         }
 
       } // transfer_provided_quantities

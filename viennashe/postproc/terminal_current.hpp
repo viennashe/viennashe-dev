@@ -99,15 +99,15 @@ namespace viennashe
    * @param semiconductor  The semiconductor segment to which the current is flowing
    * @return The current in Ampere
    */
-  template<typename DeviceT, typename T1, typename T2, typename SegmentT>
+  template<typename DeviceT, typename SegmentT>
   double get_terminal_current(DeviceT const & device,
                               viennashe::config const & conf,
-                              viennashe::she::unknown_she_quantity<T1, T2> const & quan,
+                              viennashe::she::unknown_she_quantity<double> const & quan,
                               SegmentT const & semiconductor,
                               SegmentT const & terminal
                               )
   {
-    typedef viennashe::she::unknown_she_quantity<T1, T2>  SHEQuantityType;
+    typedef viennashe::she::unknown_she_quantity<double>  SHEQuantityType;
 
     viennashe::she::current_density_wrapper<DeviceT, SHEQuantityType> current_wrapper(device, conf, quan);
     return get_terminal_current(device, current_wrapper, semiconductor, terminal);

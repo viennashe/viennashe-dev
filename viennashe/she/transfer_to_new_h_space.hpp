@@ -54,12 +54,11 @@ namespace viennashe
     namespace detail
     {
 
-      template <typename ElementType,
-                typename VertexT, typename EdgeT>
+      template <typename ElementType>
       void transfer_to_new_H_space_on_element(ElementType const & el,
                                               std::size_t index_H,
-                                              she::unknown_she_quantity<VertexT, EdgeT> const & old_quan,
-                                              she::unknown_she_quantity<VertexT, EdgeT> & new_quan)
+                                              she::unknown_she_quantity<double> const & old_quan,
+                                              she::unknown_she_quantity<double> & new_quan)
       {
         if (new_quan.get_unknown_index(el, index_H) < 0) //nothing to do
           return;
@@ -89,10 +88,9 @@ namespace viennashe
 
       }
 
-      template <typename ElementType,
-                typename VertexT, typename EdgeT>
+      template <typename ElementType>
       void normalize_on_new_H_space(ElementType const & el,
-                                    she::unknown_she_quantity<VertexT, EdgeT> & quan,
+                                    she::unknown_she_quantity<double> & quan,
                                     double scaling_factor)
       {
         for (std::size_t index_H=0; index_H < quan.get_value_H_size(); ++index_H)

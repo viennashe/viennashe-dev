@@ -55,18 +55,18 @@ namespace viennashe
       public:
         typedef DeviceType               device_type;
 
-        typedef unknown_she_quantity<viennagrid_element_id, viennagrid_element_id>     UnknownSHEQuantityType;
-        typedef UnknownSHEQuantityType                                                 unknown_she_quantity_type;
-        typedef std::deque<UnknownSHEQuantityType>                                     UnknownSHEQuantityListType;
-        typedef const_she_quantity<viennagrid_element_id, viennagrid_element_id>       ResultSHEQuantityType;
+        typedef unknown_she_quantity<double>                  UnknownSHEQuantityType;
+        typedef UnknownSHEQuantityType                        unknown_she_quantity_type;
+        typedef std::deque<UnknownSHEQuantityType>            UnknownSHEQuantityListType;
+        typedef const_she_quantity<double>                    ResultSHEQuantityType;
 
         typedef viennashe::she::she_df_wrapper<DeviceType, UnknownSHEQuantityType>                       she_df_type;
         typedef viennashe::she::edf_wrapper<DeviceType, UnknownSHEQuantityType>                             edf_type;
         typedef viennashe::she::generalized_edf_wrapper<DeviceType, UnknownSHEQuantityType>     generalized_edf_type;
 
-        typedef unknown_quantity<viennagrid_element_id>       UnknownQuantityType;
-        typedef UnknownQuantityType                           unknown_quantity_type;
-        typedef const_quantity<viennagrid_element_id>         ResultQuantityType;
+        typedef unknown_quantity<double>       UnknownQuantityType;
+        typedef UnknownQuantityType            unknown_quantity_type;
+        typedef const_quantity<double>         ResultQuantityType;
 
         typedef ResultQuantityType             potential_type;
         typedef ResultQuantityType             electron_density_type;

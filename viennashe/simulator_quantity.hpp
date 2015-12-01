@@ -123,16 +123,16 @@ namespace viennashe
     ValueT beta;
   };
 
-  template<typename AssociatedT, typename ValueT = double>
+  template<typename ValueT>
   class unknown_quantity
   {
-    std::size_t get_id(AssociatedT const & elem) const { return std::size_t(viennagrid_index_from_element_id(elem)); }
+    std::size_t get_id(viennagrid_element_id elem) const { return std::size_t(viennagrid_index_from_element_id(elem)); }
 
     public:
-      typedef unknown_quantity<AssociatedT, ValueT> self_type;
+      typedef unknown_quantity<ValueT> self_type;
 
-      typedef ValueT         value_type;
-      typedef AssociatedT    associated_type;
+      typedef ValueT                   value_type;
+      typedef viennagrid_element_id    associated_type;
       typedef robin_boundary_coefficients<ValueT>   robin_boundary_type;
 
       unknown_quantity() {}  // to fulfill default constructible concept!

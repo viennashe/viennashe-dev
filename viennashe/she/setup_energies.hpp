@@ -55,13 +55,12 @@ namespace viennashe
      * @param potential     The potential as computed with Poisson equation
      * @param quantum_correction The quantum correction potential
      */
-    template <typename DeviceT,
-              typename VertexT, typename EdgeT>
+    template <typename DeviceT>
     void setup_energies(DeviceT const & device,
-                        viennashe::she::unknown_she_quantity<VertexT, EdgeT> & quan,
+                        viennashe::she::unknown_she_quantity<double> & quan,
                         viennashe::config const & conf,
-                        viennashe::unknown_quantity<VertexT> const & potential,
-                        viennashe::unknown_quantity<VertexT> const & quantum_correction)
+                        viennashe::unknown_quantity<double> const & potential,
+                        viennashe::unknown_quantity<double> const & quantum_correction)
     {
       viennagrid_mesh mesh = device.mesh();
 
