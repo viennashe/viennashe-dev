@@ -244,57 +244,64 @@ namespace viennashe
    * @param device             The device
    * @param current_on_facet   A function object returning the normal components of the current on each facet
    */
-  template <typename DeviceT, typename CurrentDensityT>
+  template<typename DeviceT, typename CurrentDensityT>
   void check_current_conservation(DeviceT const & device,
                                   CurrentDensityT const & current_on_facet)
   {
-    throw std::runtime_error("check_current_conservation(): TODO: implement!");
+    viennagrid_dimension cell_dim;
+    VIENNASHE_VIENNAGRID_CHECK(viennagrid_mesh_cell_dimension_get(device.mesh(), &cell_dim));
 
-    /*
-    typedef typename DeviceT::mesh_type                 MeshType;
-
-    typedef typename viennagrid::result_of::point<MeshType>::type                 PointType;
-    typedef typename viennagrid::result_of::facet<MeshType>::type                 FacetType;
-    typedef typename viennagrid::result_of::cell<MeshType>::type                  CellType;
-
-    typedef typename viennagrid::result_of::const_cell_range<MeshType>::type      CellContainer;
-    typedef typename viennagrid::result_of::iterator<CellContainer>::type         CellIterator;
-
-    typedef typename viennagrid::result_of::const_facet_range<CellType>::type     FacetOnCellContainer;
-    typedef typename viennagrid::result_of::iterator<FacetOnCellContainer>::type  FacetOnCellIterator;
-
-    typedef typename viennagrid::result_of::const_coboundary_range<MeshType, FacetType, CellType>::type     CellOnFacetContainer;
-
-    CellContainer cells(device.mesh());
-    for (CellIterator cit = cells.begin();
-        cit != cells.end();
-        ++cit)
+    viennagrid_element_id *cells_begin, *cells_end;
+    VIENNASHE_VIENNAGRID_CHECK(viennagrid_mesh_elements_get(device.mesh(), cell_dim, &cells_begin, &cells_end));
+    for (viennagrid_element_id *cit  = cells_begin;
+                                cit != cells_end;
+                              ++cit)
     {
       double net_box_flux = 0;
       double partial_flux_max = 0;
 
-      PointType centroid_cell = viennagrid::centroid(*cit);
+      std::vector<viennagrid_numeric> centroid_cell(3);
+      VIENNASHE_VIENNAGRID_CHECK(viennagrid_element_centroid(device.mesh(), *cit, &(centroid_cell[0])));
 
-      FacetOnCellContainer facets_on_cell(*cit);
-      for (FacetOnCellIterator focit = facets_on_cell.begin();
-          focit != facets_on_cell.end();
-          ++focit)
+      viennagrid_element_id *facets_on_cell_begin, *facets_on_cell_end;
+      VIENNASHE_VIENNAGRID_CHECK(viennagrid_element_boundary_elements(device.mesh(), *cit, cell_dim - 1, &facets_on_cell_begin, &facets_on_cell_end));
+
+      for (viennagrid_element_id *focit  = facets_on_cell_begin;
+                                  focit != facets_on_cell_end;
+                                ++focit)
       {
-        CellType const *other_cell_ptr = util::get_other_cell_of_facet(device.mesh(), *focit, *cit);
+        viennagrid_element_id *other_cell_ptr;
+        util::get_other_cell_of_facet(device.mesh(), *focit, *cit, &other_cell_ptr);
 
         if (!other_cell_ptr) continue;  //Facet is on the boundary of the simulation domain -> homogeneous Neumann conditions
 
-        PointType centroid_other_cell = viennagrid::centroid(*other_cell_ptr);
-        PointType cell_connection = centroid_other_cell - centroid_cell;
-        PointType cell_connection_normalized = cell_connection / viennagrid::norm(cell_connection);
-        PointType facet_unit_normal = viennashe::util::outer_cell_normal_at_facet(*cit, *focit);
-        const double weighted_interface_area = viennagrid::volume(*focit) * viennagrid::inner_prod(facet_unit_normal, cell_connection_normalized);
+        std::vector<double> centroid_other_cell(3);
+        VIENNASHE_VIENNAGRID_CHECK(viennagrid_element_centroid(device.mesh(), *other_cell_ptr, &(centroid_other_cell[0])));
+        std::vector<double> cell_connection(3);
+        for (std::size_t i=0; i<cell_connection.size(); ++i)
+          cell_connection[i] = centroid_other_cell[i] - centroid_cell[i];
+        double connection_len;
+        VIENNASHE_VIENNAGRID_CHECK(viennagrid_norm_2(3, &(cell_connection[0]), &connection_len));
+        std::vector<double> cell_connection_normalized(3);
+        for (std::size_t i=0; i<cell_connection.size(); ++i)
+          cell_connection_normalized[i] = cell_connection[i] / connection_len;
+        std::vector<double> facet_unit_normal = viennashe::util::outer_cell_normal_at_facet(device.mesh(), *cit, *focit);
+
+        double facet_area;
+        VIENNASHE_VIENNAGRID_CHECK(viennagrid_element_volume(device.mesh(), *focit, &facet_area));
+        double facet_contribution;
+        VIENNASHE_VIENNAGRID_CHECK(viennagrid_inner_prod(3, &(facet_unit_normal[0]), &(cell_connection_normalized[0]), &facet_contribution));
+        const double weighted_interface_area = facet_area * viennagrid::inner_prod(facet_unit_normal, cell_connection_normalized);
+
+
         double contribution_from_facet = current_on_facet(*focit) * weighted_interface_area;
         if (std::fabs(contribution_from_facet) > partial_flux_max)
           partial_flux_max = std::fabs(contribution_from_facet);
 
-        CellOnFacetContainer cells_on_facet(device.mesh(), focit.handle());
-        if ( &(*cit) == &(cells_on_facet[0]) ) //reference direction is into box
+        viennagrid_element_id *cells_on_facet_begin, *cells_on_facet_end;
+        VIENNASHE_VIENNAGRID_CHECK(viennagrid_element_coboundary_elements(device.mesh(), *focit, cell_dim, &cells_on_facet_begin, &cells_on_facet_end));
+
+        if (*cit == cells_on_facet_begin[0]) //reference direction is into box
           net_box_flux -= contribution_from_facet;
         else
           net_box_flux += contribution_from_facet;
@@ -304,13 +311,13 @@ namespace viennashe
       {
         if ( std::fabs(net_box_flux / partial_flux_max) > 1e-10)
         {
-          log::info() << "-- Box " << *cit << " --" << std::endl;
+          log::info() << "-- Box " << viennagrid_index_from_element_id(*cit) << " --" << std::endl;
           log::info() << "Net box flux (should be zero, unless at contact): " << net_box_flux << " with maximum " << partial_flux_max << std::endl;
         }
       }
 
     } // for cells
-    */
+
   }
 
   template <typename DeviceType,

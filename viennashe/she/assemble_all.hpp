@@ -235,8 +235,9 @@ namespace viennashe
             assemble_scattering_operator_on_box( scattering_processes,
                                                  device, conf, quan,
                                                  A, b,
-                                                 *cit, index_H,
-                                                 scatter_op_in, scatter_op_out);
+                                                 *cit, index_H, 1.0,
+                                                 scatter_op_in, scatter_op_out,
+                                                 false);
           }
 
           //
@@ -291,7 +292,7 @@ namespace viennashe
                                                       *cit, index_H,
                                                       identity,
                                                       potential,
-                                                      old_potential);
+                                                      old_potential, false);
             }
           }
         } //for cells
@@ -312,6 +313,19 @@ namespace viennashe
           if (log_assemble_all::enabled)
             log::debug<log_assemble_all>() << "* assemble_all(): Assembling on facet " << *fit << std::endl;
 
+          viennagrid_element_id *cells_on_facet_begin, *cells_on_facet_end;
+          VIENNASHE_VIENNAGRID_CHECK(viennagrid_element_coboundary_elements(mesh, *fit, cell_dim, &cells_on_facet_begin, &cells_on_facet_end));
+
+          if (cells_on_facet_begin + 1 == cells_on_facet_end) // facet is on boundary, hence no contribution
+            continue;
+
+          viennagrid_numeric cell_connection_len;
+          std::vector<viennagrid_numeric> centroid_1(3);
+          std::vector<viennagrid_numeric> centroid_2(3);
+          VIENNASHE_VIENNAGRID_CHECK(viennagrid_element_centroid(mesh, cells_on_facet_begin[0], &(centroid_1[0])));
+          VIENNASHE_VIENNAGRID_CHECK(viennagrid_element_centroid(mesh, cells_on_facet_begin[1], &(centroid_2[0])));
+          VIENNASHE_VIENNAGRID_CHECK(viennagrid_distance_2(cell_dim, &(centroid_1[0]), &(centroid_2[0]), &cell_connection_len));
+
           for (std::size_t index_H = 0; index_H < quan.get_value_H_size(); ++index_H)
           {
             if (log_assemble_all::enabled)
@@ -323,8 +337,8 @@ namespace viennashe
             assemble_scattering_operator_on_box(scattering_processes,
                                                 device, conf, quan,
                                                 A, b,
-                                                *fit, index_H,
-                                                scatter_op_in, scatter_op_out);
+                                                *fit, index_H, cell_connection_len / double(cell_dim),
+                                                scatter_op_in, scatter_op_out, true);
           }
 
           //
@@ -332,8 +346,6 @@ namespace viennashe
           //
 
           // iterate over cells of facet
-          viennagrid_element_id *cells_on_facet_begin, *cells_on_facet_end;
-          VIENNASHE_VIENNAGRID_CHECK(viennagrid_element_coboundary_elements(mesh, *fit, cell_dim, &cells_on_facet_begin, &cells_on_facet_end));
           for (viennagrid_element_id *cofit  = cells_on_facet_begin;
                                       cofit != cells_on_facet_end;
                                     ++cofit)
@@ -341,19 +353,17 @@ namespace viennashe
             if (log_assemble_all::enabled)
               log::debug<log_assemble_all>() << "* assemble_all(): Assembling coupling with cell " << *cofit << std::endl;
 
-            viennagrid_element_id *other_cell_ptr;
-            util::get_other_cell_of_facet(mesh, *fit, *cofit, &other_cell_ptr);
-            if (!other_cell_ptr) continue;  //Facet is on the boundary of the simulation domain -> homogeneous Neumann conditions
+            viennagrid_element_id other_cell = (cells_on_facet_begin[0] == *cofit) ? cells_on_facet_begin[1] : cells_on_facet_begin[0];
 
             CouplingMatrixType coupling_matrix_diffusion = coupling_matrix_in_direction(a_x_transposed, a_y_transposed, a_z_transposed,
-                                                                                        mesh, *other_cell_ptr, *cofit,
+                                                                                        mesh, other_cell, *cofit,
                                                                                         quan.get_carrier_type_id());
 
             // note that the sign change due to MEDS is included in the choice of the normal vector direction (order of vertex vs. other_vertex):
             // - B \cdot n   for even unknowns,
             // + B \cdot n   for odd unknowns
             CouplingMatrixType coupling_matrix_drift = coupling_matrix_in_direction(b_x_transposed, b_y_transposed, b_z_transposed,
-                                                                                    mesh, *other_cell_ptr, *cofit,
+                                                                                    mesh, other_cell, *cofit,
                                                                                     quan.get_carrier_type_id());
 
             for (std::size_t index_H = 0; index_H < quan.get_value_H_size(); ++index_H)
@@ -379,7 +389,8 @@ namespace viennashe
                                                       *fit, index_H,
                                                       identity,
                                                       potential,
-                                                      old_potential);
+                                                      old_potential,
+                                                      true);
             }
           }
 

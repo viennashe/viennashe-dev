@@ -44,37 +44,68 @@ namespace viennashe
   template<typename DeviceT, typename CurrentAccessorT, typename SegmentT>
   double get_terminal_current(DeviceT const & device,
                               CurrentAccessorT const & current_accessor,
-                              SegmentT const & semiconductor,
-                              SegmentT const & terminal)
+                              viennagrid_region semiconductor,
+                              viennagrid_region terminal)
   {
     double current = 0;
 
-    /*
-    CellContainer cells(terminal);
-    for (CellIterator cit = cells.begin(); cit != cells.end(); ++cit)
+    viennagrid_dimension cell_dim;
+    VIENNASHE_VIENNAGRID_CHECK(viennagrid_mesh_cell_dimension_get(device.mesh(), &cell_dim));
+
+    viennagrid_element_id *cells_begin, *cells_end;
+    VIENNASHE_VIENNAGRID_CHECK(viennagrid_mesh_elements_get(device.mesh(), cell_dim, &cells_begin, &cells_end));
+    for (viennagrid_element_id *cit  = cells_begin;
+                                cit != cells_end;
+                              ++cit)
     {
-      PointType centroid_cell = viennagrid::centroid(*cit);
+      viennagrid_bool cell_in_terminal;
+      VIENNASHE_VIENNAGRID_CHECK(viennagrid_region_contains_element(terminal, *cit, &cell_in_terminal));
 
-      FacetOnCellContainer facets_on_cell(*cit);
-      for (FacetOnCellIterator focit = facets_on_cell.begin();
-          focit != facets_on_cell.end();
-          ++focit)
+      if (!cell_in_terminal)
+        continue;
+
+      std::vector<viennagrid_numeric> centroid_cell(3);
+      VIENNASHE_VIENNAGRID_CHECK(viennagrid_element_centroid(device.mesh(), *cit, &(centroid_cell[0])));
+
+      viennagrid_element_id *facets_on_cell_begin, *facets_on_cell_end;
+      VIENNASHE_VIENNAGRID_CHECK(viennagrid_element_boundary_elements(device.mesh(), *cit, cell_dim - 1, &facets_on_cell_begin, &facets_on_cell_end));
+
+      for (viennagrid_element_id *focit  = facets_on_cell_begin;
+                                  focit != facets_on_cell_end;
+                                ++focit)
       {
-        if ( viennagrid::is_interface(terminal, semiconductor, *focit) )
-        {
-          CellOnFacetContainer cells_on_facet(device.mesh(), focit.handle());
+        viennagrid_bool facet_in_semiconductor;
+        VIENNASHE_VIENNAGRID_CHECK(viennagrid_region_contains_element(semiconductor, *cit, &facet_in_semiconductor));
 
-          CellType const *other_cell_ptr = util::get_other_cell_of_facet(device.mesh(), *focit, *cit);
+        if (facet_in_semiconductor) // facet at semiconductor-terminal interface
+        {
+          viennagrid_element_id *other_cell_ptr;
+          util::get_other_cell_of_facet(device.mesh(), *focit, *cit, &other_cell_ptr);
 
           if (!other_cell_ptr) continue;  //Facet is on the boundary of the simulation domain -> homogeneous Neumann conditions
 
-          PointType centroid_other_cell = viennagrid::centroid(*other_cell_ptr);
-          PointType cell_connection = centroid_other_cell - centroid_cell;
-          PointType cell_connection_normalized = cell_connection / viennagrid::norm(cell_connection);
-          PointType facet_unit_normal = viennashe::util::outer_cell_normal_at_facet(*cit, *focit);
-          const double weighted_interface_area = viennagrid::volume(*focit) * viennagrid::inner_prod(facet_unit_normal, cell_connection_normalized);
+          std::vector<double> centroid_other_cell(3);
+          VIENNASHE_VIENNAGRID_CHECK(viennagrid_element_centroid(device.mesh(), *other_cell_ptr, &(centroid_other_cell[0])));
+          std::vector<double> cell_connection(3);
+          for (std::size_t i=0; i<cell_connection.size(); ++i)
+            cell_connection[i] = centroid_other_cell[i] - centroid_cell[i];
+          double connection_len;
+          VIENNASHE_VIENNAGRID_CHECK(viennagrid_norm_2(3, &(cell_connection[0]), &connection_len));
+          std::vector<double> cell_connection_normalized(3);
+          for (std::size_t i=0; i<cell_connection.size(); ++i)
+            cell_connection_normalized[i] = cell_connection[i] / connection_len;
+          std::vector<double> facet_unit_normal = viennashe::util::outer_cell_normal_at_facet(device.mesh(), *cit, *focit);
 
-          if ( &(*cit) == &(cells_on_facet[0]) )
+          double facet_area;
+          VIENNASHE_VIENNAGRID_CHECK(viennagrid_element_volume(device.mesh(), *focit, &facet_area));
+          double facet_contribution;
+          VIENNASHE_VIENNAGRID_CHECK(viennagrid_inner_prod(3, &(facet_unit_normal[0]), &(cell_connection_normalized[0]), &facet_contribution));
+          const double weighted_interface_area = facet_area * viennagrid::inner_prod(facet_unit_normal, cell_connection_normalized);
+
+          viennagrid_element_id *cells_on_facet_begin, *cells_on_facet_end;
+          VIENNASHE_VIENNAGRID_CHECK(viennagrid_element_coboundary_elements(device.mesh(), *focit, cell_dim, &cells_on_facet_begin, &cells_on_facet_end));
+
+          if (*cit == cells_on_facet_begin[0]) //reference direction is into box
             current += current_accessor(*focit) * weighted_interface_area;
           else  //reference direction is opposite of what we need
             current -= current_accessor(*focit) * weighted_interface_area;
@@ -83,9 +114,7 @@ namespace viennashe
           //log::info() << current_density_accessor( *eovit ) << " * " << effective_interface << " = " << current << std::endl;
         }// for edges
       }
-    } */ // for vertices
-
-    throw std::runtime_error("get_terminal_current(): TODO: Port to ViennaGrid 3.0");
+    }  // for cells
 
     return current;
   } // get_terminal_current

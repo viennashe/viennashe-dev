@@ -177,40 +177,10 @@ namespace viennashe
     }
 
     /** @brief Returns the donator doping (in m^-3) in the specified cell */
-    double get_doping_n(viennagrid_element_id cell) const
+    double get_doping_n(viennagrid_element_id cell_or_facet) const
     {
-      return cell_doping_n_.at(get_id(cell));
+      return get_doping_element_np_impl(cell_or_facet, cell_doping_n_);
     }
-
-    /*double get_doping_n(viennagrid_element_id facet) const
-    {
-      typedef typename viennagrid::result_of::const_coboundary_range<MeshT, facet_type, cell_type>::type     CellOnFacetContainer;
-      typedef typename viennagrid::result_of::iterator<CellOnFacetContainer>::type                           CellOnFacetIterator;
-
-      CellOnFacetContainer cells_on_facet(mesh_, viennagrid::handle(mesh_, facet));
-
-      CellOnFacetIterator cofit = cells_on_facet.begin();
-      cell_type const & c1 = *cofit;
-      ++cofit;
-
-      if (cofit == cells_on_facet.end())
-        return get_doping_n(c1);
-
-      cell_type const & c2 = *cofit;
-      if (viennashe::materials::is_semiconductor(get_material(c1)))
-      {
-        if (viennashe::materials::is_semiconductor(get_material(c2)))
-          return std::sqrt(get_doping_n(c1)) * std::sqrt(get_doping_n(c2));
-        else
-          return get_doping_n(c1);
-      }
-      else if (viennashe::materials::is_semiconductor(get_material(c2)))
-        return get_doping_n(c2);
-
-      throw std::runtime_error("TODO: Implement!");
-
-      return 0;
-    } */
 
     std::vector<double> const & doping_n() const { return cell_doping_n_; }
 
@@ -234,38 +204,10 @@ namespace viennashe
     }
 
     /** @brief Returns the donator doping (in m^-3) in the specified cell */
-    double get_doping_p(viennagrid_element_id cell) const
+    double get_doping_p(viennagrid_element_id cell_or_facet) const
     {
-      return cell_doping_p_.at(get_id(cell));
+      return get_doping_element_np_impl(cell_or_facet, cell_doping_p_);
     }
-
-    /*double get_doping_p(facet_type const & facet) const
-    {
-      typedef typename viennagrid::result_of::const_coboundary_range<MeshT, facet_type, cell_type>::type     CellOnFacetContainer;
-      typedef typename viennagrid::result_of::iterator<CellOnFacetContainer>::type                           CellOnFacetIterator;
-
-      CellOnFacetContainer cells_on_facet(mesh_, viennagrid::handle(mesh_, facet));
-
-      CellOnFacetIterator cofit = cells_on_facet.begin();
-      cell_type const & c1 = *cofit;
-      ++cofit;
-
-      if (cofit == cells_on_facet.end())
-        return get_doping_p(c1);
-
-      cell_type const & c2 = *cofit;
-      if (viennashe::materials::is_semiconductor(get_material(c1)))
-      {
-        if (viennashe::materials::is_semiconductor(get_material(c2)))
-          return std::sqrt(get_doping_p(c1)) * std::sqrt(get_doping_p(c2));
-        else
-          return get_doping_p(c1);
-      }
-      else if (viennashe::materials::is_semiconductor(get_material(c2)))
-        return get_doping_p(c2);
-
-      return 0;
-    } */
 
     std::vector<double> const & doping_p() const { return cell_doping_p_; }
 
@@ -533,6 +475,41 @@ protected:
             cell_doping_p_.at(get_id(*cit)) = value;
         }
       }
+    }
+
+    double get_doping_element_np_impl(viennagrid_element_id element, std::vector<double> const & doping_container) const
+    {
+      viennagrid_dimension cell_dim;
+      VIENNASHE_VIENNAGRID_CHECK(viennagrid_mesh_cell_dimension_get(mesh_, &cell_dim));
+
+      if (viennagrid_topological_dimension_from_element_id(element) == cell_dim) //cell
+      {
+        return doping_container.at(get_id(element));
+      }
+      else if (viennagrid_topological_dimension_from_element_id(element) == cell_dim - 1) // facet
+      {
+        viennagrid_element_id *cells_on_facet_begin, *cells_on_facet_end;
+        VIENNASHE_VIENNAGRID_CHECK(viennagrid_element_coboundary_elements(mesh_, element, cell_dim, &cells_on_facet_begin, &cells_on_facet_end));
+
+        if (cells_on_facet_begin + 1 == cells_on_facet_end)
+          return doping_container.at(get_id(cells_on_facet_begin[0]));
+
+        viennagrid_element_id c1 = cells_on_facet_begin[0];
+        viennagrid_element_id c2 = cells_on_facet_begin[1];
+        if (viennashe::materials::is_semiconductor(get_material(c1)))
+        {
+          if (viennashe::materials::is_semiconductor(get_material(c2)))
+            return std::sqrt(doping_container.at(get_id(c1))) * std::sqrt(doping_container.at(get_id(c2)));
+          else
+            return doping_container.at(get_id(c1));
+        }
+        else if (viennashe::materials::is_semiconductor(get_material(c2)))
+          return doping_container.at(get_id(c2));
+        else
+          return 0;
+      }
+      else
+        throw std::runtime_error("get_doping_element_np_impl(): element is not cell or facet");
     }
 
     //

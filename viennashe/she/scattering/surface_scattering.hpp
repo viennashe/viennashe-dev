@@ -114,7 +114,7 @@ namespace viennashe
 
       double get_electric_field_n(viennagrid_element_id) const
       {
-        throw std::runtime_error("get_charged_trap_density(): TODO");
+        throw std::runtime_error("get_electric_field_n(): TODO");
         /*
         typedef typename DeviceType::mesh_type                         MeshType;
         typedef typename viennagrid::result_of::point<MeshType>::type  PointType;
@@ -136,7 +136,7 @@ namespace viennashe
       template<typename FacetType>
       double get_electric_field_n(FacetType const & /*edge*/) const
       {
-        throw std::runtime_error("get_charged_trap_density(): TODO");
+        throw std::runtime_error("get_electric_field_n(): TODO");
         /*
         typedef typename DeviceType::mesh_type                         MeshType;
         typedef typename viennagrid::result_of::point<MeshType>::type  PointType;

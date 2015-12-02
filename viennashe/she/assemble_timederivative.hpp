@@ -67,7 +67,8 @@ namespace viennashe
                                   ElementType const & elem, std::size_t index_H,
                                   CouplingMatrixType const & identity_matrix,
                                   QuantityPotential const & quan_pot,
-                                  QuantityPotentialOld const & quan_pot_old)
+                                  QuantityPotentialOld const & quan_pot_old,
+                                  bool odd_assembly)
     {
       (void)quan_pot; (void)quan_pot_old; //avoid unused parameter warnings
 
@@ -81,8 +82,6 @@ namespace viennashe
       const long row_index = quan.get_unknown_index(elem, index_H);
       if (row_index < 0)
         return; //no unknown here
-
-      bool odd_assembly = detail::is_odd_assembly(elem, elem);
 
       //if (odd_assembly)
       //  return;

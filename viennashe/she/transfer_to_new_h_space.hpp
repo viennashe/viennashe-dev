@@ -121,23 +121,9 @@ namespace viennashe
                                  viennashe::she::timestep_quantities<DeviceType> & new_quantities,
                                  viennashe::config const & conf)
     {
-      throw std::runtime_error("transfer_to_new_h_space(): TODO: implement");
+      typedef she::unknown_she_quantity<double>     SHEQuantity;
 
-      /*
-      typedef typename DeviceType::mesh_type              MeshType;
-
-      typedef typename viennagrid::result_of::cell<MeshType>::type                  CellType;
-      typedef typename viennagrid::result_of::facet<MeshType>::type                 FacetType;
-
-      typedef typename viennagrid::result_of::const_facet_range<MeshType>::type     FacetContainer;
-      typedef typename viennagrid::result_of::iterator<FacetContainer>::type        FacetIterator;
-
-      typedef typename viennagrid::result_of::const_cell_range<MeshType>::type      CellContainer;
-      typedef typename viennagrid::result_of::iterator<CellContainer>::type         CellIterator;
-
-      typedef she::unknown_she_quantity<CellType, FacetType>     SHEQuantity;
-
-      MeshType const & mesh = device.mesh();
+      viennagrid_mesh mesh = device.mesh();
 
       for (std::size_t i=0; i<new_quantities.unknown_she_quantities().size(); ++i)
       {
@@ -150,25 +136,27 @@ namespace viennashe
         viennashe::she::carrier_density_wrapper<SHEQuantity> old_density_wrapper(conf, old_quan);
         viennashe::she::carrier_density_wrapper<SHEQuantity> new_density_wrapper(conf, new_quan);
 
-        viennashe::she::detail::current_on_facet_by_ref_calculator<DeviceType, SHEQuantity>
-           old_edge_evaluator(device, conf, old_quan);
-        viennashe::she::detail::current_on_facet_by_ref_calculator<DeviceType, SHEQuantity>
-           new_edge_evaluator(device, conf, new_quan);
+        viennashe::she::detail::current_on_facet_by_ref_calculator<DeviceType, SHEQuantity> old_edge_evaluator(device, conf, old_quan);
+        viennashe::she::detail::current_on_facet_by_ref_calculator<DeviceType, SHEQuantity> new_edge_evaluator(device, conf, new_quan);
 
         //
         // Step 1: transfer solution on vertices
         //
-        CellContainer cells(mesh);
-        for (CellIterator cit = cells.begin();
-            cit != cells.end();
-            ++cit)
+        viennagrid_dimension cell_dim;
+        VIENNASHE_VIENNAGRID_CHECK(viennagrid_mesh_cell_dimension_get(mesh, &cell_dim));
+
+        viennagrid_element_id *cells_begin, *cells_end;
+        VIENNASHE_VIENNAGRID_CHECK(viennagrid_mesh_elements_get(mesh, cell_dim, &cells_begin, &cells_end));
+        for (viennagrid_element_id *cit  = cells_begin;
+                                    cit != cells_end;
+                                  ++cit)
         {
           for (std::size_t index_H = 1; index_H < new_quan.get_value_H_size() - 1; ++index_H)
             detail::transfer_to_new_H_space_on_element(*cit, index_H, old_quan, new_quan);
 
           // scale with respect to density:
-          double density_old = old_density_wrapper(*cit);
-          double density_new = new_density_wrapper(*cit);
+          double density_old = old_density_wrapper(*cit)[0];
+          double density_new = new_density_wrapper(*cit)[0];
 
           if (density_new > 0 && density_old > 0)
             detail::normalize_on_new_H_space(*cit, new_quan, density_old / density_new);
@@ -178,10 +166,11 @@ namespace viennashe
         //
         // Step 2: transfer solution on edges
         //
-        FacetContainer facets(mesh);
-        for (FacetIterator fit = facets.begin();
-             fit != facets.end();
-             ++fit)
+        viennagrid_element_id *facets_begin, *facets_end;
+        VIENNASHE_VIENNAGRID_CHECK(viennagrid_mesh_elements_get(mesh, cell_dim-1, &facets_begin, &facets_end));
+        for (viennagrid_element_id *fit  = facets_begin;
+                                    fit != facets_end;
+                                  ++fit)
         {
           for (std::size_t index_H = 1; index_H < new_quan.get_value_H_size()-1; ++index_H)
             detail::transfer_to_new_H_space_on_element(*fit, index_H, old_quan, new_quan);
@@ -194,7 +183,6 @@ namespace viennashe
             detail::normalize_on_new_H_space(*fit, new_quan, current_old / current_new);
         }
       }
-      */
 
     } //transfer_to_new_H_space
 

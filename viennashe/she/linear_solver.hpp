@@ -123,14 +123,14 @@ namespace viennashe
       //log::info<log_linear_solver>() << "* solve(): Diagonalising odd unknowns... " << std::endl;
       viennashe::she::diagonalise_odd2odd_coupling_matrix(full_matrix, full_rhs, reduced_unknowns);
 
-      //log::debug<log_linear_solver>() << "Full matrix: " << viennashe::util::sparse_to_string(full_matrix) << std::endl;
+      //log::debug<log_linear_solver>() << "Full matrix: " << full_matrix << std::endl;
       //log::debug<log_linear_solver>() << "Full rhs: "    << full_rhs << std::endl;
 
       //log::info<log_linear_solver>() << "* solve(): Eliminating odd unknowns... " << std::endl;
       eliminate_odd_unknowns(full_matrix, full_rhs,
                             compressed_matrix, compressed_rhs);
 
-      //log::debug<log_linear_solver>() << "Reduced matrix: " << viennashe::util::sparse_to_string(compressed_matrix) << std::endl;
+      //log::debug<log_linear_solver>() << "Reduced matrix: " << compressed_matrix << std::endl;
       //log::debug<log_linear_solver>() << "Reduced rhs: " << compressed_rhs << std::endl;
 
       //

@@ -117,9 +117,10 @@ namespace viennashe
                                              viennashe::config const & conf,
                                              SHEQuantity const & quan,
                                              MatrixType & A, VectorType & b,
-                                             ElementType const & elem, std::size_t index_H,
+                                             ElementType const & elem, std::size_t index_H, double cell_connection_len,
                                              CouplingMatrix const & coupling_in_scatter,
-                                             CouplingMatrix const & coupling_out_scatter)
+                                             CouplingMatrix const & coupling_out_scatter,
+                                             bool odd_assembly)
     {
       typedef scattering_base<DeviceType>    ScatterProcessType;
 
@@ -141,13 +142,10 @@ namespace viennashe
 
       const long expansion_order_mid = static_cast<long>(quan.get_expansion_order(elem, index_H));
 
-      bool odd_assembly = detail::is_odd_assembly(elem, elem);
-
       double box_volume;
       VIENNASHE_VIENNAGRID_CHECK(viennagrid_element_volume(device.mesh(), elem, &box_volume));
-      // TODO: Check two lines below
-      //if (odd_assembly)
-      //  box_volume *= detail::cell_connection_length(device.mesh(), elem, viennagrid::cells(device.mesh())[0]) / static_cast<double>(PointType::dim);
+      if (odd_assembly)
+        box_volume *= cell_connection_len; // note: division by cell_dim in calling code
 
       //
       // Now iterate over all scattering operators
@@ -179,7 +177,6 @@ namespace viennashe
 
           long initial_state_index_H = energy_index_H(quan, elem, static_cast<long>(index_H), initial_kinetic_energy);
           long   final_state_index_H = energy_index_H(quan, elem, static_cast<long>(index_H),   final_kinetic_energy);
-
 
           // skip this process if one of the states is outside the simulation region
           if ( (initial_state_index_H == -1) || (final_state_index_H == -1))

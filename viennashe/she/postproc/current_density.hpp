@@ -64,30 +64,34 @@ namespace viennashe
 
           double operator()(viennagrid_element_id facet) const
           {
-
-            /*
-            typedef typename DeviceT::mesh_type                              MeshType;
-            typedef typename viennagrid::result_of::point<FacetType>::type   PointType;
-            typedef typename viennagrid::result_of::cell<MeshType>::type     CellType;
-
-            typedef typename viennagrid::result_of::const_coboundary_range<MeshType, FacetType, CellType>::type    CellOnFacetContainer;
-            typedef typename viennagrid::result_of::iterator<CellOnFacetContainer>::type                           CellOnFacetIterator;
+            viennagrid_dimension cell_dim = viennagrid_topological_dimension_from_element_id(facet) + 1;
 
             viennashe::math::SphericalHarmonic Y_00(0,0);
             typename viennashe::config::dispersion_relation_type dispersion = conf_.dispersion_relation(quan_.get_carrier_type_id());
 
-            CellOnFacetContainer cells_on_facet(device_.mesh(), viennagrid::handle(device_.mesh(), facet));
+            viennagrid_element_id *cells_on_facet_begin, *cells_on_facet_end;
+            VIENNASHE_VIENNAGRID_CHECK(viennagrid_element_coboundary_elements(device_.mesh(), facet, cell_dim, &cells_on_facet_begin, &cells_on_facet_end));
 
-            if (cells_on_facet.size() < 2)
+            if (cells_on_facet_begin + 1 == cells_on_facet_end)
               return 0;
 
-            CellOnFacetIterator cofit = cells_on_facet.begin();
-            CellType const & c1 = *cofit;
-            ++cofit;
-            CellType const & c2 = *cofit;
+            viennagrid_element_id c1 = cells_on_facet_begin[0];
+            viennagrid_element_id c2 = cells_on_facet_begin[1];
 
-            PointType normal_vector = viennagrid::centroid(c2) - viennagrid::centroid(c1);
-            normal_vector /= viennagrid::norm_2(normal_vector);
+            std::vector<viennagrid_numeric> normal_vector(3);
+            viennagrid_numeric centroid_1[3] = { 0 };
+            viennagrid_numeric centroid_2[3] = { 0 };
+            VIENNASHE_VIENNAGRID_CHECK(viennagrid_element_centroid(device_.mesh(), c1, centroid_1));
+            VIENNASHE_VIENNAGRID_CHECK(viennagrid_element_centroid(device_.mesh(), c2, centroid_2));
+            normal_vector[0] = centroid_2[0] - centroid_1[0];
+            normal_vector[1] = centroid_2[1] - centroid_1[1];
+            normal_vector[2] = centroid_2[2] - centroid_1[2];
+
+            viennagrid_numeric norm;
+            viennagrid_norm_2(3, &(normal_vector[0]), &norm);
+            normal_vector[0] /= norm;
+            normal_vector[1] /= norm;
+            normal_vector[2] /= norm;
 
             double velocity_in_normal = 0;
             double polarity = (quan_.get_carrier_type_id() == ELECTRON_TYPE_ID) ? -1.0 : 1.0;
@@ -118,23 +122,18 @@ namespace viennashe
                                      + a_x(0, 2) * quan_.get_values(facet, index_H)[1]
                                      + a_x(0, 3) * quan_.get_values(facet, index_H)[2] ) * factor * sqrt(m_d / m_t) * normal_vector[0];
 
-              if (PointType::dim > 1)
+              if (cell_dim > 1)
                 velocity_in_normal += (  a_y(0, 1) * quan_.get_values(facet, index_H)[0]
                                        + a_y(0, 2) * quan_.get_values(facet, index_H)[1]
                                        + a_y(0, 3) * quan_.get_values(facet, index_H)[2] ) * factor * sqrt(m_d / m_t) * normal_vector[1];
 
-              if (PointType::dim > 2)
+              if (cell_dim > 2)
                 velocity_in_normal += (  a_z(0, 1) * quan_.get_values(facet, index_H)[0]
                                        + a_z(0, 2) * quan_.get_values(facet, index_H)[1]
                                        + a_z(0, 3) * quan_.get_values(facet, index_H)[2] ) * factor * sqrt(m_d / m_l) * normal_vector[2];
             }
 
             return -polarity * viennashe::physics::constants::q * velocity_in_normal / Y_00(0,0);
-            */
-
-            throw std::runtime_error("current_on_facet_by_ref_calculator::operator(): TODO: implement");
-
-            return 0;
           }
 
 
@@ -192,32 +191,34 @@ namespace viennashe
           : device_(o.device_), quan_(o.quan_), facet_evaluator_(o.facet_evaluator_) {}
 
         /** @brief Functor interface returning the current density magnitude on the facet */
-        std::vector<double> operator()(viennagrid_element_id facet) const
+        std::vector<double> operator()(viennagrid_element_id cell_or_facet) const
         {
-          double value = facet_evaluator_(facet);
+          viennagrid_dimension cell_dim;
+          VIENNASHE_VIENNAGRID_CHECK(viennagrid_mesh_cell_dimension_get(device_.mesh(), &cell_dim));
 
           std::vector<double> ret(3);
-          ret[0] = value;
+          if (viennagrid_topological_dimension_from_element_id(cell_or_facet) == cell_dim) // cell
+          {
+            if (!viennashe::materials::is_semiconductor(device_.get_material(cell_or_facet)))
+              return ret;
+
+            viennashe::util::value_holder_functor<std::vector<double> > result;
+
+            viennashe::util::dual_box_flux_to_cell(device_,
+                                                   cell_or_facet,
+                                                   result, facet_evaluator_);
+            return result();
+
+          }
+          else if (viennagrid_topological_dimension_from_element_id(cell_or_facet) == cell_dim - 1) // facet
+          {
+            ret[0] = facet_evaluator_(cell_or_facet);
+          }
+          else
+            throw std::runtime_error("current_density_wrapper::operator(): invalid element dimension!");
+
           return ret;
         }
-
-        /** @brief Functor interface returning the current density at the provided cell */
-        /*value_type operator()(cell_type const & cell) const
-        {
-          typedef typename viennagrid::result_of::const_facet_range<cell_type>::type   FacetOnCellContainer;
-
-          std::vector<double> J(3);
-
-          if (!viennashe::materials::is_semiconductor(device_.get_material(cell))) return J;
-
-          viennashe::util::value_holder_functor<std::vector<double> > result;
-
-          FacetOnCellContainer facets_on_cell(cell);
-          viennashe::util::dual_box_flux_to_cell(device_,
-                                                 cell, facets_on_cell,
-                                                 result, facet_evaluator_);
-          return result();
-        }*/
 
       private:
         DeviceType const & device_;

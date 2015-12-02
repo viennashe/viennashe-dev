@@ -102,9 +102,6 @@ namespace viennashe
 
       typedef viennashe::math::sparse_matrix<double>   CouplingMatrixType;
 
-      throw std::runtime_error("assemble_ee_scattering(): TODO: implement");
-
-/*
       // We only assemble EE scattering for electrons
       if ( quan_old.get_carrier_type_id() != viennashe::ELECTRON_TYPE_ID)
         return;
@@ -139,14 +136,21 @@ namespace viennashe
       // Step 1: assemble on even nodes:
       //
       //log::debug<log_assemble_ee_scattering>() << "* assembleScatteringOperator(): Assembling on even nodes..." << std::endl;
-      CellContainer cells(mesh);
-      for (CellIterator cit = cells.begin();
-          cit != cells.end();
-          ++cit)
+      viennagrid_dimension cell_dim;
+      VIENNASHE_VIENNAGRID_CHECK(viennagrid_mesh_cell_dimension_get(device.mesh(), &cell_dim));
+
+      viennagrid_element_id *cells_begin, *cells_end;
+      VIENNASHE_VIENNAGRID_CHECK(viennagrid_mesh_elements_get(device.mesh(), cell_dim, &cells_begin, &cells_end));
+      for (viennagrid_element_id *cit  = cells_begin;
+                                  cit != cells_end;
+                                ++cit)
       {
         // Step 1: Get carrier density:
         const double carrier_density     = density_n(*cit); // we need the carrier density in a single valley
-        const double kinetic_energy_star = energy_n(*cit);  // mean particle energy
+        const double kinetic_energy_star = energy_n(*cit)[0];  // mean particle energy
+
+        viennagrid_numeric box_volume;
+        VIENNASHE_VIENNAGRID_CHECK(viennagrid_element_volume(device.mesh(), *cit, &box_volume));
 
         //
         // Iterate over relevant energies (at index_H == 0 there is no unknown...)
@@ -172,7 +176,6 @@ namespace viennashe
             log::warn() << "* assemble_ee_scattering(): Warning:  kinetic_energy_star zero or less ! kinetic_energy_star = " << kinetic_energy_star << std::endl;
           }
 
-          const double box_volume        = viennagrid::volume(*cit);
           const long expansion_order_mid = static_cast<long>(quan.get_expansion_order(*cit, index_H));
           const double energy_height     = box_height(quan, *cit, index_H);
 
@@ -295,22 +298,32 @@ namespace viennashe
       // Step 2: assemble on odd nodes:
       //
       //log::debug<log_assemble_ee_scattering>() << "* assembleScatteringOperator(): Assembling on odd nodes..." << std::endl;
-      FacetContainer facets(mesh);
-      for (FacetIterator fit = facets.begin();
-           fit != facets.end();
-           ++fit)
+      viennagrid_element_id *facets_begin, *facets_end;
+      VIENNASHE_VIENNAGRID_CHECK(viennagrid_mesh_elements_get(device.mesh(), cell_dim-1, &facets_begin, &facets_end));
+      for (viennagrid_element_id *fit  = facets_begin;
+                                  fit != facets_end;
+                                ++fit)
       {
-        CellOnFacetContainer cells_on_facet(device.mesh(), fit.handle());
+        viennagrid_element_id *cells_on_facet_begin, *cells_on_facet_end;
+        VIENNASHE_VIENNAGRID_CHECK(viennagrid_element_coboundary_elements(device.mesh(), *fit, cell_dim, &cells_on_facet_begin, &cells_on_facet_end));
 
-        if (cells_on_facet.size() < 2)
+        if (cells_on_facet_begin + 1 == cells_on_facet_end) // facet on boundary
           continue;
 
-        CellOnFacetIterator cofit = cells_on_facet.begin();
-        CellType const & c1 = *cofit;
-        ++cofit;
-        CellType const & c2 = *cofit;
+        viennagrid_element_id c1 = cells_on_facet_begin[0];
+        viennagrid_element_id c2 = cells_on_facet_begin[1];
 
-        double connection_len = viennagrid::norm_2(viennagrid::centroid(c1) - viennagrid::centroid(c2));
+        std::vector<viennagrid_numeric> centroid_1(3);
+        std::vector<viennagrid_numeric> centroid_2(3);
+        VIENNASHE_VIENNAGRID_CHECK(viennagrid_element_centroid(device.mesh(), c1, &(centroid_1[0])));
+        VIENNASHE_VIENNAGRID_CHECK(viennagrid_element_centroid(device.mesh(), c2, &(centroid_2[0])));
+
+        viennagrid_numeric connection_len;
+        VIENNASHE_VIENNAGRID_CHECK(viennagrid_distance_2(cell_dim, &(centroid_1[0]), &(centroid_2[0]), &connection_len));
+
+        viennagrid_numeric facet_volume;
+        VIENNASHE_VIENNAGRID_CHECK(viennagrid_element_volume(device.mesh(), *fit, &facet_volume));
+        const viennagrid_numeric box_volume = facet_volume * connection_len;
 
         //
         // Iterate over relevant energies (at index_H == 0 there is no unknown...)
@@ -319,9 +332,6 @@ namespace viennashe
           const long row_index = quan.get_unknown_index(*fit, index_H);
           if (row_index < 0)
             continue;
-
-
-          const double box_volume = viennagrid::volume(*fit) * connection_len;
 
           const long expansion_order_mid = static_cast<long>(quan.get_expansion_order(*fit, index_H));
 
@@ -341,7 +351,7 @@ namespace viennashe
 
           //std::cout << energy_n(v1) << " * " <<  energy_n(v2) << std::endl;
           // Step 2: Determine E* and f(E*):
-          double kinetic_energy_star = (energy_n(c1) + energy_n(c2)) / 2.0; //mean particle energy
+          double kinetic_energy_star = (energy_n(c1)[0] + energy_n(c2)[0]) / 2.0; //mean particle energy
           if (kinetic_energy_star <= 0)
             log::warn() << "* assemble_ee_scattering(): Warning: kinetic_energy_star zero!" << std::endl;
 
@@ -426,8 +436,6 @@ namespace viennashe
 
         } //index_H
       } //for edges
-
-*/
 
     } // assemble_ee
 

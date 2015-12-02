@@ -74,7 +74,7 @@ namespace viennashe
       double normal_share;
       VIENNASHE_VIENNAGRID_CHECK(viennagrid_inner_prod(3, &(facet_unit_normal[0]), &(cell_connection_normalized[0]), &normal_share));
 
-      return facet_volume * normal_share;
+      return facet_volume * std::fabs(normal_share);
     }
 
     /** @brief Worker function for the assembly of the free streaming operator. Handles the assembly of both even and odd unknowns.
@@ -118,9 +118,14 @@ namespace viennashe
       if (row_index < 0) //no unknown here
         return;
 
-      long col_index =  odd_assembly ? quan.get_unknown_index(cell, index_H) : quan.get_unknown_index(facet, index_H);
+      long col_index = odd_assembly ? quan.get_unknown_index(cell, index_H) : quan.get_unknown_index(facet, index_H);
 
       if (col_index < 0) //other element does not carry an unknown, so nothing to do here
+        return;
+
+      // nothing to do if Dirichlet boundary:
+      if (!odd_assembly
+          && viennashe::materials::is_conductor(device.get_material(cell)) && conf.she_boundary_conditions().type() == viennashe::BOUNDARY_DIRICHLET)
         return;
 
       const double weighted_interface_area = compute_weighted_interface_area(device.mesh(), cell, *other_cell_ptr, facet);

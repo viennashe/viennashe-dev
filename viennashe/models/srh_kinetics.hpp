@@ -35,54 +35,44 @@ namespace viennashe
 
         template < typename DeviceType, typename TimeStepQuantitiesT >
         double get_carrier_concentration(DeviceType const & device,
-                                         typename DeviceType::cell_type const & cell,
+                                         viennagrid_element_id cell_or_facet,
                                          TimeStepQuantitiesT const & quantities,
                                          viennashe::carrier_type_id ctype)
         {
-          (void)device;
-          if (ctype == viennashe::ELECTRON_TYPE_ID)
-            return quantities.electron_density().at(cell);
-          else
-            return quantities.hole_density().at(cell);
-        }
+          typedef typename TimeStepQuantitiesT::ResultQuantityType  CarrierDensityType;
 
-        template < typename DeviceType, typename TimeStepQuantitiesT >
-        double get_carrier_concentration(DeviceType const & device,
-                                         typename DeviceType::facet_type const & facet,
-                                         TimeStepQuantitiesT const & quantities,
-                                         viennashe::carrier_type_id ctype)
-        {
-          /*
-          typedef typename DeviceType::mesh_type  mesh_type;
-          typedef typename DeviceType::facet_type facet_type;
-          typedef typename DeviceType::cell_type  cell_type;
-          typedef typename viennagrid::result_of::const_coboundary_range<mesh_type, facet_type, cell_type>::type     CellOnFacetContainer;
-          CellOnFacetContainer cells_on_facet(device.mesh(), viennagrid::handle(device.mesh(), facet));
+          viennagrid_dimension cell_dim;
+          VIENNASHE_VIENNAGRID_CHECK(viennagrid_mesh_cell_dimension_get(device.mesh(), &cell_dim));
 
-          if (ctype == viennashe::ELECTRON_TYPE_ID)
+          CarrierDensityType const & carrier_density = (ctype == viennashe::ELECTRON_TYPE_ID) ? quantities.electron_density() : quantities.hole_density();
+
+          if (cell_dim == viennagrid_topological_dimension_from_element_id(cell_or_facet)) // cell
           {
-            if (! viennashe::materials::is_semiconductor(device.get_material(cells_on_facet[0])))
-              return quantities.electron_density().at(cells_on_facet[1]);
-            else if (! viennashe::materials::is_semiconductor(device.get_material(cells_on_facet[1])))
-              return quantities.electron_density().at(cells_on_facet[0]);
+              return carrier_density.at(cell_or_facet);
+          }
+          else if (cell_dim == viennagrid_topological_dimension_from_element_id(cell_or_facet) + 1) // facet
+          {
+            viennagrid_element_id *cells_on_facet_begin, *cells_on_facet_end;
+            VIENNASHE_VIENNAGRID_CHECK(viennagrid_element_coboundary_elements(device.mesh(), cell_or_facet, cell_dim, &cells_on_facet_begin, &cells_on_facet_end));
+
+            if (cells_on_facet_begin + 1 == cells_on_facet_end)
+              return carrier_density.at(cells_on_facet_begin[0]);
+
+            if (!viennashe::materials::is_semiconductor(device.get_material(cells_on_facet_begin[0])))
+              return carrier_density.at(cells_on_facet_begin[1]);
+            else if (!viennashe::materials::is_semiconductor(device.get_material(cells_on_facet_begin[1])))
+              return carrier_density.at(cells_on_facet_begin[0]);
             else
-            return std::sqrt(quantities.electron_density().at(cells_on_facet[0]) * quantities.electron_density().at(cells_on_facet[1]));
+            {
+              viennagrid_numeric density_0 = carrier_density.at(cells_on_facet_begin[0]);
+              viennagrid_numeric density_1 = carrier_density.at(cells_on_facet_begin[1]);
+              return std::sqrt(density_0 * density_1);
+            }
           }
           else
-          {
-            if (! viennashe::materials::is_semiconductor(device.get_material(cells_on_facet[0])))
-              return quantities.hole_density().at(cells_on_facet[1]);
-            else if (! viennashe::materials::is_semiconductor(device.get_material(cells_on_facet[1])))
-              return quantities.hole_density().at(cells_on_facet[0]);
-            else
-              return std::sqrt(quantities.hole_density().at(cells_on_facet[0]) * quantities.hole_density().at(cells_on_facet[1]));
-          }
-          */
-
-          throw std::runtime_error("get_carrier_concentration(): TODO: implement");
-
-          return 0;
+            throw std::runtime_error("get_carrier_concentration(): Invalid element type!");
         }
+
 
         /**
          * @brief Implementation of the recombination term without any occupancies considered
@@ -290,7 +280,7 @@ namespace viennashe
           double hole_rec_rate = 0;
           double hole_gen_rate = 0;
 
-          const double box_volume;
+          viennagrid_numeric box_volume;
           VIENNASHE_VIENNAGRID_CHECK(viennagrid_element_volume(device.mesh(), el, &box_volume));
 
           typedef typename viennashe::config::dispersion_relation_type  DispersionRelation;

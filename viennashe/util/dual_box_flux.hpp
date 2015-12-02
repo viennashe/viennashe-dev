@@ -38,19 +38,22 @@ namespace viennashe
 {
   namespace util
   {
-    namespace detail
+
+    inline std::vector<viennagrid_numeric>
+    outer_cell_normal_at_facet(viennagrid_mesh mesh, viennagrid_element_id cell, viennagrid_element_id facet)
     {
-      // 1d case:
-      inline std::vector<viennagrid_numeric>
-      outer_cell_normal_at_facet(viennagrid_mesh mesh, viennagrid_element_id cell, viennagrid_element_id facet)
+      std::vector<viennagrid_numeric> centroid_cell(3);
+      std::vector<viennagrid_numeric> centroid_facet(3);
+
+      viennagrid_dimension cell_dim = viennagrid_topological_dimension_from_element_id(cell);
+
+      VIENNASHE_VIENNAGRID_CHECK(viennagrid_element_centroid(mesh,  cell, &(centroid_cell[0])));
+      VIENNASHE_VIENNAGRID_CHECK(viennagrid_element_centroid(mesh, facet, &(centroid_facet[0])));
+
+      std::vector<viennagrid_numeric> ret(3);
+
+      if (cell_dim == 1)
       {
-        std::vector<viennagrid_numeric> centroid_cell(3);
-        std::vector<viennagrid_numeric> centroid_facet(3);
-
-        VIENNASHE_VIENNAGRID_CHECK(viennagrid_element_centroid(mesh,  cell, &(centroid_cell[0])));
-        VIENNASHE_VIENNAGRID_CHECK(viennagrid_element_centroid(mesh, facet, &(centroid_facet[0])));
-
-        std::vector<viennagrid_numeric> ret(3);
         if (centroid_cell[0] < centroid_facet[0])
           ret[0] = 1.0;
         else
@@ -59,90 +62,51 @@ namespace viennashe
         return ret;
       }
 
-      /*
-      // 2d, triangles and quadrilaterals:
-      template <typename CellTagT, typename WrappedConfigT>
-      typename viennagrid::result_of::point< viennagrid::element<CellTagT, WrappedConfigT> >::type
-      outer_cell_normal_at_facet(viennagrid::element<CellTagT,             WrappedConfigT> const & cell,
-                                 viennagrid::element<viennagrid::line_tag, WrappedConfigT> const & facet)
+
+      viennagrid_element_id *facet_vertices_begin, *facet_vertices_end;
+      VIENNASHE_VIENNAGRID_CHECK(viennagrid_element_boundary_elements(mesh, facet, 0, &facet_vertices_begin, &facet_vertices_end));
+
+      viennagrid_numeric *coords_0, *coords_1;
+      VIENNASHE_VIENNAGRID_CHECK(viennagrid_mesh_vertex_coords_get(mesh, facet_vertices_begin[0], &coords_0));
+      VIENNASHE_VIENNAGRID_CHECK(viennagrid_mesh_vertex_coords_get(mesh, facet_vertices_begin[1], &coords_1));
+
+      if (cell_dim == 2) // triangles and quadrilaterals
       {
-        typedef viennagrid::element<viennagrid::line_tag, WrappedConfigT>            FacetType;
-        typedef typename viennagrid::result_of::point<FacetType>::type               PointType;
-        typedef typename viennagrid::result_of::const_vertex_range<FacetType>::type  VertexRange;
-
-        VertexRange facet_vertices(facet);
-        PointType facet_vec = viennagrid::point(facet_vertices[1]) - viennagrid::point(facet_vertices[0]);
-        PointType facet_centroid_vec = viennagrid::centroid(cell) - viennagrid::point(facet_vertices[0]);
-
-        PointType edge_normal(facet_vec[1], -facet_vec[0]); // create one normal to line
-
-        if (viennagrid::inner_prod(facet_centroid_vec, edge_normal) > 0) // normal vector is pointing into cell, hence flip
-          edge_normal *= -1;
-
-        return edge_normal / viennagrid::norm(edge_normal);
+        // create vector normal to facet: (x, y) -> (y, -x)
+        ret[0] =    coords_1[1] - coords_0[1];
+        ret[1] = - (coords_1[0] - coords_0[0]);
       }
-
-      // 3d, implementation for both tetrahedra and hexahedra:
-      template <typename CellTagT, typename FacetTagT, typename WrappedConfigT>
-      typename viennagrid::result_of::point< viennagrid::element<CellTagT, WrappedConfigT> >::type
-      outer_cell_normal_at_facet_3d(viennagrid::element<CellTagT,             WrappedConfigT> const & cell,
-                                    viennagrid::element<FacetTagT, WrappedConfigT> const & facet)
+      else if (cell_dim == 3) // tetrahedra and hexahedra
       {
-        typedef viennagrid::element<FacetTagT, WrappedConfigT>                       FacetType;
-        typedef typename viennagrid::result_of::point<FacetType>::type               PointType;
-        typedef typename viennagrid::result_of::const_vertex_range<FacetType>::type  VertexRange;
+        viennagrid_numeric *coords_2;
+        VIENNASHE_VIENNAGRID_CHECK(viennagrid_mesh_vertex_coords_get(mesh, facet_vertices_begin[2], &coords_2));
 
-        VertexRange facet_vertices(facet);
-        PointType facet_vec1 = viennagrid::point(facet_vertices[1]) - viennagrid::point(facet_vertices[0]);
-        PointType facet_vec2 = viennagrid::point(facet_vertices[2]) - viennagrid::point(facet_vertices[0]);
-        PointType facet_centroid_vec = viennagrid::centroid(cell) - viennagrid::point(facet_vertices[0]);
+        viennagrid_numeric direction_1[3] = { coords_1[0] - coords_0[0],
+                                              coords_1[1] - coords_0[1],
+                                              coords_1[2] - coords_0[2] };
 
-        PointType edge_normal = viennagrid::cross_prod(facet_vec1, facet_vec2); // create one normal to line
+        viennagrid_numeric direction_2[3] = { coords_2[0] - coords_0[0],
+                                              coords_2[1] - coords_0[1],
+                                              coords_2[2] - coords_0[2] };
 
-        if (viennagrid::inner_prod(facet_centroid_vec, edge_normal) > 0) // normal vector is pointing into cell, hence flip
-          edge_normal *= -1;
-
-        return edge_normal / viennagrid::norm(edge_normal);
+        VIENNASHE_VIENNAGRID_CHECK(viennagrid_cross_prod(&(direction_1[0]), &(direction_2[0]), &ret[0]));
       }
-
-      // 3d, overload for tetrahedra
-      template <typename CellTagT, typename WrappedConfigT>
-      typename viennagrid::result_of::point< viennagrid::element<CellTagT, WrappedConfigT> >::type
-      outer_cell_normal_at_facet(viennagrid::element<CellTagT,                 WrappedConfigT> const & cell,
-                                 viennagrid::element<viennagrid::triangle_tag, WrappedConfigT> const & facet)
-      {
-        return outer_cell_normal_at_facet_3d(cell, facet);
-      }
-
-      // 3d, overload for hexahedra
-      template <typename CellTagT, typename WrappedConfigT>
-      typename viennagrid::result_of::point< viennagrid::element<CellTagT, WrappedConfigT> >::type
-      outer_cell_normal_at_facet(viennagrid::element<CellTagT,                      WrappedConfigT> const & cell,
-                                 viennagrid::element<viennagrid::quadrilateral_tag, WrappedConfigT> const & facet)
-      {
-        return outer_cell_normal_at_facet_3d(cell, facet);
-      } */
-
-
-    }
-
-    /** @brief Returns the unit outer normal of a facet with respect to the provided cell */
-    inline std::vector<double>
-    outer_cell_normal_at_facet(viennagrid_mesh mesh,
-                               viennagrid_element_id cell,
-                               viennagrid_element_id facet)
-    {
-      viennagrid_dimension cell_dim;
-      VIENNASHE_VIENNAGRID_CHECK(viennagrid_mesh_cell_dimension_get(mesh, &cell_dim));
-
-      if (cell_dim == 1)
-        return detail::outer_cell_normal_at_facet(mesh, cell, facet);
       else
-        throw std::runtime_error("outer_cell_normal_at_facet(): TODO: implement for 2d and 3d!");
+        throw std::runtime_error("outer_cell_normal_at_facet: invalid cell dimension!");
 
-      return std::vector<double>(3);
+      // check direction: normal vector needs to point outwards, i.e. similar direction than connection cell_centroid to facet_centroid
+      viennagrid_numeric inner_prod = 0;
+      inner_prod += ret[0] * (centroid_facet[0] - centroid_cell[0]);
+      inner_prod += ret[1] * (centroid_facet[1] - centroid_cell[1]);
+      inner_prod += ret[2] * (centroid_facet[2] - centroid_cell[2]);
+
+      viennagrid_numeric norm = std::sqrt(ret[0] * ret[0] + ret[1] * ret[1] + ret[2] * ret[2]);
+      ret[0] /= (inner_prod < 0) ? -norm : norm;
+      ret[1] /= (inner_prod < 0) ? -norm : norm;
+      ret[2] /= (inner_prod < 0) ? -norm : norm;
+
+      return ret;
     }
-
 
 
     /**

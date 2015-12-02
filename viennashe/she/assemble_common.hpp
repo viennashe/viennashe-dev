@@ -77,35 +77,11 @@ namespace viennashe
         return ret;
       }
 
-      template <typename T>
-      bool is_odd_assembly(T const &, T const &)
-      {
-        return false;
-      }
 
-      template <typename T, typename U>
-      bool is_odd_assembly(T const &, U const &)
-      {
-        return true;
-      }
 
-      /** @brief Static dispatcher for computing the connection between two cells adjacent to a facet. Argument is not a facet, so return an arbitrary value.
-        *
-        * @tparam CellT    Arbitrary cell, only used for the static dispatch.
-        */
-      template <typename MeshT, typename CellT>
-      double cell_connection_length(MeshT const &, CellT const &, CellT const &)
-      {
-        assert(bool("Logic error: cell_connection_length() for cell called!"));
-        return 1.0;
-      }
-
-      /** @brief Static dispatcher for computing the connection between two cells adjacent to a facet.
-      *
-      * @tparam CellT    Arbitrary cell, only used for the static dispatch.
-      */
-      template <typename MeshT, typename FacetT, typename CellT>
-      double cell_connection_length(MeshT const & mesh, FacetT const & facet, CellT const &)
+      /** @brief Static dispatcher for computing the connection between two cells adjacent to a facet. */
+      template <typename MeshT>
+      double cell_connection_length(MeshT const & mesh, viennagrid_element_id facet)
       {
         viennagrid_dimension cell_dim;
         VIENNASHE_VIENNAGRID_CHECK(viennagrid_mesh_cell_dimension_get(mesh, &cell_dim));
@@ -126,11 +102,10 @@ namespace viennashe
         VIENNASHE_VIENNAGRID_CHECK(viennagrid_mesh_geometric_dimension_get(mesh, &geo_dim));
 
         // compute 2-norm of distance between centroids
-        double ret = 0;
-        for (std::size_t i=0; i<geo_dim; ++i)
-          ret += (centroid1[0] - centroid2[0]) * (centroid1[0] - centroid2[0]);
+        viennagrid_numeric distance;
+        VIENNASHE_VIENNAGRID_CHECK(viennagrid_distance_2(geo_dim, &(centroid1[0]), &(centroid2[0]), &distance));
 
-        return std::sqrt(ret);
+        return distance;
       }
 
       template <typename DeviceType>
@@ -179,97 +154,27 @@ namespace viennashe
                                                  viennagrid_mesh mesh, viennagrid_element_id c1, viennagrid_element_id c2,
                                                  PolarityTag const & polarity)
     {
-      (void)m2; (void)m3; //prevent unused variable warnings
-
       std::vector<double> centroid1(3), centroid2(3);
       VIENNASHE_VIENNAGRID_CHECK(viennagrid_element_centroid(mesh, c1, &(centroid1[0])));
       VIENNASHE_VIENNAGRID_CHECK(viennagrid_element_centroid(mesh, c2, &(centroid2[0])));
 
       double norm = 0;
-      for (std::size_t i=0; i<3; ++i)
-        norm += (centroid2[0] - centroid1[0]) * (centroid2[0] - centroid1[0]);
-      norm = std::sqrt(norm);
+      VIENNASHE_VIENNAGRID_CHECK(viennagrid_distance_2(3, &(centroid1[0]), &(centroid2[0]), &norm));
 
-      double factor = (centroid2[0] - centroid1[0]) / norm;
-
-      //log::debug<log_coupling_matrix_in_direction>() << "Coefficients: " << p3;
-      double m_t = viennashe::materials::si::transverse_effective_mass(polarity);
-      double m_d = viennashe::materials::si::dos_effective_mass(polarity);
-
-      MatrixType result = m1 * (factor * sqrt(m_d / m_t));
-      return result;
-    }
-
-
-    /** @brief Returns dot(M, n), where M=(m1, m2, m3) is the vector of coupling matrices, and n = v2 - v1 is the directional vector (i.e. normal vector on box). Two spatial dimensions.
-     *
-     * @param m1   Coupling matrix in x-direction
-     * @param m2   Coupling matrix in y-direction
-     * @param m3   Coupling matrix in z-direction
-     * @param c1   First  cell (no Delaunay criterion required!)
-     * @param c2   Second cell (no Delaunay criterion required!)
-     * @param polarity  A polarity tag for distinguishing between electrons and holes
-     */
-    /*template <typename MatrixType, typename CellType, typename PolarityTag>
-    MatrixType coupling_matrix_in_direction_impl(MatrixType const & m1, MatrixType const & m2, MatrixType const & m3,
-                                                   CellType const & c1,   CellType const & c2, PolarityTag const & polarity,
-                                                 viennagrid::cartesian_cs<2>)
-    {
-      typedef typename viennagrid::result_of::point<CellType>::type      PointType;
-
-      (void)m3; //prevent unused variable warnings
-      PointType p3 = viennagrid::centroid(c2) - viennagrid::centroid(c1);
-      p3 /= viennagrid::norm(p3); //normalize p3
-
-      if (!p3[0] && !p3[1])
-      {
-        log::error() << " Vertices equal! ";
-        log::debug<log_coupling_matrix_in_direction>() << c1 << std::endl;
-        log::debug<log_coupling_matrix_in_direction>() << c2 << std::endl;
-        throw coupled_vertices_equal_exception("");
-      }
+      double alpha_1 = (centroid2[0] - centroid1[0]) / norm;
+      double alpha_2 = (centroid2[1] - centroid1[1]) / norm;
+      double alpha_3 = (centroid2[2] - centroid1[2]) / norm;
 
       //log::debug<log_coupling_matrix_in_direction>() << "Coefficients: " << p3;
-      double m_t = viennashe::materials::si::transverse_effective_mass(polarity);
-      double m_d = viennashe::materials::si::dos_effective_mass(polarity);
-
-      MatrixType result = m1 * (p3[0] * sqrt(m_d / m_t));
-      result += m2 * (p3[1] * sqrt(m_d / m_t));
-      return result;
-    } */
-
-
-    /** @brief Returns dot(M, n), where M=(m1, m2, m3) is the vector of coupling matrices, and n = v2 - v1 is the directional vector (i.e. normal vector on box). Three spatial dimensions.
-     *
-     * @param m1   Coupling matrix in x-direction
-     * @param m2   Coupling matrix in y-direction
-     * @param m3   Coupling matrix in z-direction
-     * @param c1   First  cell (no Delaunay criterion required!)
-     * @param c2   Second cell (no Delaunay criterion required!)
-     * @param polarity  A polarity tag for distinguishing between electrons and holes
-     */
-    /*
-    template <typename MatrixType, typename CellType, typename PolarityTag>
-    MatrixType coupling_matrix_in_direction_impl(MatrixType const & m1, MatrixType const & m2, MatrixType const & m3,
-                                                   CellType const & c1,   CellType const & c2, PolarityTag const & polarity,
-                                                 viennagrid::cartesian_cs<3>)
-    {
-      typedef typename viennagrid::result_of::point<CellType>::type      PointType;
-
-      PointType p3 = viennagrid::centroid(c2) - viennagrid::centroid(c1);
-      p3 /= viennagrid::norm(p3); //normalize p3
-
       double m_t = viennashe::materials::si::transverse_effective_mass(polarity);
       double m_l = viennashe::materials::si::longitudinal_effective_mass(polarity);
       double m_d = viennashe::materials::si::dos_effective_mass(polarity);
 
-      MatrixType result = m1 * (p3[0] * sqrt(m_d / m_t));
-      result += m2 * (p3[1] * sqrt(m_d / m_t));
-      result += m3 * (p3[2] * sqrt(m_d / m_l));
-
+      MatrixType result = m1 * (alpha_1 * sqrt(m_d / m_t));
+      result += m2 * (alpha_2 * sqrt(m_d / m_t));
+      result += m3 * (alpha_3 * sqrt(m_d / m_l));
       return result;
-    } */
-
+    }
 
 
     /** @brief Returns dot(M, n), where M=(m1, m2, m3) is the vector of coupling matrices, and n = v2 - v1 is the directional vector (i.e. normal vector on box)

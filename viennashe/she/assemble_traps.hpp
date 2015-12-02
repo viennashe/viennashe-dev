@@ -69,7 +69,7 @@ namespace viennashe
                                               TimeStepQuantitiesT const & quantities,
                                               SHEQuantity const & quan,
                                               viennashe::config const & conf,
-                                              typename DeviceType::cell_type const & el,
+                                              viennagrid_element_id el,
                                               std::size_t index_H,
                                               MatrixType & matrix, VectorType & rhs,
                                               CouplingMatrixType const & diagonal_coupling_matrix,
@@ -77,9 +77,6 @@ namespace viennashe
                                              )
       {
 
-        throw std::runtime_error("assemble_traps_coupling_on_cell(): TODO: implement");
-
-        /*
         typedef typename DeviceType::trap_level_container_type          TrapContainerType;
         typedef typename TrapContainerType::const_iterator              TrapIterator;
 
@@ -104,7 +101,8 @@ namespace viennashe
 
         viennashe::math::harmonics_iteration_type harmonics_it_id = viennashe::math::EVEN_HARMONICS_ITERATION_ID;
 
-        double volume_contribution = viennagrid::volume(el);
+        viennagrid_numeric volume_contribution;
+        VIENNASHE_VIENNAGRID_CHECK(viennagrid_element_volume(device.mesh(), el, &volume_contribution));
 
         std::size_t inner_index = 0;
         for ( TrapIterator trap_it = traps.begin();
@@ -155,7 +153,6 @@ namespace viennashe
                           viennashe::math::spherical_harmonics_iterator(expansion_order, harmonics_it_id)
                         );
         } // for traps
-        */
 
       } //assemble_traps_coupling_on_cell
 
@@ -171,22 +168,15 @@ namespace viennashe
                                               TimeStepQuantitiesT const & quantities,
                                               SHEQuantity const & quan,
                                               viennashe::config const & conf,
-                                              typename DeviceType::facet_type const & el,
+                                              viennagrid_element_id el,
                                               std::size_t index_H,
                                               MatrixType & matrix, VectorType & rhs,
                                               CouplingMatrixType const & diagonal_coupling_matrix,
                                               CouplingMatrixType const & coupling_matrix_00
                                              )
       {
-
-        throw std::runtime_error("assemble_traps_coupling_on_cell(): TODO: implement");
-/*
-        typedef typename DeviceType::mesh_type MeshType;
-        typedef typename DeviceType::cell_type CellType;
         typedef typename DeviceType::trap_level_container_type       TrapContainerType;
         typedef typename TrapContainerType::const_iterator           TrapIterator;
-        typedef typename viennagrid::result_of::point<MeshType>::type   PointType;
-        typedef typename viennagrid::result_of::const_coboundary_range<MeshType, typename DeviceType::facet_type, CellType>::type     CellOnFacetContainer;
 
         (void)rhs; (void)coupling_matrix_00;
         const long row_index = quan.get_unknown_index(el, index_H);
@@ -200,17 +190,22 @@ namespace viennashe
 
         viennashe::math::harmonics_iteration_type harmonics_it_id = viennashe::math::ODD_HARMONICS_ITERATION_ID;
 
-        double volume_contribution = viennagrid::volume(el);
-        volume_contribution *= detail::cell_connection_length(device.mesh(), el, viennagrid::cells(device.mesh())[0]) / static_cast<double>(PointType::dim);
+        viennagrid_dimension cell_dim;
+        VIENNASHE_VIENNAGRID_CHECK(viennagrid_mesh_cell_dimension_get(device.mesh(), &cell_dim));
 
-        CellOnFacetContainer cells_on_facet(device.mesh(), viennagrid::handle(device.mesh(), el));
+        viennagrid_numeric facet_volume;
+        VIENNASHE_VIENNAGRID_CHECK(viennagrid_element_volume(device.mesh(), el, &facet_volume));
+        double volume_contribution = facet_volume * detail::cell_connection_length(device.mesh(), el) / viennagrid_numeric(cell_dim);
 
-        for (std::size_t cell_index = 0; cell_index < cells_on_facet.size(); ++cell_index)
+        viennagrid_element_id *cells_on_facet_begin, *cells_on_facet_end;
+        VIENNASHE_VIENNAGRID_CHECK(viennagrid_element_coboundary_elements(device.mesh(), el, cell_dim, &cells_on_facet_begin, &cells_on_facet_end));
+
+        for (viennagrid_element_id *cofit = cells_on_facet_begin; cofit != cells_on_facet_end; ++cofit)
         {
-          CellType const & cell = cells_on_facet[cell_index];
+          viennagrid_element_id cell = *cofit;
 
           TrapContainerType const & traps = device.get_trap_levels(cell);
-          const std::size_t num_trap_unknowns    = quantities.num_trap_unknown_indices(cell);
+          const std::size_t num_trap_unknowns = quantities.num_trap_unknown_indices(cell);
 
           if (num_trap_unknowns <= 0)
             return;
@@ -248,7 +243,7 @@ namespace viennashe
                                             );
           } // for traps
         }
-*/
+
       } // assemble_traps_coupling_on_facet
 
     } // namespace detail
@@ -274,20 +269,9 @@ namespace viennashe
                                  MatrixType & matrix,
                                  VectorType & rhs)
     {
-
-      throw std::runtime_error("assemble_traps_coupling(): TODO: implement");
-/*
-      typedef typename DeviceType::mesh_type              MeshType;
-
-      typedef typename viennagrid::result_of::const_cell_range<MeshType>::type        CellContainer;
-      typedef typename viennagrid::result_of::iterator<CellContainer>::type           CellIterator;
-
-      typedef typename viennagrid::result_of::const_facet_range<MeshType>::type       FacetContainer;
-      typedef typename viennagrid::result_of::iterator<FacetContainer>::type          FacetIterator;
-
       typedef viennashe::math::sparse_matrix<double>   CouplingMatrixType;
 
-      MeshType const & mesh = device.mesh();
+      viennagrid_mesh mesh = device.mesh();
 
       //
       // Set up scatter matrices:
@@ -302,31 +286,36 @@ namespace viennashe
         diagonal_coupling_matrix(i,i) += 1.0;
       coupling_matrix_00(0,0) = 1.0 / Y_00(0,0);
 
-        //
-        // Step 1: assemble on even nodes:
-        //
-        CellContainer cells(mesh);
-        for (CellIterator cit = cells.begin();
-             cit != cells.end();
-             ++cit)
-        {
-          for (std::size_t index_H = 0; index_H < quan.get_value_H_size(); ++index_H)
-            detail::assemble_traps_coupling_on_cell(device, quantities, quan, conf, *cit, index_H, matrix, rhs, diagonal_coupling_matrix, coupling_matrix_00);
-        }
+      //
+      // Step 1: assemble on even nodes:
+      //
+      viennagrid_dimension cell_dim;
+      VIENNASHE_VIENNAGRID_CHECK(viennagrid_mesh_cell_dimension_get(mesh, &cell_dim));
+
+      viennagrid_element_id *cells_begin, *cells_end;
+      VIENNASHE_VIENNAGRID_CHECK(viennagrid_mesh_elements_get(mesh, cell_dim, &cells_begin, &cells_end));
+      for (viennagrid_element_id *cit  = cells_begin;
+                                  cit != cells_end;
+                                ++cit)
+      {
+        for (std::size_t index_H = 0; index_H < quan.get_value_H_size(); ++index_H)
+          detail::assemble_traps_coupling_on_cell(device, quantities, quan, conf, *cit, index_H, matrix, rhs, diagonal_coupling_matrix, coupling_matrix_00);
+      }
 
 
-        //
-        // Step 3: assemble on odd nodes
-        //
-        FacetContainer facets(mesh);
-        for (FacetIterator fit = facets.begin();
-             fit != facets.end();
-             ++fit)
-        {
-          for (std::size_t index_H = 0; index_H < quan.get_value_H_size(); ++index_H)
-            detail::assemble_traps_coupling_on_facet(device, quantities, quan, conf, *fit, index_H, matrix, rhs, diagonal_coupling_matrix, coupling_matrix_00);
-        }
-*/
+      //
+      // Step 3: assemble on odd nodes
+      //
+      viennagrid_element_id *facets_begin, *facets_end;
+      VIENNASHE_VIENNAGRID_CHECK(viennagrid_mesh_elements_get(mesh, cell_dim-1, &facets_begin, &facets_end));
+      for (viennagrid_element_id *fit  = facets_begin;
+                                  fit != facets_end;
+                                ++fit)
+      {
+        for (std::size_t index_H = 0; index_H < quan.get_value_H_size(); ++index_H)
+          detail::assemble_traps_coupling_on_facet(device, quantities, quan, conf, *fit, index_H, matrix, rhs, diagonal_coupling_matrix, coupling_matrix_00);
+      }
+
     } //assemble_traps_coupling
 
 
@@ -345,26 +334,21 @@ namespace viennashe
                                VectorType & rhs
                               )
     {
-
-      throw std::runtime_error("assemble_traps_solver(): TODO: implement");
-
-/*
-      typedef typename DeviceType::mesh_type           MeshType;
-
-      typedef typename viennagrid::result_of::const_cell_range<MeshType>::type        CellContainer;
-      typedef typename viennagrid::result_of::iterator<CellContainer>::type           CellIterator;
-
       typedef typename DeviceType::trap_level_container_type     TrapContainerType;
       typedef typename TrapContainerType::const_iterator         TrapIterator;
 
       (void)quan; (void)matrix; (void)rhs; //eliminate unused parameter warnings
 
-      MeshType const & mesh = device.mesh();
+      viennagrid_mesh mesh = device.mesh();
 
-      CellContainer cells(mesh);
-      for (CellIterator cit  = cells.begin();
-                        cit != cells.end();
-                      ++cit)
+      viennagrid_dimension cell_dim;
+      VIENNASHE_VIENNAGRID_CHECK(viennagrid_mesh_cell_dimension_get(mesh, &cell_dim));
+
+      viennagrid_element_id *cells_begin, *cells_end;
+      VIENNASHE_VIENNAGRID_CHECK(viennagrid_mesh_elements_get(mesh, cell_dim, &cells_begin, &cells_end));
+      for (viennagrid_element_id *cit  = cells_begin;
+                                  cit != cells_end;
+                                ++cit)
       {
         const std::size_t num_trap_unknowns = quantities.num_trap_unknown_indices(*cit);
         TrapContainerType const & traps = device.get_trap_levels(*cit);
@@ -387,7 +371,7 @@ namespace viennashe
 
             quantities.trap_occupancy(*cit, inner_index, new_ft);
 
-            / * TODO: NEWTON
+            /* TODO: NEWTON
             matrix(unknown_index, unknown_index) = 1.0;
             if (simulation_cnt > 0)
             {
@@ -399,12 +383,12 @@ namespace viennashe
               rhs[unknown_index] = trap_it->occupancy();
 
             ++unknown_index;
-            * /
+            */
 
           } //for trap_level
         } // if
       } //for cells
-*/
+
     }
 
 
