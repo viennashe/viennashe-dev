@@ -147,7 +147,7 @@ namespace viennashe
                                   focit != facets_end;
                                 ++focit, ++facet_ctr )
       {
-        flux_contributions[facet_ctr] = facet_access(*focit);
+        flux_contributions[facet_ctr] = facet_access(*focit)[0];
         normals[facet_ctr]            = outer_cell_normal_at_facet(device.mesh(), cell, *focit); // vector along the edge pointing away from Vertex 'to'
 
         // flip orientation of flux contribution if global orientation is different:

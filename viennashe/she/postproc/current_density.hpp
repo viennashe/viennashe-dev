@@ -62,7 +62,7 @@ namespace viennashe
                                    1);
           }
 
-          double operator()(viennagrid_element_id facet) const
+          std::vector<double> operator()(viennagrid_element_id facet) const
           {
             viennagrid_dimension cell_dim = viennagrid_topological_dimension_from_element_id(facet) + 1;
 
@@ -72,8 +72,10 @@ namespace viennashe
             viennagrid_element_id *cells_on_facet_begin, *cells_on_facet_end;
             VIENNASHE_VIENNAGRID_CHECK(viennagrid_element_coboundary_elements(device_.mesh(), facet, cell_dim, &cells_on_facet_begin, &cells_on_facet_end));
 
+            std::vector<double> ret(3);
+
             if (cells_on_facet_begin + 1 == cells_on_facet_end)
-              return 0;
+              return ret;
 
             viennagrid_element_id c1 = cells_on_facet_begin[0];
             viennagrid_element_id c2 = cells_on_facet_begin[1];
@@ -133,7 +135,8 @@ namespace viennashe
                                        + a_z(0, 3) * quan_.get_values(facet, index_H)[2] ) * factor * sqrt(m_d / m_l) * normal_vector[2];
             }
 
-            return -polarity * viennashe::physics::constants::q * velocity_in_normal / Y_00(0,0);
+            ret[0] = -polarity * viennashe::physics::constants::q * velocity_in_normal / Y_00(0,0);
+            return ret;
           }
 
 
@@ -212,7 +215,7 @@ namespace viennashe
           }
           else if (viennagrid_topological_dimension_from_element_id(cell_or_facet) == cell_dim - 1) // facet
           {
-            ret[0] = facet_evaluator_(cell_or_facet);
+            ret[0] = facet_evaluator_(cell_or_facet)[0];
           }
           else
             throw std::runtime_error("current_density_wrapper::operator(): invalid element dimension!");

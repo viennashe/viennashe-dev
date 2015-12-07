@@ -55,7 +55,7 @@ namespace viennashe
 
       electric_field_on_facet(DeviceType const & device, PotentialAccessorType const & potential) : device_(device), potential_(potential) {}
 
-      double operator()(viennagrid_element_id facet) const
+      std::vector<double> operator()(viennagrid_element_id facet) const
       {
         viennagrid_dimension cell_dim;
         VIENNASHE_VIENNAGRID_CHECK(viennagrid_mesh_cell_dimension_get(device_.mesh(), &cell_dim));
@@ -63,8 +63,9 @@ namespace viennashe
         viennagrid_element_id *cells_begin, *cells_end;
         VIENNASHE_VIENNAGRID_CHECK(viennagrid_element_coboundary_elements(device_.mesh(), facet, cell_dim, &cells_begin, &cells_end));
 
+        std::vector<double> ret(3);
         if (cells_end == cells_begin + 1) // facet on surface
-          return 0;
+          return ret;
 
         const double potential_center = potential_.get_value(cells_begin[0]);
         const double potential_outer  = potential_.get_value(cells_begin[1]);
@@ -80,7 +81,8 @@ namespace viennashe
 
         const double Emag     = -(potential_outer - potential_center) / distance;
 
-        return Emag;
+        ret[0] = Emag;
+        return ret;
       }
       private:
         DeviceType const & device_;
@@ -127,9 +129,7 @@ namespace viennashe
       else if (cell_dim == element_dim + 1) // facet provided
       {
         viennashe::detail::electric_field_on_facet<DeviceType, PotentialAccessorType> facet_eval(device_, potential_);
-        std::vector<double> ret(3);
-        ret[0] = facet_eval(cell_or_facet);
-        return ret;
+        return facet_eval(cell_or_facet);
       }
 
       throw std::runtime_error("electric_field_wrapper::operator(): Invalid element dimension");

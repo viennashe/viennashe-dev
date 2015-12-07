@@ -54,7 +54,7 @@ namespace viennashe
 
       electric_flux_on_facet(DeviceType const & device, PotentialAccessorType const & potential) : device_(device), potential_(potential) {}
 
-      double operator()(viennagrid_element_id facet) const
+      std::vector<double> operator()(viennagrid_element_id facet) const
       {
         viennagrid_dimension cell_dim;
         VIENNASHE_VIENNAGRID_CHECK(viennagrid_mesh_cell_dimension_get(device_.mesh(), &cell_dim));
@@ -62,8 +62,9 @@ namespace viennashe
         viennagrid_element_id *cells_on_facet_begin, *cells_on_facet_end;
         VIENNASHE_VIENNAGRID_CHECK(viennagrid_element_coboundary_elements(device_.mesh(), facet, cell_dim, &cells_on_facet_begin, &cells_on_facet_end));
 
+        std::vector<double> ret(3);
         if (cells_on_facet_begin + 1 == cells_on_facet_end)
-          return 0;
+          return ret;
 
         viennagrid_element_id c1 = cells_on_facet_begin[0];
         viennagrid_element_id c2 = cells_on_facet_begin[1];
@@ -92,7 +93,8 @@ namespace viennashe
 
         const double Emag  = -(potential_outer - potential_center) / connection_len;
 
-        return Emag * permittivity_mean;
+        ret[0] = Emag * permittivity_mean;
+        return ret;
       }
 
       private:
@@ -142,7 +144,7 @@ namespace viennashe
       }
       else if (viennagrid_topological_dimension_from_element_id(cell_or_facet) == cell_dim - 1) // facet
       {
-        ret[0] = facet_eval(cell_or_facet);
+        ret = facet_eval(cell_or_facet);
       }
       else
         throw std::runtime_error("current_density_wrapper::operator(): invalid element dimension!");

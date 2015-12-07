@@ -176,8 +176,8 @@ namespace viennashe
             detail::transfer_to_new_H_space_on_element(*fit, index_H, old_quan, new_quan);
 
           // scale with respect to current:
-          double current_old = old_edge_evaluator(*fit);
-          double current_new = new_edge_evaluator(*fit);
+          double current_old = old_edge_evaluator(*fit)[0];
+          double current_new = new_edge_evaluator(*fit)[0];
 
           if (current_new && current_old)
             detail::normalize_on_new_H_space(*fit, new_quan, current_old / current_new);

@@ -40,6 +40,7 @@
 #include "viennashe/util/dual_box_flux.hpp"
 
 #include "viennashe/she/postproc/macroscopic.hpp"
+#include "viennashe/simulator_quantity.hpp"
 
 /** @file viennashe/postproc/current_density.hpp
     @brief Computes the current density (both Jn and Jp) after using a drift diffusion solution
@@ -57,7 +58,7 @@ namespace viennashe
               typename MobilityModel>
     struct current_density_on_facet
     {
-      typedef double value_type;
+      typedef std::vector<double> value_type;
 
       current_density_on_facet(DeviceType const & device,
                                viennashe::carrier_type_id ctype,
@@ -78,18 +79,20 @@ namespace viennashe
         viennagrid_element_id *cells_begin, *cells_end;
         VIENNASHE_VIENNAGRID_CHECK(viennagrid_element_coboundary_elements(device_.mesh(), facet, cell_dim, &cells_begin, &cells_end));
 
+        value_type ret(3);
+
         if (cells_end == cells_begin + 1) // facet on surface
-          return 0;
+          return ret;
 
         viennagrid_element_id c1 = cells_begin[0];
         viennagrid_element_id c2 = cells_begin[1];
 
         if (viennashe::materials::is_insulator(device_.get_material(c1)) || viennashe::materials::is_insulator(device_.get_material(c2))) // no current into insulator
-          return 0;
+          return ret;
 
         // at least one of the two cells must be a semiconductor:
         if (!viennashe::materials::is_semiconductor(device_.get_material(c1)) && !viennashe::materials::is_semiconductor(device_.get_material(c2)))
-          return 0;
+          return ret;
 
         const double potential_center = potential_(c1);
         const double carrier_center   = viennashe::materials::is_conductor(device_.get_material(c1))
@@ -113,13 +116,14 @@ namespace viennashe
                                        ? bnd_carrier_density(c1, device_.get_lattice_temperature(c1))
                                        : carrier_.get_value(c2);
 
-        if ( carrier_outer <= 0 || carrier_center <= 0 ) return 0;
+        if ( carrier_outer <= 0 || carrier_center <= 0 ) return ret;
 
         const double polarity = (carrier_type_id_ == viennashe::ELECTRON_TYPE_ID) ? -1.0 : 1.0;
         const double charge_flux = flux_approximator(carrier_center, carrier_outer, potential_center, potential_outer, distance, mobility, T);
         const double Jmag = polarity * mobility * charge_flux;
 
-        return Jmag;
+        ret[0] = Jmag;
+        return ret;
       } // operator()
 
     private:
@@ -143,6 +147,20 @@ namespace viennashe
 
       private:
         SimulatorQuantity const & quantity_;
+    };
+
+    template <typename DeviceType, typename ValueT>
+    class macroscopic_carrier_mask_filter<DeviceType, viennashe::const_quantity<ValueT> >
+    {
+      public:
+        typedef bool    value_type;
+
+        macroscopic_carrier_mask_filter(viennashe::const_quantity<ValueT> const & quan) : quantity_(quan) {}
+
+        value_type operator()(viennagrid_element_id c) const { return true; } //TODO: Might need fixing!
+
+      private:
+        viennashe::const_quantity<ValueT> const & quantity_;
     };
 
   } // namespace detail
@@ -196,9 +214,7 @@ namespace viennashe
           {
             detail::current_density_on_facet<DeviceType, PotentialQuantityType, CarrierQuantityType, MobilityModel> edge_evaluator(device_, carrier_type_id_, potential_, carrier_, mobility_);
 
-            value_type ret(3);
-            ret[0] = edge_evaluator(cell_or_facet);
-            return ret;
+            return edge_evaluator(cell_or_facet);
           }
 
           return value_type();
@@ -294,7 +310,7 @@ namespace viennashe
         const double weighted_interface_area = facet_area * viennagrid::inner_prod(facet_unit_normal, cell_connection_normalized);
 
 
-        double contribution_from_facet = current_on_facet(*focit) * weighted_interface_area;
+        double contribution_from_facet = current_on_facet(*focit)[0] * weighted_interface_area;
         if (std::fabs(contribution_from_facet) > partial_flux_max)
           partial_flux_max = std::fabs(contribution_from_facet);
 

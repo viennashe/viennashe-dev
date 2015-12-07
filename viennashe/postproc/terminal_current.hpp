@@ -41,7 +41,7 @@ namespace viennashe
    * @param semiconductor     The semiconductor segment to which the current is flowing
    * @return The current in Ampere
    */
-  template<typename DeviceT, typename CurrentAccessorT, typename SegmentT>
+  template<typename DeviceT, typename CurrentAccessorT>
   double get_terminal_current(DeviceT const & device,
                               CurrentAccessorT const & current_accessor,
                               viennagrid_region semiconductor,
@@ -106,9 +106,9 @@ namespace viennashe
           VIENNASHE_VIENNAGRID_CHECK(viennagrid_element_coboundary_elements(device.mesh(), *focit, cell_dim, &cells_on_facet_begin, &cells_on_facet_end));
 
           if (*cit == cells_on_facet_begin[0]) //reference direction is into box
-            current += current_accessor(*focit) * weighted_interface_area;
+            current += current_accessor(*focit)[0] * weighted_interface_area;
           else  //reference direction is opposite of what we need
-            current -= current_accessor(*focit) * weighted_interface_area;
+            current -= current_accessor(*focit)[0] * weighted_interface_area;
 
           //log::info() << *eovit << std::endl;
           //log::info() << current_density_accessor( *eovit ) << " * " << effective_interface << " = " << current << std::endl;
