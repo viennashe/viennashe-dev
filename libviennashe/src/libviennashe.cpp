@@ -67,7 +67,7 @@ viennasheErrorCode viennashe_finalize(void)
  * @param ecode The error code
  * @return The argument ecode
  */
-viennasheErrorCode viennashe_error(viennasheErrorCode ecode)
+viennasheErrorCode viennashe_error_info(viennasheErrorCode ecode)
 {
   if (ecode != 0)
   {

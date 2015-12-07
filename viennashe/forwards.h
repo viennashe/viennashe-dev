@@ -57,9 +57,10 @@
     @brief Contains forward declarations and definition of small classes that must be defined at an early stage
 */
 
-//
-//  Section 1: Set up keys for ViennaData:
-//
+// Generic error value:
+typedef int viennashe_error;
+
+
 
 /** @brief The main ViennaSHE namespace. All functionality resides inside this namespace. */
 namespace viennashe

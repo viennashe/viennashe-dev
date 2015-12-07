@@ -25,9 +25,9 @@ extern "C"
 typedef int viennasheErrorCode; /*! The error code type */
 
 /** @brief Error code interpretation function */
-VIENNASHE_EXPORT viennasheErrorCode viennashe_error(viennasheErrorCode ecode);
+VIENNASHE_EXPORT viennasheErrorCode viennashe_error_info(viennasheErrorCode ecode);
 
-#define LIBVIENNASHE_CHKERR(x)  if((x)) return viennashe_error((x));
+#define LIBVIENNASHE_CHKERR(x)  if((x)) return viennashe_error_info((x));
 #define LIBVIENNASHE_NO_ERROR 0
 
 #ifdef	__cplusplus

@@ -33,4 +33,6 @@
 #include "viennashe/postproc/all.hpp"
 #include "viennashe/she/postproc/all.hpp"
 
+#include "viennashe/boxmesh/boxmesh.hpp"
+
 #endif
