@@ -162,13 +162,10 @@ void init_device(DeviceType & device,
   **/
 int main()
 {
-  /** We configure our type of device and use a simple 1D mesh for the MOS-structure **/
-  typedef viennashe::device<viennagrid_mesh>    DeviceType;
-
   std::cout << viennashe::preamble() << std::endl;
 
   // Create the device object
-  DeviceType device;
+  viennashe::device device;
 
   /** Before doing anything else, we trigger the device generation: **/
   std::cout << "* main(): Creating mesh ..." << std::endl;
@@ -230,7 +227,7 @@ int main()
       changes to the config *will not* affect the simulator object anymore.
       The simulator is then started using the member function .run()
     **/
-  viennashe::simulator<DeviceType> dd_simulator(device, dd_cfg);
+  viennashe::simulator dd_simulator(device, dd_cfg);
 
   std::cout << "* main(): Launching simulator..." << std::endl;
   // Run the DD simulation
@@ -306,7 +303,7 @@ int main()
    **/
   std::cout << "* main(): Computing SHE..." << std::endl;
 
-  viennashe::simulator<DeviceType> she_simulator(device, config);
+  viennashe::simulator she_simulator(device, config);
 
   she_simulator.set_initial_guess(viennashe::quantity::potential(), dd_simulator.potential());
   she_simulator.set_initial_guess(viennashe::quantity::electron_density(), dd_simulator.electron_density());
@@ -324,17 +321,17 @@ int main()
 
   if (config.get_electron_equation() == viennashe::EQUATION_SHE )
   {
-    viennashe::io::she_vtk_writer<DeviceType>()(device,
-                                                she_simulator.config(),
-                                                she_simulator.quantities().electron_distribution_function(),
-                                                "mos1d-dg_edf_n");
+    viennashe::io::she_vtk_writer()(device,
+                                    she_simulator.config(),
+                                    she_simulator.quantities().electron_distribution_function(),
+                                    "mos1d-dg_edf_n");
   }
   if (config.get_hole_equation() == viennashe::EQUATION_SHE)
   {
-    viennashe::io::she_vtk_writer<DeviceType>()(device,
-                                                she_simulator.config(),
-                                                she_simulator.quantities().hole_distribution_function(),
-                                                "mos1d-dg_edf_p");
+    viennashe::io::she_vtk_writer()(device,
+                                    she_simulator.config(),
+                                    she_simulator.quantities().hole_distribution_function(),
+                                    "mos1d-dg_edf_p");
   }
 
   /**   The macroscopic quantities are written to simple data files suitable for Gnuplot (http://www.gnuplot.info/) **/

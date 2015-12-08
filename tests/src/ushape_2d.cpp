@@ -68,8 +68,8 @@ void init_device(DeviceType & device)
 
 int main()
 {
-  typedef viennashe::device<viennagrid_mesh>           DeviceType;
-  typedef DeviceType::segment_type                     SegmentType;
+  typedef viennashe::device           DeviceType;
+  typedef DeviceType::segment_type    SegmentType;
 
   std::cout << viennashe::preamble() << std::endl;
 
@@ -100,7 +100,7 @@ int main()
   dd_cfg.with_holes(true);
   dd_cfg.nonlinear_solver().max_iters(300);
   dd_cfg.nonlinear_solver().damping(0.4);
-  viennashe::simulator<DeviceType> dd_simulator(device, dd_cfg);
+  viennashe::simulator dd_simulator(device, dd_cfg);
 
   std::cout << "* main(): Launching DD simulator..." << std::endl;
   dd_simulator.run();
@@ -156,7 +156,7 @@ int main()
   // Instantiate and launch the SHE simulator
   //
   std::cout << "* main(): Computing SHE..." << std::endl;
-  viennashe::simulator<DeviceType> she_simulator(device, config);
+  viennashe::simulator she_simulator(device, config);
   she_simulator.set_initial_guess(viennashe::quantity::potential(), dd_simulator.potential());
   she_simulator.set_initial_guess(viennashe::quantity::electron_density(), dd_simulator.electron_density());
   she_simulator.set_initial_guess(viennashe::quantity::hole_density(), dd_simulator.hole_density());
@@ -168,10 +168,10 @@ int main()
   std::cout << "* main(): Writing SHE result..." << std::endl;
 
   // Writes EDF to VTK file
-  viennashe::io::she_vtk_writer<DeviceType>()(device,
-                                              she_simulator.config(),
-                                              she_simulator.quantities().electron_distribution_function(),
-                                              "ushape2d_edf");
+  viennashe::io::she_vtk_writer()(device,
+                                  she_simulator.config(),
+                                  she_simulator.quantities().electron_distribution_function(),
+                                  "ushape2d_edf");
 
   viennashe::io::write_quantities_to_VTK_file(she_simulator, "ushape2d_she_quan");
 

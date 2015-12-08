@@ -37,11 +37,10 @@ namespace viennashe
   namespace she
   {
 
-    template <typename DeviceType,
-              typename TimeStepQuantitiesT,
+    template <typename TimeStepQuantitiesT,
               typename MatrixType,
               typename VectorType>
-    void assemble( DeviceType & device,
+    void assemble( viennashe::device & device,
                    TimeStepQuantitiesT & old_quantities,
                    TimeStepQuantitiesT & quantities,
                    viennashe::config const & conf,
@@ -52,9 +51,9 @@ namespace viennashe
     {
       typedef viennashe::math::sparse_matrix<double>   CouplingMatrixType;
 
-      typedef typename viennashe::she::timestep_quantities<DeviceType>::unknown_quantity_type      SpatialUnknownType;
+      typedef typename TimeStepQuantitiesT::unknown_quantity_type      SpatialUnknownType;
 
-      std::vector< scattering_base<DeviceType> * > scattering_processes;
+      std::vector< scattering_base * > scattering_processes;
 
       if (conf.with_traps())
       {
@@ -143,19 +142,19 @@ namespace viennashe
         if (conf.scattering().acoustic_phonon().enabled())
         {
           log::debug<log_assemble_all>() << "assemble(): Acoustic phonon scattering is ENABLED!" << std::endl;
-          scattering_processes.push_back(new acoustic_phonon_scattering<DeviceType>(device, conf));
+          scattering_processes.push_back(new acoustic_phonon_scattering(device, conf));
         }
 
         if (conf.scattering().optical_phonon().enabled())
         {
           log::debug<log_assemble_all>() << "assemble(): Optical phonon scattering is ENABLED!" << std::endl;
-          scattering_processes.push_back(new optical_phonon_scattering<DeviceType>(device, conf, conf.energy_spacing()));
+          scattering_processes.push_back(new optical_phonon_scattering(device, conf, conf.energy_spacing()));
         }
 
         if (conf.scattering().ionized_impurity().enabled())
         {
           log::debug<log_assemble_all>() << "assemble(): Ionized impurity scattering is ENABLED!" << std::endl;
-          scattering_processes.push_back(new ionized_impurity_scattering<DeviceType>(device, conf));
+          scattering_processes.push_back(new ionized_impurity_scattering(device, conf));
         }
 
         if (conf.scattering().impact_ionization().enabled())
@@ -166,22 +165,22 @@ namespace viennashe
           if ( ! conf.with_electrons() || conf.get_electron_equation() != viennashe::EQUATION_SHE )
             log::warn() << std::endl << "WARNING: II scattering enabled, but 'BTE for electrons' is disabled! Expect inconsistent results!" << std::endl;
 
-          scattering_processes.push_back(new impact_ionization_scattering<DeviceType>(device, conf));
+          scattering_processes.push_back(new impact_ionization_scattering(device, conf));
         }
 
         if (conf.with_traps() && conf.scattering().trapped_charge().enabled())
         {
           log::debug<log_assemble_all>() << "assemble(): Trapped charge scattering is ENABLED!" << std::endl;
-          scattering_processes.push_back(new trapped_charge_scattering<DeviceType, TimeStepQuantitiesT>(device, conf, quantities));
+          scattering_processes.push_back(new trapped_charge_scattering<TimeStepQuantitiesT>(device, conf, quantities));
         }
 
-        typedef typename viennashe::electric_field_wrapper<DeviceType, SpatialUnknownType> ElectricFieldAccessor;
+        typedef typename viennashe::electric_field_wrapper<SpatialUnknownType> ElectricFieldAccessor;
         ElectricFieldAccessor Efield(device, potential);
 
         if (conf.scattering().surface().enabled())
         {
           log::debug<log_assemble_all>() << "assemble(): Surface roughness scattering is ENABLED!" << std::endl;
-          scattering_processes.push_back(new surface_scattering<DeviceType, ElectricFieldAccessor>(device, conf, Efield));
+          scattering_processes.push_back(new surface_scattering<ElectricFieldAccessor>(device, conf, Efield));
         }
 
 

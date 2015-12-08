@@ -54,8 +54,8 @@ namespace viennashe
      * @param device        The device (includes a ViennaGrid mesh) on which simulation is carried out
      * @param quan          The SHE quantities
      */
-    template <typename DeviceType, typename SHEQuantity>
-    void lower_expansion_order_near_bandedge(DeviceType const & device, SHEQuantity & quan)
+    template <typename SHEQuantity>
+    void lower_expansion_order_near_bandedge(viennashe::device const & device, SHEQuantity & quan)
     {
       viennagrid_mesh mesh = device.mesh();
 
@@ -131,9 +131,8 @@ namespace viennashe
      * @param device        The device (includes a ViennaGrid mesh) on which simulation is carried out
      * @param quan          The SHE quantities
      */
-    template <typename DeviceType,
-              typename SHEQuantity>
-    void smooth_expansion_order(DeviceType const & device,
+    template<typename SHEQuantity>
+    void smooth_expansion_order(viennashe::device const & device,
                                 SHEQuantity  & quan)
     {
       viennagrid_mesh mesh = device.mesh();
@@ -191,10 +190,8 @@ namespace viennashe
      * @param device        The device on which simulation is carried out
      * @param quan          The SHE quantities
      */
-    template <typename DeviceType,
-              typename SHEQuantity>
-    void write_expansion_order_to_facets(DeviceType & device,
-                                        SHEQuantity  & quan)
+    template <typename SHEQuantity>
+    void write_expansion_order_to_facets(viennashe::device & device, SHEQuantity  & quan)
     {
       viennagrid_mesh mesh = device.mesh();
 
@@ -232,10 +229,9 @@ namespace viennashe
        * @param quan          The unkown SHE quantities on edges and vertices
        * @param conf          The simulator configuration
       */
-      template <typename DeviceType>
-      void distribute_expansion_orders_impl(DeviceType const & device,
-                                            viennashe::she::unknown_she_quantity<double> & quan,
-                                            viennashe::config const & conf)
+      inline void distribute_expansion_orders_impl(viennashe::device const & device,
+                                                   viennashe::she::unknown_she_quantity<double> & quan,
+                                                   viennashe::config const & conf)
       {
         viennagrid_mesh mesh = device.mesh();
 
@@ -303,10 +299,9 @@ namespace viennashe
      * @param quan          The SHE unkown quantities on edges and vertices
      * @param conf          The simulator configuration
      */
-    template <typename DeviceType>
-    void distribute_expansion_orders(DeviceType & device,
-                                     viennashe::she::unknown_she_quantity<double> & quan,
-                                     viennashe::config const & conf)
+    inline void distribute_expansion_orders(viennashe::device const & device,
+                                            viennashe::she::unknown_she_quantity<double> & quan,
+                                            viennashe::config const & conf)
     {
       detail::distribute_expansion_orders_impl(device, quan, conf);
 
@@ -321,12 +316,11 @@ namespace viennashe
       smooth_expansion_order(device, quan);
     }
 
-    template <typename DeviceType>
-    void distribute_expansion_orders(DeviceType const & device,
-                                     timestep_quantities<DeviceType> & quantities,
-                                     viennashe::config const & conf)
+    inline void distribute_expansion_orders(viennashe::device const & device,
+                                            timestep_quantities & quantities,
+                                            viennashe::config const & conf)
     {
-      typedef typename viennashe::she::timestep_quantities<DeviceType>::unknown_she_quantity_type  SHEUnknownType;
+      typedef typename viennashe::she::timestep_quantities::unknown_she_quantity_type  SHEUnknownType;
 
       SHEUnknownType & f_n = quantities.electron_distribution_function();
       SHEUnknownType & f_p = quantities.hole_distribution_function();

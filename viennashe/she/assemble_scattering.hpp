@@ -105,7 +105,6 @@ namespace viennashe
 
 
     template <typename ScatterProcessesT,
-              typename DeviceType,
               //typename TimeStepQuantitiesT,
               typename SHEQuantity,
               typename MatrixType,
@@ -113,7 +112,7 @@ namespace viennashe
               typename ElementType,
               typename CouplingMatrix>
     void assemble_scattering_operator_on_box(ScatterProcessesT const & scatter_processes,
-                                             DeviceType const & device,
+                                             viennashe::device const & device,
                                              viennashe::config const & conf,
                                              SHEQuantity const & quan,
                                              MatrixType & A, VectorType & b,
@@ -122,7 +121,7 @@ namespace viennashe
                                              CouplingMatrix const & coupling_out_scatter,
                                              bool odd_assembly)
     {
-      typedef scattering_base<DeviceType>    ScatterProcessType;
+      typedef scattering_base    ScatterProcessType;
 
       //
       // Step 1: Get standard quantities

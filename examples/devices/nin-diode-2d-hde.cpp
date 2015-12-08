@@ -109,12 +109,6 @@ void init_device(DeviceType & device)
   **/
 int main()
 {
-  /** First we define the device type including the topology to use.
-      Here we select a ViennaGrid mesh consisting of triangles.
-      See \ref manual-page-api or the ViennaGrid manual for other mesh types.
-   **/
-  typedef viennashe::device<viennagrid_mesh>        DeviceType;
-
   std::cout << viennashe::preamble() << std::endl;
 
   /** <h3>Read and Scale the Mesh</h3>
@@ -124,7 +118,7 @@ int main()
       SI units (meter). Thus, we scale the mesh by a factor of \f$ 10^{-9} \f$.
   **/
   std::cout << "* main(): Creating device..." << std::endl;
-  DeviceType device;
+  viennashe::device device;
   device.load_mesh("../examples/data/nin2d.mesh");
   device.scale(1e-8);
 
@@ -166,7 +160,7 @@ int main()
       changes to the config *will not* affect the simulator object anymore.
       The simulator is then started using the member function .run()
     **/
-  viennashe::simulator<DeviceType> dd_simulator(device, dd_cfg);
+  viennashe::simulator dd_simulator(device, dd_cfg);
 
   std::cout << "* main(): Launching DD simulator..." << std::endl;
   dd_simulator.run();
@@ -228,7 +222,7 @@ int main()
     Then, the simulation is invoked using the member function run()
    **/
   std::cout << "* main(): Computing SHE..." << std::endl;
-  viennashe::simulator<DeviceType> she_simulator(device, config);
+  viennashe::simulator she_simulator(device, config);
   she_simulator.set_initial_guess(viennashe::quantity::potential(), dd_simulator.potential());
   she_simulator.set_initial_guess(viennashe::quantity::electron_density(), dd_simulator.electron_density());
   she_simulator.set_initial_guess(viennashe::quantity::hole_density(), dd_simulator.hole_density());
@@ -241,10 +235,10 @@ int main()
   **/
   std::cout << "* main(): Writing SHE result..." << std::endl;
 
-  viennashe::io::she_vtk_writer<DeviceType>()(device,
-                                              she_simulator.config(),
-                                              she_simulator.quantities().electron_distribution_function(),
-                                              "nin2d-hde_edf");
+  viennashe::io::she_vtk_writer()(device,
+                                  she_simulator.config(),
+                                  she_simulator.quantities().electron_distribution_function(),
+                                  "nin2d-hde_edf");
 
   /** Finally we also write all macroscopic quantities (electrostatic potential, carrier concentration, temperature profile, etc.) to a single VTK file:
   **/

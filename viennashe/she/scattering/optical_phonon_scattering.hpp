@@ -41,10 +41,9 @@ namespace viennashe
     * This class provides the parameters for inelastic optical phonon scattering.
     * Parameters are a mess at the moment.
     */
-    template <typename DeviceType>
-    class optical_phonon_scattering : public scattering_base<DeviceType>
+    class optical_phonon_scattering : public scattering_base
     {
-        typedef scattering_base<DeviceType>                     base_type;
+        typedef scattering_base                     base_type;
 
       public:
         typedef typename base_type::scatter_processes_type      scatter_processes_type;
@@ -57,7 +56,7 @@ namespace viennashe
          * @param energy_grid_spacing  Spacing of the energy grid in order to map phonon energy suitably
          *
          */
-        optical_phonon_scattering(DeviceType const & device,
+        optical_phonon_scattering(viennashe::device const & device,
                                   viennashe::config const & conf,
                                   double energy_grid_spacing = 0)
           : base_type(device, conf),
@@ -110,8 +109,7 @@ namespace viennashe
          *
          * @return A vector describing all possible states. For optical phonon scattering there are two final scattering states
          */
-        template <typename ElementType>
-        scatter_processes_type get(ElementType const & elem,
+        scatter_processes_type get(viennagrid_element_id elem,
                                    double kinetic_energy,
                                    viennashe::carrier_type_id ctype) const
         {

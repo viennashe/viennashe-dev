@@ -71,10 +71,8 @@ namespace viennashe
   struct error_indicator {};
 
 
-  template <typename MeshT>
   class device;
 
-  template <typename DeviceType>
   class simulator;
 
 

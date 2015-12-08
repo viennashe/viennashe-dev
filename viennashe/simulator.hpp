@@ -654,28 +654,27 @@ namespace viennashe
    *
    * @tparam DeviceType      Type of the device the simulator is operating on
    */
-  template <typename DeviceType>
   class simulator
   {
     private:
-      typedef simulator<DeviceType>    self_type;
+      typedef simulator    self_type;
 
       typedef viennashe::math::sparse_matrix<double>    MatrixType;
       typedef std::vector<double>                       VectorType;
 
-      typedef typename DeviceType::mesh_type           MeshType;
+      typedef viennashe::device::mesh_type           MeshType;
 
     public:
 
-      typedef DeviceType device_type;
+      typedef viennashe::device device_type;
 
-      typedef viennashe::she::timestep_quantities<DeviceType>            SHETimeStepQuantitiesT;
+      typedef viennashe::she::timestep_quantities                     SHETimeStepQuantitiesType;
 
-      typedef typename SHETimeStepQuantitiesT::she_df_type                       she_df_type;
-      typedef typename SHETimeStepQuantitiesT::edf_type                             edf_type;
-      typedef typename SHETimeStepQuantitiesT::generalized_edf_type     generalized_edf_type;
+      typedef SHETimeStepQuantitiesType::she_df_type                       she_df_type;
+      typedef SHETimeStepQuantitiesType::edf_type                             edf_type;
+      typedef SHETimeStepQuantitiesType::generalized_edf_type     generalized_edf_type;
 
-      typedef typename SHETimeStepQuantitiesT::UnknownSHEQuantityType      she_quantity_type;
+      typedef SHETimeStepQuantitiesType::UnknownSHEQuantityType      she_quantity_type;
 
       typedef unknown_quantity<double>       UnknownQuantityType;
       typedef UnknownQuantityType            unknown_quantity_type;
@@ -692,9 +691,9 @@ namespace viennashe
        * @param device  The device
        * @param conf    A SHE configuation object
        */
-      simulator(DeviceType & device, viennashe::config const & conf = viennashe::config()) : p_device_(&device), config_(conf)
+      simulator(device_type & device, viennashe::config const & conf = viennashe::config()) : p_device_(&device), config_(conf)
       {
-        quantities_history_.push_back(SHETimeStepQuantitiesT());
+        quantities_history_.push_back(SHETimeStepQuantitiesType());
 
         // Step 1: Doping must be available on cells
         //setup_doping_on_vertices(device);
@@ -721,12 +720,12 @@ namespace viennashe
         // electrostatic potential:
         quantities().unknown_quantities().push_back(UnknownQuantityType(viennashe::quantity::potential(), EQUATION_POISSON_DD, cell_num));
         detail::set_unknown_for_material(device, quantities().unknown_quantities().back(), materials::checker(MATERIAL_NO_CONDUCTOR_ID));
-        detail::set_boundary_for_material(device, quantities().unknown_quantities().back(), materials::checker(MATERIAL_CONDUCTOR_ID), boundary_potential_accessor<DeviceType>(device), BOUNDARY_DIRICHLET);
-        detail::set_initial_guess(device, quantities().unknown_quantities().back(), built_in_potential_accessor<DeviceType>(device));
+        detail::set_boundary_for_material(device, quantities().unknown_quantities().back(), materials::checker(MATERIAL_CONDUCTOR_ID), boundary_potential_accessor(device), BOUNDARY_DIRICHLET);
+        detail::set_initial_guess(device, quantities().unknown_quantities().back(), built_in_potential_accessor(device));
 
         // electron and hole densities:
-        contact_carrier_density_accessor<DeviceType> contact_carrier_density_holes(device, HOLE_TYPE_ID, true);
-        contact_carrier_density_accessor<DeviceType> contact_carrier_density_electrons(device, ELECTRON_TYPE_ID, true);
+        contact_carrier_density_accessor contact_carrier_density_holes(device, HOLE_TYPE_ID, true);
+        contact_carrier_density_accessor contact_carrier_density_electrons(device, ELECTRON_TYPE_ID, true);
         quantities().unknown_quantities().push_back(UnknownQuantityType(viennashe::quantity::electron_density(), EQUATION_CONTINUITY, cell_num, 1.0));
         if (conf.with_electrons())
         {
@@ -799,7 +798,7 @@ namespace viennashe
         if (conf.with_hde())
           detail::set_unknown_for_material(device, quantities().unknown_quantities().back(), materials::checker(MATERIAL_NO_CONDUCTOR_ID));
         detail::set_boundary_for_material(device, quantities().unknown_quantities().back(), materials::checker(MATERIAL_CONDUCTOR_ID),
-                                          viennashe::lattice_temperature_accessor<DeviceType>(device), BOUNDARY_DIRICHLET);
+                                          viennashe::lattice_temperature_accessor(device), BOUNDARY_DIRICHLET);
         // initial guess already set above
 
         //
@@ -867,7 +866,7 @@ namespace viennashe
 
         double initial_residual_norm = 0;
 
-        SHETimeStepQuantitiesT transferred_quantities;
+        SHETimeStepQuantitiesType transferred_quantities;
 
         bool update_no_damping  = false;
         bool break_after_update = false;
@@ -1114,10 +1113,10 @@ namespace viennashe
 
 
       /** @brief Returns the controller object. Const version. */
-      SHETimeStepQuantitiesT const & quantities() const { return quantities_history_.back(); }
+      SHETimeStepQuantitiesType const & quantities() const { return quantities_history_.back(); }
 
       /** @brief Returns the controller object. Non-const version. */
-      SHETimeStepQuantitiesT & quantities() { return quantities_history_.back(); }
+      SHETimeStepQuantitiesType & quantities() { return quantities_history_.back(); }
 
       /** @brief Returns a wrapper for the distribution function for electrons and holes (whatever is computed by the simulator),
        *         which can be evaluated in the vertices and edges of the mesh */
@@ -1169,7 +1168,7 @@ namespace viennashe
        *
        *  @param index  Distance from first time step. 0: first timestep, 1: next timestep, etc.
        */
-      SHETimeStepQuantitiesT const & quantity_history(std::size_t index) const { return quantities_history_.at(index); }
+      SHETimeStepQuantitiesType const & quantity_history(std::size_t index) const { return quantities_history_.at(index); }
 
       std::size_t quantity_history_size() const { return quantities_history_.size(); }
 
@@ -1177,7 +1176,7 @@ namespace viennashe
       void advance_in_time()
       {
         quantities_history_.push_back(quantities());
-        detail::set_boundary_for_material(device(), quantities().get_unknown_quantity(viennashe::quantity::potential()), materials::checker(MATERIAL_CONDUCTOR_ID), boundary_potential_accessor<DeviceType>(device()), BOUNDARY_DIRICHLET);
+        detail::set_boundary_for_material(device(), quantities().get_unknown_quantity(viennashe::quantity::potential()), materials::checker(MATERIAL_CONDUCTOR_ID), boundary_potential_accessor(device()), BOUNDARY_DIRICHLET);
       }
 
       // the following is for compatibility reasons:
@@ -1188,8 +1187,8 @@ namespace viennashe
       viennashe::config const & config() const { return config_; }
       viennashe::config       & config()       { return config_; }
 
-      DeviceType const & device() const { return *p_device_; }
-      DeviceType & device() { return *p_device_; }
+      viennashe::device const & device() const { return *p_device_; }
+      viennashe::device & device() { return *p_device_; }
 
     private:
 
@@ -1524,10 +1523,10 @@ namespace viennashe
         return next_iterate;
       } */
 
-      DeviceType * p_device_;
+      viennashe::device * p_device_;
       viennashe::config config_;
 
-      std::vector<SHETimeStepQuantitiesT> quantities_history_;
+      std::vector<SHETimeStepQuantitiesType> quantities_history_;
 
   }; //simulator
 

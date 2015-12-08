@@ -39,19 +39,18 @@ namespace viennashe
 
 
   /** @brief Convenience functor for setting the doping across the device */
-  template <typename DeviceType>
   class doping_setter
   {
     public:
       typedef double value_type;
 
-      doping_setter(DeviceType & d, viennashe::carrier_type_id ctype) : device_(d), is_doping_n_(ctype == viennashe::ELECTRON_TYPE_ID) {}
+      doping_setter(viennashe::device & d, viennashe::carrier_type_id ctype) : device_(d), is_doping_n_(ctype == viennashe::ELECTRON_TYPE_ID) {}
 
       template <typename T>
       void operator()(T const & t, value_type value) const { is_doping_n_ ? device_.set_doping_n(value, t) : device_.set_doping_p(value, t); }
 
     private:
-      DeviceType & device_;
+      viennashe::device & device_;
       bool is_doping_n_;
   };
 

@@ -20,13 +20,11 @@
 
 int main()
 {
-  typedef viennashe::device<viennagrid_mesh>     DeviceType;
-
   std::cout << viennashe::preamble() << std::endl;
 
   std::cout << "* main(): Creating mesh ..." << std::endl;
 
-  DeviceType device;
+  viennashe::device device;
 
   const double len_gate  = 1e-9;
   const double cs_gate   = 0.01e-9;
@@ -82,7 +80,7 @@ int main()
   dd_cfg.quantum_correction(true);      // solve density gradient equations
   dd_cfg.with_quantum_correction(true); // apply correction potentials from density gradient
 
-  viennashe::simulator<DeviceType> dd_simulator(device, dd_cfg);
+  viennashe::simulator dd_simulator(device, dd_cfg);
 
   std::cout << "* main(): Launching simulator..." << std::endl;
 
@@ -141,7 +139,7 @@ int main()
   // Launch solver
   //
   std::cout << "* main(): Computing SHE..." << std::endl;
-  viennashe::simulator<DeviceType> she_simulator(device, config);
+  viennashe::simulator she_simulator(device, config);
   she_simulator.set_initial_guess(viennashe::quantity::potential(), dd_simulator.potential());
   she_simulator.set_initial_guess(viennashe::quantity::electron_density(), dd_simulator.electron_density());
   she_simulator.set_initial_guess(viennashe::quantity::hole_density(), dd_simulator.hole_density());

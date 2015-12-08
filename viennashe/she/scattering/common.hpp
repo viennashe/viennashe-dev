@@ -75,14 +75,13 @@ namespace viennashe
         double generation_rate_;
     };
 
-    template <typename DeviceType>
     class scattering_base
     {
       public:
         typedef std::vector<scatter_process_descriptor>   scatter_processes_type;
         typedef scatter_processes_type                    value_type;
 
-        scattering_base(DeviceType const & device, viennashe::config const & conf) : device_(device), conf_(conf) {}
+        scattering_base(viennashe::device const & device, viennashe::config const & conf) : device_(device), conf_(conf) {}
 
         virtual ~scattering_base() {}
 
@@ -93,7 +92,7 @@ namespace viennashe
         virtual scatter_process_id id() const = 0;
 
       protected:
-        DeviceType        const & device_;
+        viennashe::device const & device_;
         viennashe::config const & conf_;
     };
 

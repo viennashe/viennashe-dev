@@ -81,14 +81,14 @@
 
 struct viennashe_device_impl
 {
-  viennashe::device<viennagrid_mesh> device_;
+  viennashe::device device_;
 };
 
 struct viennashe_simulator_impl
 {
-  viennashe_simulator_impl(viennashe::device<viennagrid_mesh> dev, viennashe::config conf) : sim_(dev, conf) {}
+  viennashe_simulator_impl(viennashe::device dev, viennashe::config conf) : sim_(dev, conf) {}
 
-  viennashe::simulator<viennashe::device<viennagrid_mesh> > sim_;
+  viennashe::simulator sim_;
 };
 
 /**

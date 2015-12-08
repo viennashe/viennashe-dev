@@ -38,16 +38,15 @@ namespace viennashe
     *
     * This class provides the parameters for elastic acoustical phonon scattering.
     */
-    template <typename DeviceType>
-    class acoustic_phonon_scattering : public scattering_base<DeviceType>
+    class acoustic_phonon_scattering : public scattering_base
     {
-        typedef scattering_base<DeviceType>                     base_type;
+        typedef scattering_base                     base_type;
 
       public:
         typedef typename base_type::scatter_processes_type      scatter_processes_type;
         typedef scatter_processes_type                          value_type;
 
-        explicit acoustic_phonon_scattering(DeviceType const & device,
+        explicit acoustic_phonon_scattering(viennashe::device const & device,
                                             viennashe::config const & conf) : base_type(device, conf), params_(conf.scattering().acoustic_phonon()) { }
 
         scatter_processes_type operator()(viennagrid_element_id elem,
@@ -70,8 +69,7 @@ namespace viennashe
          *
          * @return A vector describing all possible states. For acoustic phonon scattering we use the approximation 'incoming energy equal final energy'.
          */
-        template <typename ElementType>
-        scatter_processes_type get(ElementType const & elem,
+        scatter_processes_type get(viennagrid_element_id elem,
                                    double kinetic_energy,
                                    viennashe::carrier_type_id ctype) const
         {

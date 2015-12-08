@@ -69,16 +69,15 @@ namespace viennashe
     /////////////////// VTK export ////////////////////////////
 
     /** @brief VTK writer class */
-    template<typename SHEDeviceType>
     class she_vtk_writer
     {
     protected:
 
-      typedef typename SHEDeviceType::mesh_type                      MeshType;
+      typedef typename viennashe::device::mesh_type                      MeshType;
 
       /** @brief Checks whether a certain cell in x-space is inside the conduction band or the valence band at total energy index index_H */
-      template <typename DeviceType, typename SHEQuantity>
-      bool is_valid(DeviceType const & device, SHEQuantity const & quan, viennagrid_element_type cell, std::size_t index_H)
+      template <typename SHEQuantity>
+      bool is_valid(viennashe::device const & device, SHEQuantity const & quan, viennagrid_element_type cell, std::size_t index_H)
       {
         if ( quan.get_unknown_index(cell, index_H) >= 0 && viennashe::materials::is_semiconductor(device.get_material(cell)) )
           return true;
@@ -90,8 +89,8 @@ namespace viennashe
       }
 
       /** @brief Determines the number of cells in the output mesh in (x, H)-space. */
-      template <typename DeviceType, typename SHEQuantity>
-      long get_cell_num(DeviceType const & device, SHEQuantity const & quan)
+      template <typename SHEQuantity>
+      long get_cell_num(viennashe::device const & device, SHEQuantity const & quan)
       {
 
         long total_cell_num = 0;
@@ -158,8 +157,8 @@ namespace viennashe
       }
 
       /** @brief Determines the number of vertices of the output mesh in (x, H)-space */
-      template <typename DeviceType, typename SHEQuantity>
-      long get_point_num(DeviceType const & device, SHEQuantity const & quan)
+      template <typename SHEQuantity>
+      long get_point_num(viennashe::device const & device, SHEQuantity const & quan)
       {
         long point_num = 0;
 
@@ -196,8 +195,8 @@ namespace viennashe
       }
 
       /** @brief Implementation for writing the vertex coordinates in (x, H)-space */
-      template <typename DeviceType, typename SHEQuantity>
-      void writePoints(DeviceType const & device, SHEQuantity const & quan, std::ofstream & writer)
+      template <typename SHEQuantity>
+      void writePoints(viennashe::device const & device, SHEQuantity const & quan, std::ofstream & writer)
       {
         writer << "   <Points>" << std::endl;
         writer << "    <DataArray type=\"Float32\" NumberOfComponents=\"3\" format=\"ascii\">" << std::endl;
@@ -235,8 +234,8 @@ namespace viennashe
       } //writePoints()
 
       /** @brief Implementation for writing the cells in (x, H)-space (derived from a mesh in x-space) */
-      template <typename DeviceType, typename SHEQuantity>
-      void writeCells(DeviceType const & device, SHEQuantity const & quan, std::ofstream & writer)
+      template <typename SHEQuantity>
+      void writeCells(viennashe::device const & device, SHEQuantity const & quan, std::ofstream & writer)
       {
         writer << "   <Cells> " << std::endl;
         writer << "    <DataArray type=\"Int32\" Name=\"connectivity\" format=\"ascii\">" << std::endl;
@@ -336,8 +335,8 @@ namespace viennashe
       }
 
       /** @brief Implementation for writing the data (that is usually the energy distribution function) to the vertices in (x, H)-space */
-      template <typename DeviceType, typename SHEQuantity>
-      void writePointData(DeviceType const & device,
+      template <typename SHEQuantity>
+      void writePointData(viennashe::device const & device,
                           SHEQuantity const & quan,
                           std::ofstream & writer, std::string name_in_file = "result")
       {
@@ -380,8 +379,8 @@ namespace viennashe
       };
 
       /** @brief Writes data defined on cells to file */
-      template <typename DeviceType, typename SHEQuantity>
-      void writeCellDataArray(DeviceType const & device,
+      template <typename SHEQuantity>
+      void writeCellDataArray(viennashe::device const & device,
                               viennashe::config const & conf,
                               SHEQuantity const & quan,
                               std::ofstream & writer,
@@ -470,8 +469,8 @@ namespace viennashe
       } //writeCellDataArray
 
       /** @brief Writes data defined on cells to file */
-      template <typename DeviceType, typename SHEQuantity>
-      void writeCellData(DeviceType const & device,
+      template <typename SHEQuantity>
+      void writeCellData(viennashe::device const & device,
                          viennashe::config const & conf,
                          SHEQuantity const & quan,
                          std::ofstream & writer)
@@ -500,8 +499,8 @@ namespace viennashe
         writer << "</VTKFile>" << std::endl;
       }
 
-      template <typename DeviceType, typename SegmentType, typename SHEQuantityT>
-      void write_segment(DeviceType const & device,
+      template <typename SegmentType, typename SHEQuantityT>
+      void write_segment(viennashe::device const & device,
                          SegmentType const & segment,
                          viennashe::config const & conf,
                          SHEQuantityT const & quan,
@@ -546,8 +545,8 @@ namespace viennashe
        * @param filename       Name of the file to be written to
        * @param conf           The simulator configuration
        */
-      template <typename DeviceType, typename SHEQuantityT>
-      void operator()(DeviceType const & device,
+      template <typename SHEQuantityT>
+      void operator()(viennashe::device const & device,
                       viennashe::config const & conf,
                       SHEQuantityT const & quan,
                       std::string const & filename)
@@ -631,10 +630,9 @@ namespace viennashe
      * @param filename     Name of the file to be written to
      * @param name_in_file   The quantity name to be used in the VTK file
      */
-    template <typename QuantityType,
-              typename DeviceType>
+    template <typename QuantityType>
     void write_quantity_to_VTK_file(QuantityType const & quantity,
-                                    DeviceType const & device,
+                                    viennashe::device const & device,
                                     viennagrid_dimension topologic_dimension,
                                     std::string filename,
                                     std::string name_in_file = "viennashe_quantity")
@@ -677,9 +675,9 @@ namespace viennashe
      *
      *    Custom functors may need to overload detail::extract_topology_tag if writing cell quantities (by default, unidentified quantities are assumed to be vertex-quantities)
      */
-    template <typename QuantityType, typename DeviceType>
+    template <typename QuantityType>
     void write_quantity_to_VTK_file(QuantityType const & quantity,
-                                    DeviceType const & device,
+                                    viennashe::device const & device,
                                     std::string filename,
                                     std::string name_in_file = "viennashe_quantity")
     {
@@ -691,16 +689,14 @@ namespace viennashe
 
 
     /** @brief Generic interface function for writing simulated quantities to a VTK file. */
-    template <typename DeviceType>
-    void write_quantities_to_VTK_file(viennashe::simulator<DeviceType> const & simulator_obj,
-                                      std::string filename)
+    inline void write_quantities_to_VTK_file(viennashe::simulator const & simulator_obj, std::string filename)
     {
-      typedef typename viennashe::simulator<DeviceType>               SimulatorType;
-      typedef typename DeviceType::mesh_type                          MeshType;
+      typedef typename viennashe::simulator               SimulatorType;
+      typedef typename viennashe::device::mesh_type       MeshType;
 
       typedef typename SimulatorType::unknown_quantity_type    UnknownQuantityType;
 
-      DeviceType const & device = simulator_obj.device();
+      viennashe::device const & device = simulator_obj.device();
 
       viennagrid_dimension cell_dim;
       VIENNASHE_VIENNAGRID_CHECK(viennagrid_mesh_cell_dimension_get(device.mesh(), &cell_dim));
@@ -875,8 +871,8 @@ namespace viennashe
         // lattice temperature
         if (quan.get_name() == viennashe::quantity::lattice_temperature())
         {
-          typedef typename SimulatorType::SHETimeStepQuantitiesT QuantitiesType;
-          typedef typename viennashe::hde::power_density_accessor<DeviceType, QuantitiesType> PowerDensityAccessorType;
+          typedef typename SimulatorType::SHETimeStepQuantitiesType                QuantitiesType;
+          typedef typename viennashe::hde::power_density_accessor<QuantitiesType>  PowerDensityAccessorType;
 
           PowerDensityAccessorType pdacc(device, simulator_obj.quantities(), simulator_obj.config());
 

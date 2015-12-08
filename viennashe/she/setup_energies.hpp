@@ -152,13 +152,12 @@ namespace viennashe
      * @param quantities    The quantities defined on the device
      * @param conf          The simulator configuration
      */
-    template <typename DeviceType>
-    void setup_energies(DeviceType const & device,
-                        timestep_quantities<DeviceType> & quantities,
-                        viennashe::config const & conf)
+    inline void setup_energies(viennashe::device const & device,
+                               timestep_quantities & quantities,
+                               viennashe::config const & conf)
     {
-      typedef typename viennashe::she::timestep_quantities<DeviceType>::unknown_quantity_type      SpatialUnknownType;
-      typedef typename viennashe::she::timestep_quantities<DeviceType>::unknown_she_quantity_type  SHEUnknownType;
+      typedef typename viennashe::she::timestep_quantities::unknown_quantity_type      SpatialUnknownType;
+      typedef typename viennashe::she::timestep_quantities::unknown_she_quantity_type  SHEUnknownType;
 
       SpatialUnknownType const & potential      = quantities.get_unknown_quantity(viennashe::quantity::potential());
       SpatialUnknownType const & quantum_corr_n = quantities.get_unknown_quantity(viennashe::quantity::density_gradient_electron_correction());

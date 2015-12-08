@@ -91,12 +91,12 @@ namespace libviennashe
 
     /** @brief Implements quantity_wrapper. Wraps scalar quantities, which are accessible via a
      *         device based accessor in ViennaSHE (cf. accessor.hpp) */
-    template <typename DeviceT, typename AccessorT>
+    template <typename AccessorT>
     class accessor_based_quantity_wrapper : public quantity_wrapper
     {
     public:
 
-      typedef accessor_based_quantity_wrapper<DeviceT, AccessorT> self_type;
+      typedef accessor_based_quantity_wrapper<AccessorT> self_type;
 
       /**
        * @brief CTOR.
@@ -105,7 +105,7 @@ namespace libviennashe
        * @param name The unique name of the quantity
        */
       accessor_based_quantity_wrapper(AccessorT const & acc,
-                                      DeviceT const & dev,
+                                      viennashe::device const & dev,
                                       viennagrid_dimension topo_dim,
                                       std::string name)
         : quantity_wrapper(name), dev_(dev), acc_(acc), topo_dim_(topo_dim)
@@ -160,7 +160,7 @@ namespace libviennashe
       virtual quantity_wrapper * copy() const { return new self_type(*this); }
 
     private:
-      DeviceT   const & dev_;
+      viennashe::device   const & dev_;
       AccessorT acc_;
       viennagrid_dimension topo_dim_;
     };
@@ -168,12 +168,12 @@ namespace libviennashe
     /** @brief Implements quantity_wrapper. Wraps vector valued quantities, which are accessible via a
      *         device based accessor in ViennaSHE (cf. accessor.hpp)
      */
-    template <typename DeviceT, typename AccessorT>
+    template <typename AccessorT>
     class accessor_based_array_quantity_wrapper : public quantity_wrapper
     {
     public:
 
-      typedef accessor_based_array_quantity_wrapper<DeviceT, AccessorT> self_type;
+      typedef accessor_based_array_quantity_wrapper<AccessorT> self_type;
 
       /**
        * @brief CTOR.
@@ -182,7 +182,7 @@ namespace libviennashe
        * @param name The unique name of the vector valued quantity
        */
       accessor_based_array_quantity_wrapper(AccessorT const & acc,
-                                            DeviceT const & dev,
+                                            viennashe::device const & dev,
                                             viennagrid_dimension topo_dim,
                                             std::string name)
         : quantity_wrapper(name), dev_(dev), acc_(acc)
@@ -237,7 +237,7 @@ namespace libviennashe
       virtual quantity_wrapper * copy() const { return new self_type(*this); }
 
     private:
-      DeviceT   const & dev_;
+      viennashe::device   const & dev_;
       AccessorT acc_;
       viennagrid_dimension topo_dim_;
     };

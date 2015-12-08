@@ -48,8 +48,8 @@ namespace viennashe
    * @param start_index The index offset, usefull if you have more than one unkown quantity
    * @return The first mapping index
    */
-  template <typename DeviceType, typename VertexT>
-  long create_mapping(DeviceType const & device,
+  template <typename VertexT>
+  long create_mapping(viennashe::device const & device,
                       viennashe::unknown_quantity<VertexT> & quantity,
                       long start_index = 0)
   {
@@ -91,8 +91,8 @@ namespace viennashe
      * @param conf     The simulator configuration
      * @param current_index The current index
      */
-    template <typename DeviceType, typename CellType, typename SHEQuantity>
-    void map_cell(DeviceType const & device,
+    template <typename CellType, typename SHEQuantity>
+    void map_cell(viennashe::device const & device,
                   CellType const & cell,
                   std::size_t index_H,
                   SHEQuantity & quan,
@@ -134,15 +134,15 @@ namespace viennashe
      *  Preconditions:
      *   - Even unknowns on vertices already assigned
      */
-    template <typename DeviceType, typename SHEQuantity>
-    void map_facet(DeviceType const & device,
+    template <typename SHEQuantity>
+    void map_facet(viennashe::device const & device,
                    SHEQuantity & quan,
                    viennashe::config const & conf,
                    viennagrid_element_id facet,
                    std::size_t index_H,
                    long & current_index)
     {
-      typedef typename DeviceType::mesh_type           MeshType;
+      typedef typename viennashe::device::mesh_type           MeshType;
 
       viennagrid_dimension cell_dim;
       VIENNASHE_VIENNAGRID_CHECK(viennagrid_mesh_cell_dimension_get(device.mesh(), &cell_dim));
@@ -194,8 +194,8 @@ namespace viennashe
    * @param conf          The simulator configuration
    * @param unknown_offset The first index to be assigned (allows for offsets); Nonzero value if e.g. the potential is also considered within Newton iteration
    */
-  template <typename DeviceType, typename SHEQuantity>
-  long create_even_mapping(DeviceType const & device,
+  template <typename SHEQuantity>
+  long create_even_mapping(viennashe::device const & device,
                            SHEQuantity & quan,
                            viennashe::config const & conf,
                            long unknown_offset = 0)
@@ -257,8 +257,8 @@ namespace viennashe
    * @param conf          The simulator configuration
    * @param unknown_offset The first index to be assigned (allows for offsets)
    */
-  template <typename DeviceType, typename SHEQuantity>
-  long create_odd_mapping(DeviceType const & device,
+  template <typename SHEQuantity>
+  long create_odd_mapping(viennashe::device const & device,
                           SHEQuantity & quan,
                           viennashe::config const & conf,
                           long unknown_offset = 0)  //nonzero value if e.g. the potential is also considered within Newton iteration
@@ -297,10 +297,9 @@ namespace viennashe
    * @param conf The simulator configuration
    * @return Information on the number of unknowns per quantity
    */
-  template<typename DeviceT>
-  map_info_type create_mapping(DeviceT const & device,
-                               viennashe::she::timestep_quantities<DeviceT> & quantities,
-                               viennashe::config const & conf)
+  inline map_info_type create_mapping(viennashe::device const & device,
+                                      viennashe::she::timestep_quantities & quantities,
+                                      viennashe::config const & conf)
   {
     typedef typename map_info_type::value_type::second_type   PairType;
 

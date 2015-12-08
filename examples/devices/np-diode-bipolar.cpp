@@ -122,17 +122,11 @@ void init_device(DeviceType & device)
   **/
 int main()
 {
-  /** First we define the device type including the topology to use.
-      Here we select a ViennaGrid mesh consisting of quadrilaterals.
-      See \ref manual-page-api or the ViennaGrid manual for other mesh types.
-   **/
-  typedef viennashe::device<viennagrid_mesh>                    DeviceType;
-
   std::cout << viennashe::preamble() << std::endl;
 
   /** With the device type available, we can directly instantiate an empty device object **/
   std::cout << "* main(): Creating device..." << std::endl;
-  DeviceType device;
+  viennashe::device device;
 
   /** <h3> Generate the Mesh using the built-in Mesh Generator </h3>
   To generate a suitable mesh for our nin-diode, we use the built-in 1d/2d mesh generator in ViennaSHE.
@@ -200,7 +194,7 @@ int main()
       changes to the config *will not* affect the simulator object anymore.
       The simulator is then started using the member function .run()
     **/
-  viennashe::simulator<DeviceType> dd_simulator(device, dd_cfg);
+  viennashe::simulator dd_simulator(device, dd_cfg);
 
   std::cout << "* main(): Launching simulator..." << std::endl;
   dd_simulator.run();
@@ -259,7 +253,7 @@ int main()
    **/
   std::cout << "* main(): Computing first-order SHE..." << std::endl;
 
-  viennashe::simulator<DeviceType> she_simulator(device, config);
+  viennashe::simulator she_simulator(device, config);
 
   // Use the DD solution as initial guess
   she_simulator.set_initial_guess(viennashe::quantity::potential(),        dd_simulator.potential());
@@ -274,10 +268,10 @@ int main()
   so we first write the results to a VTK file for inspection using e.g. ParaView.
   **/
   std::cout << "* main(): Writing SHE result..." << std::endl;
-  viennashe::io::she_vtk_writer<DeviceType>()(device,
-                                              she_simulator.config(),
-                                              she_simulator.quantities().electron_distribution_function(),
-                                              "np-diode-she");
+  viennashe::io::she_vtk_writer()(device,
+                                  she_simulator.config(),
+                                  she_simulator.quantities().electron_distribution_function(),
+                                  "np-diode-she");
 
   /** Moreover, we write macroscopic quantities, in particular the average trap occupancy, to a another VTK file:
   **/

@@ -47,13 +47,12 @@ namespace viennashe
   {
     /** @brief An accessor to the electric field along a given edge. Electrostatic potential required */
 
-    template <typename DeviceType,
-              typename PotentialAccessorType>
+    template <typename PotentialAccessorType>
     struct electric_field_on_facet
     {
-      typedef typename DeviceType::mesh_type MeshType;
+      typedef typename viennashe::device::mesh_type MeshType;
 
-      electric_field_on_facet(DeviceType const & device, PotentialAccessorType const & potential) : device_(device), potential_(potential) {}
+      electric_field_on_facet(viennashe::device const & device, PotentialAccessorType const & potential) : device_(device), potential_(potential) {}
 
       std::vector<double> operator()(viennagrid_element_id facet) const
       {
@@ -85,7 +84,7 @@ namespace viennashe
         return ret;
       }
       private:
-        DeviceType const & device_;
+        viennashe::device const & device_;
         PotentialAccessorType const & potential_;
 
     }; // electric_field_on_edge
@@ -93,13 +92,13 @@ namespace viennashe
   } // namespace detail
 
   /** @brief An accessor to the electric field on vertices and edges. Potential requiered */
-  template < typename DeviceType, typename PotentialAccessorType >
+  template<typename PotentialAccessorType>
   struct electric_field_wrapper
   {
   public:
     typedef std::vector<double> value_type;
 
-    electric_field_wrapper(DeviceType const & device, PotentialAccessorType const & potential) : device_(device), potential_(potential) { }
+    electric_field_wrapper(viennashe::device const & device, PotentialAccessorType const & potential) : device_(device), potential_(potential) { }
 
     std::vector<double> operator()(viennagrid_element_id cell_or_facet) const
     {
@@ -110,7 +109,7 @@ namespace viennashe
 
       if (cell_dim == element_dim) // cell provided
       {
-        typedef detail::electric_field_on_facet<DeviceType, PotentialAccessorType>  FieldOnFacetEvaluator;
+        typedef detail::electric_field_on_facet<PotentialAccessorType>  FieldOnFacetEvaluator;
 
         viennashe::materials::checker no_conductor_filter(MATERIAL_NO_CONDUCTOR_ID);
 
@@ -128,7 +127,7 @@ namespace viennashe
       }
       else if (cell_dim == element_dim + 1) // facet provided
       {
-        viennashe::detail::electric_field_on_facet<DeviceType, PotentialAccessorType> facet_eval(device_, potential_);
+        viennashe::detail::electric_field_on_facet<PotentialAccessorType> facet_eval(device_, potential_);
         return facet_eval(cell_or_facet);
       }
 
@@ -139,7 +138,7 @@ namespace viennashe
     }
 
     private:
-      DeviceType const & device_;
+      viennashe::device const & device_;
       PotentialAccessorType const & potential_;
   }; // electric_field_wrapper
 
@@ -151,13 +150,12 @@ namespace viennashe
    * @param container        The container to be filled with values
    * @tparam ContainerType   A container type, for example: std::vector or std::deque
    */
-  template <typename DeviceType,
-            typename PotentialAccessor>
-  void write_electric_field_to_quantity_field(DeviceType const & device,
+  template <typename PotentialAccessor>
+  void write_electric_field_to_quantity_field(viennashe::device const & device,
                                               PotentialAccessor const & potential,
                                               viennagrid_quantity_field field)
   {
-    electric_field_wrapper<DeviceType, PotentialAccessor> Efield(device, potential);
+    electric_field_wrapper<PotentialAccessor> Efield(device, potential);
 
     viennashe::write_macroscopic_quantity_to_quantity_field(device, Efield, field);
   }

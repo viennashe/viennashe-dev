@@ -145,7 +145,7 @@ int test_result_at_point(viennashe::carrier_type_id carrier_type,
   }
 
   // Test 2: Interpolated first-order expansion coefficients should be to zero (up to round-off):
-  viennashe::she::interpolated_she_df_wrapper<DeviceType, SHEQuantity> interpolated_she_df(device, conf, quan);
+  viennashe::she::interpolated_she_df_wrapper<SHEQuantity> interpolated_she_df(device, conf, quan);
   for (long m = -1; m <= 1; ++m)
   {
     double f_1m = interpolated_she_df(cell, kinetic_energy, 1, m, index_H);
@@ -158,7 +158,7 @@ int test_result_at_point(viennashe::carrier_type_id carrier_type,
   }
 
   // Test 3: Generalized distribution function evaluated at random angles should be the same (up to round-off)
-  viennashe::she::generalized_df_wrapper<DeviceType, SHEQuantity> generalized_df(device, conf, quan);
+  viennashe::she::generalized_df_wrapper<SHEQuantity> generalized_df(device, conf, quan);
   double gdf_val1 = generalized_df(cell, kinetic_energy, 0.123, 1.02);
   double gdf_val2 = generalized_df(cell, kinetic_energy, 0.420, 3.60);
   double gdf_val3 = generalized_df(cell, kinetic_energy, 0.360, 4.02);
@@ -177,7 +177,7 @@ int test_result_at_point(viennashe::carrier_type_id carrier_type,
   }
 
   // Test 4: Now check the same for the generalized energy distribution function wrapper:
-  viennashe::she::generalized_edf_wrapper<DeviceType, SHEQuantity> generalized_edf(conf, quan);
+  viennashe::she::generalized_edf_wrapper<SHEQuantity> generalized_edf(conf, quan);
   double edf_val1 = generalized_edf(cell, kinetic_energy);
   double edf_val2 = generalized_edf(cell, kinetic_energy);
   double edf_val3 = generalized_edf(cell, kinetic_energy);
@@ -201,7 +201,7 @@ int test_result_at_point(viennashe::carrier_type_id carrier_type,
 
 inline int simulate(double temperature)
 {
-  typedef viennashe::device<viennagrid_mesh>          DeviceType;
+  typedef viennashe::device          DeviceType;
 
   std::cout << "* main(): Creating device..." << std::endl;
   DeviceType device;
@@ -224,7 +224,7 @@ inline int simulate(double temperature)
   dd_cfg.with_holes(true);
   dd_cfg.set_hole_equation(viennashe::EQUATION_CONTINUITY);
   //dd_cfg.gummel_iters(50);
-  viennashe::simulator<DeviceType> dd_simulator(device, dd_cfg);
+  viennashe::simulator dd_simulator(device, dd_cfg);
 
   std::cout << "* main(): Launching simulator..." << std::endl;
   dd_simulator.run();
@@ -246,7 +246,7 @@ inline int simulate(double temperature)
   config.nonlinear_solver().max_iters(1);
 
   std::cout << "* main(): Computing SHE..." << std::endl;
-  viennashe::simulator<DeviceType> she_simulator(device, config);
+  viennashe::simulator she_simulator(device, config);
   she_simulator.set_initial_guess(viennashe::quantity::potential(),        dd_simulator.potential());
   she_simulator.set_initial_guess(viennashe::quantity::electron_density(), dd_simulator.electron_density());
   she_simulator.set_initial_guess(viennashe::quantity::hole_density(),     dd_simulator.hole_density());
@@ -259,10 +259,10 @@ inline int simulate(double temperature)
   std::cout << "* main(): Writing SHE result..." << std::endl;
   std::stringstream ss;
   ss << "equilibrium_resistor_" << temperature << "_edf";
-  viennashe::io::she_vtk_writer<DeviceType>()(device,
-                                              she_simulator.config(),
-                                              she_simulator.quantities().electron_distribution_function(),
-                                              ss.str());
+  viennashe::io::she_vtk_writer()(device,
+                                  she_simulator.config(),
+                                  she_simulator.quantities().electron_distribution_function(),
+                                  ss.str());
 
   //
   // check result: Must equal kinetic energy:

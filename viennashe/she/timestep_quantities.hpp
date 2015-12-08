@@ -39,11 +39,10 @@ namespace viennashe
 
 
     /** @brief The main SHE simulator controller class. Acts as an accessor for all SHE quantities needed for the simulation. */
-    template <typename DeviceType>
     class timestep_quantities
     {
-        typedef timestep_quantities<DeviceType>     self_type;
-        typedef std::vector<double>                 VectorType;
+        typedef timestep_quantities                self_type;
+        typedef std::vector<double>                VectorType;
 
         typedef std::vector<std::vector<long> >    index_vector_type;
         typedef std::vector<std::vector<double> >  trap_occupancy_type;
@@ -53,16 +52,16 @@ namespace viennashe
         typedef std::vector<double>               error_values_vector_type;
 
       public:
-        typedef DeviceType               device_type;
+        typedef viennashe::device                 device_type;
 
         typedef unknown_she_quantity<double>                  UnknownSHEQuantityType;
         typedef UnknownSHEQuantityType                        unknown_she_quantity_type;
         typedef std::deque<UnknownSHEQuantityType>            UnknownSHEQuantityListType;
         typedef const_she_quantity<double>                    ResultSHEQuantityType;
 
-        typedef viennashe::she::she_df_wrapper<DeviceType, UnknownSHEQuantityType>                       she_df_type;
-        typedef viennashe::she::edf_wrapper<DeviceType, UnknownSHEQuantityType>                             edf_type;
-        typedef viennashe::she::generalized_edf_wrapper<DeviceType, UnknownSHEQuantityType>     generalized_edf_type;
+        typedef viennashe::she::she_df_wrapper<UnknownSHEQuantityType>                       she_df_type;
+        typedef viennashe::she::edf_wrapper<UnknownSHEQuantityType>                             edf_type;
+        typedef viennashe::she::generalized_edf_wrapper<UnknownSHEQuantityType>     generalized_edf_type;
 
         typedef unknown_quantity<double>       UnknownQuantityType;
         typedef UnknownQuantityType            unknown_quantity_type;
@@ -98,10 +97,10 @@ namespace viennashe
           return cell_trap_unknown_indices_.at(viennagrid_index_from_element_id(c)).at(inner_index);
         }
 
-        void setup_trap_unkown_indices(DeviceType const & device)
+        void setup_trap_unkown_indices(device_type const & device)
         {
-          typedef typename DeviceType::trap_level_container_type     TrapContainerType;
-          typedef typename TrapContainerType::const_iterator         TrapIterator;
+          typedef device_type::trap_level_container_type    TrapContainerType;
+          typedef TrapContainerType::const_iterator         TrapIterator;
 
           long i = 0;
           viennagrid_dimension cell_dim;
@@ -208,7 +207,10 @@ namespace viennashe
         }
         UnknownSHEQuantityType       &      carrier_distribution_function(viennashe::carrier_type_id ctype)
         {
-          return static_cast<const self_type*>(this)->carrier_distribution_function(ctype); // call the const version; avoid code duplication
+          if (ctype == viennashe::ELECTRON_TYPE_ID)  return this->electron_distribution_function();
+          else if (ctype == viennashe::HOLE_TYPE_ID) return this->hole_distribution_function();
+          else throw viennashe::carrier_type_not_supported_exception("In carrier_distribution_function");
+          //return static_cast<const self_type*>(this)->carrier_distribution_function(ctype); // call the const version; avoid code duplication
         }
 
         UnknownSHEQuantityListType       & unknown_she_quantities()       { return unknown_she_quantities_; }

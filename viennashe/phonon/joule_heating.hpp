@@ -77,18 +77,18 @@ namespace viennashe
 
 
    /** @brief Power density accessor. Used to get the power density in the assembly of the heat diffusion equation */
-   template <typename DeviceType, typename QuantitiesListType>
+   template <typename QuantitiesListType>
    class power_density_accessor
    {
     public:
       typedef typename QuantitiesListType::unknown_quantity_type                quantity_type;
       typedef typename QuantitiesListType::unknown_she_quantity_type            she_quantity_type;
 
-      typedef typename viennashe::models::result_of::mobility_type<DeviceType>::type    mobility_type;
+      typedef typename viennashe::models::result_of::mobility_type::type    mobility_type;
 
       typedef double    value_type;
 
-      power_density_accessor(DeviceType const & d,
+      power_density_accessor(viennashe::device const & d,
                              QuantitiesListType const & quantities,
                              viennashe::config const & conf)
          : device_(d), conf_(conf),
@@ -141,17 +141,17 @@ namespace viennashe
       }
 
     private:
-      DeviceType         const & device_;
+      viennashe::device  const & device_;
       viennashe::config  const & conf_;
 
       mobility_type mobility_model_n_;
       mobility_type mobility_model_p_;
 
-      viennashe::current_density_wrapper<DeviceType, quantity_type, quantity_type, mobility_type> Jfield_dd_n_;
-      viennashe::current_density_wrapper<DeviceType, quantity_type, quantity_type, mobility_type> Jfield_dd_p_;
-      viennashe::she::current_density_wrapper<DeviceType, she_quantity_type>       Jfield_she_n_;
-      viennashe::she::current_density_wrapper<DeviceType, she_quantity_type>       Jfield_she_p_;
-      viennashe::electric_field_wrapper<DeviceType, quantity_type>                 Efield_;
+      viennashe::current_density_wrapper<quantity_type, quantity_type, mobility_type> Jfield_dd_n_;
+      viennashe::current_density_wrapper<quantity_type, quantity_type, mobility_type> Jfield_dd_p_;
+      viennashe::she::current_density_wrapper<she_quantity_type>       Jfield_she_n_;
+      viennashe::she::current_density_wrapper<she_quantity_type>       Jfield_she_p_;
+      viennashe::electric_field_wrapper<quantity_type>                 Efield_;
     };
 
 

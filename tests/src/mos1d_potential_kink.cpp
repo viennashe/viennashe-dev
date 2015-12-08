@@ -103,15 +103,9 @@ void init_device(DeviceType & device, double Vg_init)
 
 int main()
 {
-  typedef viennashe::device<viennagrid_mesh>     DeviceType;
-
-  //typedef viennagrid::result_of::const_cell_range<MeshType>::type     CellContainer;
-  //typedef viennagrid::result_of::iterator<CellContainer>::type        CellIterator;
-  //typedef viennagrid::result_of::const_facet_range<MeshType>::type    FacetContainer;
-
   std::cout << "* main(): Initializing device ..." << std::endl;
 
-  DeviceType device;
+  viennashe::device device;
 
   const double len_gate  = 1e-9;
   const double cs_gate   = 1e-10;
@@ -138,7 +132,7 @@ int main()
   dd_cfg.nonlinear_solver().max_iters(20);
   dd_cfg.nonlinear_solver().damping(1.0);
 
-  viennashe::simulator<DeviceType> dd_simulator(device, dd_cfg);
+  viennashe::simulator dd_simulator(device, dd_cfg);
 
   std::cout << "* main(): Launching simulator..." << std::endl;
 

@@ -44,13 +44,13 @@ namespace viennashe
     namespace detail
     {
 
-      template <typename DeviceT, typename SHEQuantityT>
+      template<typename SHEQuantityT>
       class current_on_facet_by_ref_calculator
       {
           typedef viennashe::math::sparse_matrix<double>   CouplingMatrixType;
 
         public:
-          current_on_facet_by_ref_calculator(DeviceT const & d,
+          current_on_facet_by_ref_calculator(viennashe::device const & d,
                                              viennashe::config const & conf,
                                              SHEQuantityT const & quan)
            : device_(d), conf_(conf), quan_(quan),
@@ -144,7 +144,7 @@ namespace viennashe
 
 
         private:
-          DeviceT      const & device_;
+          viennashe::device const & device_;
           viennashe::config conf_;
           SHEQuantityT const & quan_;
 
@@ -177,14 +177,13 @@ namespace viennashe
 
 
     /** @brief Accessor class providing the carrier velocity inside the device */
-    template <typename DeviceType,
-              typename SHEQuantity>
+    template <typename SHEQuantity>
     class current_density_wrapper
     {
       public:
         typedef std::vector<double>       value_type;
 
-        current_density_wrapper(DeviceType const & device,
+        current_density_wrapper(viennashe::device const & device,
                                 viennashe::config const & conf,
                                 SHEQuantity const & quan)
           : device_(device), quan_(quan), facet_evaluator_(device, conf, quan)
@@ -224,9 +223,9 @@ namespace viennashe
         }
 
       private:
-        DeviceType const & device_;
+        viennashe::device const & device_;
         SHEQuantity  quan_;
-        detail::current_on_facet_by_ref_calculator<DeviceType, SHEQuantity> facet_evaluator_; // REFERENCES quan_ and dispersion_
+        detail::current_on_facet_by_ref_calculator<SHEQuantity> facet_evaluator_; // REFERENCES quan_ and dispersion_
     };
 
 
@@ -237,13 +236,13 @@ namespace viennashe
      * @param conf             The simulator configuration
      * @param container        Container for the current density vector
      */
-    template <typename DeviceType, typename SHEQuantity>
-    void write_current_density_to_quantity_field(DeviceType const & device,
+    template <typename SHEQuantity>
+    void write_current_density_to_quantity_field(viennashe::device const & device,
                                                  viennashe::config const & conf,
                                                  SHEQuantity const & quan,
                                                  viennagrid_quantity_field field)
     {
-      current_density_wrapper<DeviceType, SHEQuantity> current_wrapper(device, conf, quan);
+      current_density_wrapper<SHEQuantity> current_wrapper(device, conf, quan);
 
       viennashe::write_macroscopic_quantity_to_quantity_field(device, current_wrapper, field);
     }
@@ -255,12 +254,12 @@ namespace viennashe
      * @param conf   The simulator configuration
      * @param quan   The SHE quantities
      */
-    template <typename DeviceT, typename SHEQuantity>
-    void check_current_conservation(DeviceT const & device,
+    template <typename SHEQuantity>
+    void check_current_conservation(viennashe::device const & device,
                                     viennashe::config const & conf,
                                     SHEQuantity const & quan)
     {
-      detail::current_on_facet_by_ref_calculator<DeviceT, SHEQuantity> current_on_facet(device, conf, quan);
+      detail::current_on_facet_by_ref_calculator<SHEQuantity> current_on_facet(device, conf, quan);
 
       viennashe::check_current_conservation(device, current_on_facet);
     }

@@ -45,14 +45,13 @@ namespace viennashe
   {
 
     /** @brief Accessor class providing the carrier velocity inside the device */
-    template <typename DeviceType,
-              typename SHEQuantity>
+    template <typename SHEQuantity>
     class carrier_velocity_wrapper
     {
       public:
         typedef std::vector<double>       value_type;
 
-        carrier_velocity_wrapper(DeviceType        const & device,
+        carrier_velocity_wrapper(viennashe::device        const & device,
                                  viennashe::config const & conf,
                                  SHEQuantity       const & quan)
           : device_(device), quan_(quan),
@@ -80,11 +79,11 @@ namespace viennashe
 
       private:
 
-        DeviceType  const & device_;
+        viennashe::device const & device_;
         SHEQuantity const & quan_;
 
-        current_density_wrapper<DeviceType, SHEQuantity> current_density_;
-        carrier_density_wrapper<SHEQuantity>             carrier_density_;
+        current_density_wrapper<SHEQuantity> current_density_;
+        carrier_density_wrapper<SHEQuantity> carrier_density_;
     };
 
 
@@ -95,13 +94,13 @@ namespace viennashe
      * @param quan             The SHE quantity (electron or hole distribution function) used for the calculation
      * @param container        The container the values should be written to
     */
-    template <typename DeviceType,typename SHEQuantity>
-    void write_carrier_velocity_to_quantity_field(DeviceType const & device,
+    template <typename SHEQuantity>
+    void write_carrier_velocity_to_quantity_field(viennashe::device const & device,
                                                   viennashe::config const & conf,
                                                   SHEQuantity const & quan,
                                                   viennagrid_quantity_field field)
     {
-      carrier_velocity_wrapper<DeviceType, SHEQuantity> velocity_wrapper(device, conf, quan);
+      carrier_velocity_wrapper<SHEQuantity> velocity_wrapper(device, conf, quan);
 
       viennashe::write_macroscopic_quantity_to_quantity_field(device, velocity_wrapper, field);
     }

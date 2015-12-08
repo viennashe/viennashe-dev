@@ -44,9 +44,8 @@ namespace viennashe
      * @param doping_n_ret Return by reference; The averaged donor doping
      * @param doping_p_ret Return by reference; The averaged acceptor doping
      */
-    template<typename DeviceType>
-    void get_dopings_from_neighboring_semiconductor_cells(DeviceType const & device, viennagrid_element_id cell,
-                                                          double * doping_n_ret, double * doping_p_ret)
+    inline void get_dopings_from_neighboring_semiconductor_cells(viennashe::device const & device, viennagrid_element_id cell,
+                                                                 double * doping_n_ret, double * doping_p_ret)
     {
       // Ensure unity doping by default
       double doping_n = 1;
@@ -101,61 +100,57 @@ namespace viennashe
   };
 
   /** @brief Returns the lattice temperature on the device */
-  template <typename DeviceType>
   class lattice_temperature_accessor
   {
     public:
       typedef double    value_type;
 
-      lattice_temperature_accessor(DeviceType const & d) : device_(d) {}
+      lattice_temperature_accessor(viennashe::device const & d) : device_(d) {}
 
       value_type operator()(viennagrid_element_id cell) const { return device_.get_lattice_temperature(cell); }
 
     private:
-      DeviceType const & device_;
+      viennashe::device const & device_;
   };
 
   /** @brief Returns the thermal potential in the device */
-  template <typename DeviceType>
   class thermal_potential_accessor
   {
     public:
       typedef double    value_type;
 
-      thermal_potential_accessor(DeviceType const & d) : device_(d) {}
+      thermal_potential_accessor(viennashe::device const & d) : device_(d) {}
 
       value_type operator()(viennagrid_element_id cell) const { return viennashe::physics::get_thermal_potential(device_.get_lattice_temperature(cell)); }
 
     private:
-      DeviceType const & device_;
+      viennashe::device const & device_;
   };
 
   /** @brief Accessor for returning the doping (donator/acceptor doping is defined in the CTOR) */
-  template <typename DeviceType>
   class doping_accessor
   {
     public:
       typedef double    value_type;
 
       /** @brief This CTOR specifies donator doping */
-      doping_accessor(DeviceType const & d, viennashe::carrier_type_id ctype) : device_(d), is_doping_n_(ctype == viennashe::ELECTRON_TYPE_ID) {}
+      doping_accessor(viennashe::device const & d, viennashe::carrier_type_id ctype) : device_(d), is_doping_n_(ctype == viennashe::ELECTRON_TYPE_ID) {}
 
       value_type operator()(viennagrid_element_id cell) const { return is_doping_n_ ? device_.get_doping_n(cell) : device_.get_doping_p(cell); }
 
     private:
-      DeviceType const & device_;
+      viennashe::device const & device_;
       bool is_doping_n_;
   };
 
 
   /** @brief Accessor for retrieving the built-in potential in the device */
-  template<typename DeviceType>
   class built_in_potential_accessor
   {
     public:
       typedef double    value_type;
 
-      built_in_potential_accessor(DeviceType const & d) : device_(d) {}
+      built_in_potential_accessor(viennashe::device const & d) : device_(d) {}
 
       value_type operator()(viennagrid_element_id cell) const
       {
@@ -187,18 +182,17 @@ namespace viennashe
       }
 
     private:
-      DeviceType const & device_;
+      viennashe::device const & device_;
   };
 
 
   /** @brief Accessor for obtaining the Dirichlet boundary condition for the Poisson equation in the device (contact-potential plus built-in potential) */
-  template<typename DeviceT>
   class boundary_potential_accessor
   {
     public:
       typedef double    value_type;
 
-      boundary_potential_accessor(DeviceT const & d) : device_(d), built_in_pot_(d) {}
+      boundary_potential_accessor(viennashe::device const & d) : device_(d), built_in_pot_(d) {}
 
       value_type operator()(viennagrid_element_id cell) const
       {
@@ -210,18 +204,17 @@ namespace viennashe
       }
 
     private:
-      DeviceT const & device_;
-      built_in_potential_accessor<DeviceT> built_in_pot_;
+      viennashe::device const & device_;
+      built_in_potential_accessor built_in_pot_;
   };
 
   /** @brief Accessor for obtaining the contact potential in the device */
-  template<typename DeviceType>
   class contact_potential_accessor
   {
     public:
       typedef double    value_type;
 
-      contact_potential_accessor(DeviceType const & d) : device_(d) {}
+      contact_potential_accessor(viennashe::device const & d) : device_(d) {}
 
       value_type operator()(viennagrid_element_id cell) const
       {
@@ -229,34 +222,32 @@ namespace viennashe
       }
 
     private:
-      DeviceType const & device_;
+      viennashe::device const & device_;
   };
 
 
   /** @brief Accessor for obtaining the permittivity in the device */
-  template<typename DeviceType>
   class permittivity_accessor
   {
     public:
       typedef double    value_type;
 
-      permittivity_accessor(DeviceType const & d) : device_(d) {}
+      permittivity_accessor(viennashe::device const & d) : device_(d) {}
 
       value_type operator()(viennagrid_element_id cell) const { return viennashe::materials::permittivity(device_.get_material(cell)); }
 
     private:
-      DeviceType const & device_;
+      viennashe::device const & device_;
   };
 
 
   /** @brief Accessor for fixed charges */
-  template<typename DeviceType>
   class fixed_charge_accessor
   {
     public:
       typedef double  value_type;
 
-      fixed_charge_accessor(DeviceType const & d) : device_(d) { }
+      fixed_charge_accessor(viennashe::device const & d) : device_(d) { }
 
       /** @brief Returns the fixed charge in As */
       value_type operator()(viennagrid_element_id cell) const
@@ -265,17 +256,16 @@ namespace viennashe
       }
 
     private:
-     DeviceType const & device_;
+     viennashe::device const & device_;
   };
 
   /** @brief Accessor to get the diffusivity. Used in the assembly of the heat diffusion equation */
-  template<typename DeviceType>
   class diffusivity_accessor
   {
   public:
     typedef double    value_type;
 
-    diffusivity_accessor(DeviceType const & d) : device_(d) {}
+    diffusivity_accessor(viennashe::device const & d) : device_(d) {}
 
     value_type operator()(viennagrid_element_id cell, double T) const
     {
@@ -284,16 +274,15 @@ namespace viennashe
     }
 
   private:
-    DeviceType const & device_;
+    viennashe::device const & device_;
  };
 
  /** @brief Returns the carrier density at contacts modelled as thermal baths (used by DD and SHE) */
-  template<typename DeviceType>
   struct contact_carrier_density_accessor
   {
     typedef double value_type;
 
-    contact_carrier_density_accessor(DeviceType const & d, viennashe::carrier_type_id ctype, bool doping_bnd = false)
+    contact_carrier_density_accessor(viennashe::device const & d, viennashe::carrier_type_id ctype, bool doping_bnd = false)
      : device_(d), carrier_type_id_(ctype), doping_bnd_(doping_bnd) { }
 
     value_type operator()(viennagrid_element_id cell) const
@@ -335,7 +324,7 @@ namespace viennashe
     }
 
     private:
-      DeviceType const & device_;
+      viennashe::device const & device_;
       viennashe::carrier_type_id carrier_type_id_;
       bool doping_bnd_;
   };

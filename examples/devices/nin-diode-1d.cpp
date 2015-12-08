@@ -110,7 +110,7 @@ int main()
       In one dimension there is no other element type available, while in
       two and three spatial dimensions one can choose from triangles, quadrilaterals, etc.
   **/
-  typedef viennashe::device<viennagrid_mesh>            DeviceType;
+  typedef viennashe::device            DeviceType;
 
   std::cout << viennashe::preamble() << std::endl;
 
@@ -190,7 +190,7 @@ int main()
       changes to the config *will not* affect the simulator object anymore.
       The simulator is then started using the member function .run()
     **/
-  viennashe::simulator<DeviceType> dd_simulator(device, dd_cfg);
+  viennashe::simulator dd_simulator(device, dd_cfg);
 
   std::cout << "* main(): Launching simulator..." << std::endl;
   dd_simulator.run();
@@ -251,7 +251,7 @@ int main()
     Then, the simulation is invoked using the member function .run()
    **/
   std::cout << "* main(): Computing SHE..." << std::endl;
-  viennashe::simulator<DeviceType> she_simulator(device, config);
+  viennashe::simulator she_simulator(device, config);
 
   // Use DD solution as an initial guess
   she_simulator.set_initial_guess(viennashe::quantity::potential(), dd_simulator.potential());
@@ -267,10 +267,10 @@ int main()
   **/
   std::cout << "* main(): Writing SHE result..." << std::endl;
 
-  viennashe::io::she_vtk_writer<DeviceType>()(device,
-                                              she_simulator.config(),
-                                              she_simulator.quantities().electron_distribution_function(),
-                                              "nin1d_edf");
+  viennashe::io::she_vtk_writer()(device,
+                                  she_simulator.config(),
+                                  she_simulator.quantities().electron_distribution_function(),
+                                  "nin1d_edf");
 
   /** In addition, we write all macroscopic quantities such as carrier concentrations to a VTK file:
   **/
@@ -282,7 +282,7 @@ int main()
   viennashe::io::gnuplot_edf_writer gedfwriter;
 
   // Helper type returning the generalized energy distribution function:
-  typedef viennashe::she::generalized_edf_wrapper<DeviceType, viennashe::simulator<DeviceType>::she_quantity_type> EDFWrapperType;
+  typedef viennashe::she::generalized_edf_wrapper<viennashe::simulator::she_quantity_type> EDFWrapperType;
 
   // Write the generalized EDF to a plain text file
   gedfwriter(device,

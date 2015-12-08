@@ -52,14 +52,13 @@ namespace viennashe
      * @param quan    The unknown SHE quantities on edges and vertices
      * @param conf    The simulator configuration
      */
-    template <typename DeviceType>
-    void write_boundary_conditions(DeviceType const & device,
-                                   viennashe::she::unknown_she_quantity<double> & quan,
-                                   viennashe::config const & conf)
+    inline void write_boundary_conditions(viennashe::device const & device,
+                                          viennashe::she::unknown_she_quantity<double> & quan,
+                                          viennashe::config const & conf)
     {
       viennagrid_mesh mesh = device.mesh();
 
-      viennashe::contact_carrier_density_accessor<DeviceType> bnd_carrier_density(device, quan.get_carrier_type_id());
+      viennashe::contact_carrier_density_accessor bnd_carrier_density(device, quan.get_carrier_type_id());
 
       const double kB = viennashe::physics::constants::kB;
       viennashe::config::dispersion_relation_type dispersion = conf.dispersion_relation(quan.get_carrier_type_id());
@@ -132,12 +131,11 @@ namespace viennashe
     } // write_boundary_conditions())
 
 
-    template <typename DeviceType>
-    void write_boundary_conditions(DeviceType const & device,
-                                   timestep_quantities<DeviceType> & quantities,
-                                   viennashe::config const & conf)
+    inline void write_boundary_conditions(viennashe::device const & device,
+                                          timestep_quantities & quantities,
+                                          viennashe::config const & conf)
     {
-      typedef typename viennashe::she::timestep_quantities<DeviceType>::unknown_she_quantity_type  SHEUnknownType;
+      typedef typename viennashe::she::timestep_quantities::unknown_she_quantity_type  SHEUnknownType;
 
       SHEUnknownType & f_n = quantities.electron_distribution_function();
       SHEUnknownType & f_p = quantities.hole_distribution_function();

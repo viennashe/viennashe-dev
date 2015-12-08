@@ -98,16 +98,10 @@ void init_device(DeviceType & device, double vcc)
   **/
 int main()
 {
-  /** We configure our device type using a simple 1D mesh consisting of lines.
-      In one dimension there is no other element type available, while in
-      two and three spatial dimensions one can choose from triangles, quadrilaterals, etc.
-  **/
-  typedef viennashe::device<viennagrid_mesh>    DeviceType;
-
   std::cout << viennashe::preamble() << std::endl;
 
   /** With the device type available, we can directly instantiate an empty device object **/
-  DeviceType device;
+  viennashe::device device;
 
 
   /** <h3> Generate the Mesh using the built-in Mesh Generator </h3>
@@ -166,7 +160,7 @@ int main()
       changes to the config *will not* affect the simulator object anymore.
       The simulator is then started using the member function .run()
     **/
-  viennashe::simulator<DeviceType> dd_simulator(device, dd_cfg);
+  viennashe::simulator dd_simulator(device, dd_cfg);
 
   std::cout << "* main(): Launching simulator..." << std::endl;
   dd_simulator.run();
@@ -227,7 +221,7 @@ int main()
     Then, the simulation is invoked using the member function .run()
    **/
   std::cout << "* main(): Computing SHE (electrons only) ..." << std::endl;
-  viennashe::simulator<DeviceType> she_simulator(device, config);
+  viennashe::simulator she_simulator(device, config);
 
   she_simulator.set_initial_guess(viennashe::quantity::potential(),        dd_simulator.potential());
   she_simulator.set_initial_guess(viennashe::quantity::electron_density(), dd_simulator.electron_density());
@@ -246,8 +240,8 @@ int main()
   edfwriter(device, viennashe::util::any_filter(), she_simulator.edf(viennashe::ELECTRON_TYPE_ID), "resistor_edf.dat");
 
   /** Also write the current density and the electron density: **/
-  typedef viennashe::simulator<DeviceType>::she_quantity_type she_quan_type;
-  viennashe::she::current_density_wrapper<DeviceType, she_quan_type> Jn(device, config,
+  typedef viennashe::simulator::she_quantity_type she_quan_type;
+  viennashe::she::current_density_wrapper<she_quan_type> Jn(device, config,
                 she_simulator.quantities().electron_distribution_function());
 
   viennashe::io::write_cell_quantity_for_gnuplot(Jn, device, "resistor_Jn.dat");
@@ -278,7 +272,7 @@ int main()
     Just as before, the simulator object is instantiated by passing the device and the configuration to the constructor.
     The potential as well as carrier concentrations are taken from the previous first-order SHE simulation:
    **/
-  viennashe::simulator<DeviceType> she_simulator_ee(device, config);
+  viennashe::simulator she_simulator_ee(device, config);
 
   she_simulator_ee.set_initial_guess(viennashe::quantity::potential(),        she_simulator.potential());
   she_simulator_ee.set_initial_guess(viennashe::quantity::electron_density(), she_simulator.electron_density());

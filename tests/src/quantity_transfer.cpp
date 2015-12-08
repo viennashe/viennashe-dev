@@ -174,10 +174,9 @@ int test(DeviceType const & device, std::string output_filename)
 
 int main()
 {
-  typedef viennashe::device<viennagrid_mesh>      DeviceType;
-
   std::cout << "* main(): Testing mesh in 1d..." << std::endl;
-  DeviceType device1d;
+  viennashe::device device1d;
+
   viennashe::util::device_generation_config generator_params;
   generator_params.add_segment(0.0,  1e-6, 30);  //start at x=0, length 1e-6, 30 points
   device1d.generate_mesh(generator_params);
@@ -188,7 +187,7 @@ int main()
 
 
   std::cout << "* main(): Testing mesh in 2d..." << std::endl;
-  DeviceType device2d;
+  viennashe::device device2d;
   device2d.load_mesh("../../examples/data/nin2d.mesh");
 
   if (test(device2d, "quantity_transfer_2d") != EXIT_SUCCESS)
@@ -196,7 +195,7 @@ int main()
 
 
   std::cout << "* main(): Testing mesh in 3d..." << std::endl;
-  DeviceType device3d;
+  viennashe::device device3d;
   device3d.load_mesh("../../examples/data/half-trigate57656.mesh");
 
   if (test(device3d, "quantity_transfer_3d") != EXIT_SUCCESS)

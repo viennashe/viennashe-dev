@@ -41,8 +41,8 @@ namespace viennashe
    * @param semiconductor     The semiconductor segment to which the current is flowing
    * @return The current in Ampere
    */
-  template<typename DeviceT, typename CurrentAccessorT>
-  double get_terminal_current(DeviceT const & device,
+  template<typename CurrentAccessorT>
+  double get_terminal_current(viennashe::device const & device,
                               CurrentAccessorT const & current_accessor,
                               viennagrid_region semiconductor,
                               viennagrid_region terminal)
@@ -128,8 +128,8 @@ namespace viennashe
    * @param semiconductor  The semiconductor segment to which the current is flowing
    * @return The current in Ampere
    */
-  template<typename DeviceT, typename SegmentT>
-  double get_terminal_current(DeviceT const & device,
+  template<typename SegmentT>
+  double get_terminal_current(viennashe::device const & device,
                               viennashe::config const & conf,
                               viennashe::she::unknown_she_quantity<double> const & quan,
                               SegmentT const & semiconductor,
@@ -138,7 +138,7 @@ namespace viennashe
   {
     typedef viennashe::she::unknown_she_quantity<double>  SHEQuantityType;
 
-    viennashe::she::current_density_wrapper<DeviceT, SHEQuantityType> current_wrapper(device, conf, quan);
+    viennashe::she::current_density_wrapper<SHEQuantityType> current_wrapper(device, conf, quan);
     return get_terminal_current(device, current_wrapper, semiconductor, terminal);
   }
 
@@ -154,12 +154,11 @@ namespace viennashe
    * @param conductor The conductor segment adjacent to the semiconductor
    * @return The current in Ampere
    */
-  template < typename DeviceType,
-             typename PotentialAccessor,
-             typename AccessorTypeCarrier,
-             typename MobilityModel,
-             typename SegmentType >
-  double get_terminal_current(DeviceType const & device,
+  template<typename PotentialAccessor,
+           typename AccessorTypeCarrier,
+           typename MobilityModel,
+           typename SegmentType >
+  double get_terminal_current(viennashe::device const & device,
                               viennashe::carrier_type_id ctype,
                               PotentialAccessor const & potential,
                               AccessorTypeCarrier const & carrier,
@@ -167,7 +166,7 @@ namespace viennashe
                               SegmentType const & semi,
                               SegmentType const & conductor)
   {
-    viennashe::current_density_wrapper<DeviceType, PotentialAccessor, AccessorTypeCarrier, MobilityModel> Jfield(device, ctype, potential, carrier, mobility_model);
+    viennashe::current_density_wrapper<PotentialAccessor, AccessorTypeCarrier, MobilityModel> Jfield(device, ctype, potential, carrier, mobility_model);
     return viennashe::get_terminal_current(device, Jfield, semi, conductor);
   }
 

@@ -174,16 +174,15 @@ namespace viennashe
      * @param writer The writer
      * @param name   The name of the current density in the file
      */
-    template <typename DeviceType,
-              typename SHEQuantity,
+    template <typename SHEQuantity,
               typename WriterType>
-    void add_current_density_to_writer(DeviceType const & device,
+    void add_current_density_to_writer(viennashe::device const & device,
                                        viennashe::config const & conf,
                                        SHEQuantity const & quan,
                                        WriterType & writer,
                                        std::string name)
     {
-      viennashe::she::current_density_wrapper<DeviceType, SHEQuantity> current_wrapper(device, conf, quan);
+      viennashe::she::current_density_wrapper<SHEQuantity> current_wrapper(device, conf, quan);
       // quantity IS GOING TO BE COPIED!
       viennashe::io::add_macroscopic_quantity_to_writer(current_wrapper, writer, name);
     }
@@ -198,12 +197,11 @@ namespace viennashe
      * @param writer The writer
      * @param name The name of the current density in the file
     */
-    template <typename DeviceType,
-              typename PotentialQuantityType,
+    template <typename PotentialQuantityType,
               typename CarrierQuantityType,
               typename MobilityModel,
               typename WriterType>
-    void add_current_density_to_writer(DeviceType const & device,
+    void add_current_density_to_writer(viennashe::device const & device,
                                        PotentialQuantityType const & potential,
                                        CarrierQuantityType   const & carrier,
                                        viennashe::carrier_type_id ctype,
@@ -211,7 +209,7 @@ namespace viennashe
                                        WriterType & writer,
                                        std::string name)
     {
-      typedef typename viennashe::current_density_wrapper<DeviceType, PotentialQuantityType,
+      typedef typename viennashe::current_density_wrapper<PotentialQuantityType,
                                                           CarrierQuantityType, MobilityModel>  current_density_type;
       current_density_type Jfield(device, ctype, potential, carrier, mobility_model);
       // quantity IS GOING TO BE COPIED!

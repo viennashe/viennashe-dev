@@ -145,8 +145,6 @@ int main()
       Here we select a ViennaGrid mesh consisting of tetrahedra.
       See \ref manual-page-api or the ViennaGrid manual for other mesh types.
    **/
-  typedef viennashe::device<viennagrid_mesh> DeviceType;
-
   std::cout << viennashe::preamble() << std::endl;
 
   /** <h3>Read and Scale the Mesh</h3>
@@ -156,7 +154,7 @@ int main()
       SI units (meter). Thus, we scale the mesh by a factor of \f$ 10^{-9} \f$.
   **/
   std::cout << "* main(): Creating and scaling device..." << std::endl;
-  DeviceType device;
+  viennashe::device  device;
   try
   {
     device.load_mesh("../examples/data/half-trigate57656.mesh");
@@ -232,8 +230,8 @@ int main()
       The simulator is then started using the member function .run()
     **/
   std::cout << "* main(): Creating and launching DD simulator..." << std::endl;
-  viennashe::simulator<DeviceType> dd_simulator(device,   // the device created before
-                                                dd_cfg);  // the configuration
+  viennashe::simulator dd_simulator(device,   // the device created before
+                                    dd_cfg);  // the configuration
   dd_simulator.run();
 
   /** <h4>Write DD Simulation Output</h4>
@@ -292,7 +290,7 @@ int main()
     Then, the simulation is invoked using the member function run()
    **/
   std::cout << "* main(): Computing first-order SHE (requires about 5 GB RAM)..." << std::endl;
-  viennashe::simulator<DeviceType> she_simulator(device, config);
+  viennashe::simulator she_simulator(device, config);
 
   she_simulator.set_initial_guess(viennashe::quantity::potential(),        dd_simulator.potential());
   she_simulator.set_initial_guess(viennashe::quantity::electron_density(), dd_simulator.electron_density());

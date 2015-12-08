@@ -115,10 +115,10 @@ namespace viennashe
     * @param new_quantities   The timestep_quantities used for the upcoming simulation, which is filled with the interpolated old values
     * @param old_quantities   The timestep_quantities used for obtaining the old values from another grid (same grid in (x, H)-space, but other potential profile)
     */
-    template <typename DeviceType>
-    void transfer_to_new_h_space(DeviceType const & device,
-                                 viennashe::she::timestep_quantities<DeviceType> const & old_quantities,
-                                 viennashe::she::timestep_quantities<DeviceType> & new_quantities,
+    inline
+    void transfer_to_new_h_space(viennashe::device const & device,
+                                 viennashe::she::timestep_quantities const & old_quantities,
+                                 viennashe::she::timestep_quantities & new_quantities,
                                  viennashe::config const & conf)
     {
       typedef she::unknown_she_quantity<double>     SHEQuantity;
@@ -136,8 +136,8 @@ namespace viennashe
         viennashe::she::carrier_density_wrapper<SHEQuantity> old_density_wrapper(conf, old_quan);
         viennashe::she::carrier_density_wrapper<SHEQuantity> new_density_wrapper(conf, new_quan);
 
-        viennashe::she::detail::current_on_facet_by_ref_calculator<DeviceType, SHEQuantity> old_edge_evaluator(device, conf, old_quan);
-        viennashe::she::detail::current_on_facet_by_ref_calculator<DeviceType, SHEQuantity> new_edge_evaluator(device, conf, new_quan);
+        viennashe::she::detail::current_on_facet_by_ref_calculator<SHEQuantity> old_edge_evaluator(device, conf, old_quan);
+        viennashe::she::detail::current_on_facet_by_ref_calculator<SHEQuantity> new_edge_evaluator(device, conf, new_quan);
 
         //
         // Step 1: transfer solution on vertices

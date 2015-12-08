@@ -102,7 +102,7 @@ namespace viennashe
      * @tparam DeviceType      The device type on which to evaluate the distribution function
      * @tparam VectorType      Vector type used for the SHE result vector.
      */
-    template <typename DeviceType, typename SHEQuantityT>
+    template <typename SHEQuantityT>
     class she_df_wrapper
     {
       private:
@@ -268,7 +268,7 @@ namespace viennashe
      * @tparam DeviceType      The device type on which to evaluate the distribution function
      * @tparam VectorType      Vector type used for the SHE result vector.
      */
-    template <typename DeviceType, typename SHEQuantityT>
+    template <typename SHEQuantityT>
     class interpolated_she_df_wrapper
     {
       public:
@@ -278,7 +278,7 @@ namespace viennashe
         typedef typename viennashe::config::dispersion_relation_type      dispersion_relation_type;
         typedef SHEQuantityT she_quantity_type;
 
-        interpolated_she_df_wrapper(DeviceType const & device,
+        interpolated_she_df_wrapper(viennashe::device const & device,
                                     viennashe::config const & conf,
                                     SHEQuantityT const & quan)
           : device_(device),      //Note: Reference to device is required for ViennaGrid co-boundary operations
@@ -349,8 +349,8 @@ namespace viennashe
           return 0;
         }
 
-        DeviceType const & device_;
-        she_df_wrapper<DeviceType, SHEQuantityT>  she_df_;
+        viennashe::device const & device_;
+        she_df_wrapper<SHEQuantityT>  she_df_;
     };
 
 
@@ -362,7 +362,7 @@ namespace viennashe
      * @tparam DeviceType      The device type on which to evaluate the distribution function
      * @tparam VectorType      Vector type used for the SHE result vector.
      */
-    template <typename DeviceType, typename SHEQuantityT>
+    template <typename SHEQuantityT>
     class df_wrapper
     {
       private:
@@ -373,7 +373,7 @@ namespace viennashe
         typedef typename viennashe::config::dispersion_relation_type      dispersion_relation_type;
         typedef SHEQuantityT she_quantity_type;
 
-        df_wrapper(DeviceType const & device,
+        df_wrapper(viennashe::device const & device,
                    viennashe::config const & conf,
                    SHEQuantityT const & quan)
         : //she_unknown_(quan),
@@ -425,7 +425,7 @@ namespace viennashe
         }
 
         //UnknownSHEType she_unknown_; // TODO: fix
-        interpolated_she_df_wrapper<DeviceType, SHEQuantityT>  interpolated_she_df_;
+        interpolated_she_df_wrapper<SHEQuantityT>  interpolated_she_df_;
     };
 
 
@@ -436,7 +436,7 @@ namespace viennashe
      * @tparam DeviceType      The device type on which to evaluate the distribution function
      * @tparam VectorType      Vector type used for the SHE result vector.
      */
-    template <typename DeviceType, typename SHEQuantityT>
+    template <typename SHEQuantityT>
     class generalized_df_wrapper
     {
       private:
@@ -447,7 +447,7 @@ namespace viennashe
         typedef typename viennashe::config::dispersion_relation_type      dispersion_relation_type;
         typedef SHEQuantityT she_quantity_type;
 
-        generalized_df_wrapper(DeviceType const & device,
+        generalized_df_wrapper(viennashe::device const & device,
                                viennashe::config const & conf,
                                SHEQuantityT const & quan) : dispersion_(conf.dispersion_relation(quan.get_carrier_type_id())), df_(device, conf, quan) {}
 
@@ -475,7 +475,7 @@ namespace viennashe
 
       private:
         dispersion_relation_type      dispersion_;
-        df_wrapper<DeviceType, SHEQuantityT>   df_;
+        df_wrapper<SHEQuantityT>   df_;
     };
 
 
@@ -492,7 +492,7 @@ namespace viennashe
      * @tparam DeviceType      The device type on which to evaluate the distribution function
      * @tparam VectorType      Vector type used for the SHE result vector.
      */
-    template <typename DeviceType, typename SHEQuantityT>
+    template <typename SHEQuantityT>
     class edf_wrapper
     {
       private:
@@ -532,8 +532,8 @@ namespace viennashe
 
 
       private:
-        she_df_wrapper<DeviceType, SHEQuantityT>  she_df_;
-        viennashe::math::SphericalHarmonic         Y_00_;
+        she_df_wrapper<SHEQuantityT>         she_df_;
+        viennashe::math::SphericalHarmonic   Y_00_;
     };
 
 
@@ -542,7 +542,7 @@ namespace viennashe
      * @tparam DeviceType      The device type on which to evaluate the distribution function
      * @tparam VectorType      Vector type used for the SHE result vector.
      */
-    template <typename DeviceType, typename SHEQuantityT>
+    template <typename SHEQuantityT>
     class generalized_edf_wrapper
     {
       private:
@@ -582,8 +582,8 @@ namespace viennashe
 
 
       private:
-        dispersion_relation_type      dispersion_;
-        edf_wrapper<DeviceType, SHEQuantityT>  edf_;
+        dispersion_relation_type   dispersion_;
+        edf_wrapper<SHEQuantityT>  edf_;
     };
 
 

@@ -40,16 +40,15 @@ namespace viennashe
     *
     * This class provides the parameters for ionized impurity scattering.
     */
-    template <typename DeviceType>
-    class ionized_impurity_scattering : public scattering_base<DeviceType>
+    class ionized_impurity_scattering : public scattering_base
     {
-        typedef scattering_base<DeviceType>                     base_type;
+        typedef scattering_base                     base_type;
 
       public:
         typedef typename base_type::scatter_processes_type      scatter_processes_type;
         typedef scatter_processes_type                          value_type;
 
-        explicit ionized_impurity_scattering(DeviceType const & device,
+        explicit ionized_impurity_scattering(viennashe::device const & device,
                                              viennashe::config const & conf) : base_type(device, conf), params_(conf.scattering().ionized_impurity()) {  }
 
         scatter_processes_type operator()(viennagrid_element_id elem,
@@ -71,8 +70,7 @@ namespace viennashe
          *
          * @return A vector describing all possible states. For ionized_impurity_scattering we use the approximation 'incoming energy equal final energy'.
          */
-        template <typename ElementType>
-        scatter_processes_type get(ElementType const & elem,
+        scatter_processes_type get(viennagrid_element_id elem,
                                    double kinetic_energy,
                                    viennashe::carrier_type_id ctype) const
         {
@@ -88,8 +86,7 @@ namespace viennashe
         }
 
 
-        template <typename ElementType>
-        double getScatteringRate(ElementType const & elem,
+        double getScatteringRate(viennagrid_element_id elem,
                                  double kinetic_energy,
                                  viennashe::carrier_type_id ctype) const
         {

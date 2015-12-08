@@ -128,13 +128,11 @@ void init_device(DeviceType & device, double TL_left, double TL_right)
 
 int main()
 {
-  typedef viennashe::device<viennagrid_mesh>    DeviceType;
-
   std::cout << viennashe::preamble() << std::endl;
 
   std::cout << "* main(): Creating mesh ..." << std::endl;
 
-  DeviceType device;
+  viennashe::device device;
 
   const double len_gate  = 1e-9;
   const double cs_gate   = 0.01e-9;
@@ -165,7 +163,7 @@ int main()
   dd_cfg.nonlinear_solver().max_iters(30);
   dd_cfg.nonlinear_solver().damping(0.8);
 
-  viennashe::simulator<DeviceType> simulator(device, dd_cfg);
+  viennashe::simulator simulator(device, dd_cfg);
 
   std::cout << "* main(): Running simulation ..." << std::endl;
 

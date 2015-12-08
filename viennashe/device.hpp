@@ -31,9 +31,6 @@
 
 #include "viennashe/trap_level.hpp"
 
-#include "viennashe/accessors.hpp"
-#include "viennashe/setters.hpp"
-
 /** @file  viennashe/device.hpp
     @brief Contains the definition of a device class independent of the actual macroscopic model to be solved.
 */
@@ -42,11 +39,10 @@ namespace viennashe
 {
 
   /** @brief Defines the physical properties of a device, e.g. doping */
-  template<typename MeshT>
   class device
   {
   public:
-    typedef MeshT                           mesh_type;
+    typedef viennagrid_mesh                 mesh_type;
     typedef viennagrid_region               segment_type;
     typedef viennagrid_region_id            segment_id_type;
 
@@ -94,8 +90,8 @@ namespace viennashe
     }
 
     /** @brief Returns the underlying mesh */
-    MeshT const & mesh() const { return mesh_; }
-    MeshT       & mesh()       { return mesh_; }
+    mesh_type const & mesh() const { return mesh_; }
+    mesh_type       & mesh()       { return mesh_; }
 
     segment_type segment(segment_id_type seg_id)
     {
@@ -358,7 +354,7 @@ namespace viennashe
     /** @brief Adds a trap (density, energy) to the whole device */
     void add_trap_level(trap_level_type trap)
     {
-      add_trap_level_on_complex(trap, mesh_);
+      add_trap_level_on_complex(trap, NULL);
     }
 
     /** @brief Returns all the trap levels defined for the provided cell */
@@ -560,7 +556,7 @@ protected:
       }
     }
 
-    MeshT             mesh_;
+    mesh_type             mesh_;
 
     // device data:
     std::vector<double>   cell_doping_n_;

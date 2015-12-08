@@ -44,16 +44,16 @@ namespace viennashe
      *
      *  Calculates surface scattering based on an estimate of the wave-function of the carriers using the electric field
      */
-    template <typename DeviceType, typename ElectricFieldAccessor>
-    class surface_scattering : public scattering_base<DeviceType>
+    template <typename ElectricFieldAccessor>
+    class surface_scattering : public scattering_base
     {
-        typedef scattering_base<DeviceType>                     base_type;
+        typedef scattering_base                     base_type;
 
       public:
         typedef typename base_type::scatter_processes_type      scatter_processes_type;
         typedef scatter_processes_type                          value_type;
 
-      explicit surface_scattering(DeviceType const & device,
+      explicit surface_scattering(viennashe::device const & device,
                                   viennashe::config const & conf,
                                   ElectricFieldAccessor const & Efield)
        : base_type(device, conf), params_(conf.scattering().surface()), _Efield(Efield) { }
@@ -77,8 +77,7 @@ namespace viennashe
        *
        * @return A vector describing all possible states. For ionized_impurity_scattering we use the approximation 'incoming energy equal final energy'.
        */
-      template <typename ElementType>
-      scatter_processes_type get(ElementType const & elem,
+      scatter_processes_type get(viennagrid_element_id elem,
                                  double kinetic_energy,
                                  viennashe::carrier_type_id ctype) const
       {
@@ -93,8 +92,7 @@ namespace viennashe
       }
 
 
-      template <typename ElementType>
-      double getScatteringRate(ElementType const & elem,
+      double getScatteringRate(viennagrid_element_id elem,
                                double kinetic_energy,
                                viennashe::carrier_type_id ctype) const
       {

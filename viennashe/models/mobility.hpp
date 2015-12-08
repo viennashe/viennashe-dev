@@ -29,10 +29,9 @@ namespace viennashe
     namespace result_of
     {
       /** @brief Compiletime mobility-type getter */
-      template < typename DeviceType >
       struct mobility_type
       {
-        typedef typename viennashe::models::dd::mobility<DeviceType> type;
+        typedef typename viennashe::models::dd::mobility type;
       };
 
     } // result_of
@@ -43,12 +42,11 @@ namespace viennashe
      * @param params The mobility model parameters
      * @return A viennashe::models::dd::mobility model
      */
-    template < typename DeviceType >
-    viennashe::models::dd::mobility<DeviceType>
-      create_mobility_model(DeviceType const & device,
+    inline viennashe::models::dd::mobility
+      create_mobility_model(viennashe::device const & device,
                             viennashe::models::dd::mobility_paramters const & params)
     {
-      return viennashe::models::dd::mobility<DeviceType>(device, params);
+      return viennashe::models::dd::mobility(device, params);
     }
 
     /**
@@ -57,8 +55,7 @@ namespace viennashe
      * @param mu The mobility you like the model to yield
      * @return A viennashe::models::dd::mobility model, where all submodels have been disabled
      */
-    template < typename DeviceType >
-    viennashe::models::dd::mobility<DeviceType> create_constant_mobility_model(DeviceType const & device, double mu)
+    inline viennashe::models::dd::mobility create_constant_mobility_model(viennashe::device const & device, double mu)
     {
       viennashe::models::dd::mobility_paramters params;
       params.mu0 = mu;
@@ -67,7 +64,7 @@ namespace viennashe
       params.impurity.enabled = false;
       params.surface.enabled  = false;
 
-      return viennashe::models::dd::mobility<DeviceType>(device, params);
+      return viennashe::models::dd::mobility(device, params);
     }
 
 

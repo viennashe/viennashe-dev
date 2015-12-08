@@ -37,7 +37,7 @@ namespace viennashe
   {
 
     /** @brief Accessor class providing the average expansion order inside the device */
-    template <typename DeviceType, typename SHEQuantity>
+    template <typename SHEQuantity>
     class average_expansion_order_wrapper
     {
       public:
@@ -50,8 +50,7 @@ namespace viennashe
                                                              energy_start_(energy_start),
                                                              energy_end_(energy_end) {}
 
-        template <typename CellType>
-        std::vector<value_type> operator()(CellType const & cell) const
+        std::vector<value_type> operator()(viennagrid_element_id cell) const
         {
           double sum_order = 0;   //summation of all expansion orders
           long num_energies = 0;  //no of energy points considered
@@ -86,14 +85,14 @@ namespace viennashe
      * @param energy_start   (Optional) Lower bound for the kinetic energy (in eV) range to be considered for the averaging the SHE order
      * @param energy_end     (Optional) Upper bound for the kinetic energy (in eV) range to be considered for the averaging the SHE order
      */
-    template <typename DeviceType, typename SHEQuantity>
-    void write_average_expansion_order_to_container(DeviceType const & device,
+    template <typename SHEQuantity>
+    void write_average_expansion_order_to_container(viennashe::device const & device,
                                                     SHEQuantity const & quan,
                                                     viennagrid_quantity_field field,
                                                     double energy_start = 0.0,
                                                     double energy_end = 1.0)
     {
-      average_expansion_order_wrapper<DeviceType, SHEQuantity> wrapper(quan, energy_start, energy_end);
+      average_expansion_order_wrapper<SHEQuantity> wrapper(quan, energy_start, energy_end);
 
       viennashe::write_macroscopic_quantity_to_quantity_field(device, wrapper, field);
     }

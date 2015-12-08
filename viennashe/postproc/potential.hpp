@@ -34,10 +34,9 @@ namespace viennashe
    * @param container        The container to be filled with values
    * @tparam ContainerType   A container type, for example: std::vector or std::deque
    */
-  template <typename DeviceType,
-            typename PotentialAccessor,
+  template <typename PotentialAccessor,
             typename ContainerType>
-  void write_potential_to_quantity_field(DeviceType const & device,
+  void write_potential_to_quantity_field(viennashe::device const & device,
                                          PotentialAccessor const & pot,
                                          viennagrid_quantity_field field)
   {

@@ -121,7 +121,7 @@ namespace viennashe
      * @param f_np The SHE solution (dummy if not used)
      * @return The requested carrier concentration
      */
-    template <typename DeviceType, typename CellType, typename SpatialUnknownT, typename SHEUnknownT>
+    template <typename CellType, typename SpatialUnknownT, typename SHEUnknownT>
     double get_carrier_density_for_poisson(viennashe::config const & conf,
                                            CellType          const & cell,
                                            SpatialUnknownT   const & np_density,
@@ -157,19 +157,18 @@ namespace viennashe
    * @param A           The system matrix
    * @param b           The right hand side
    */
-  template <typename DeviceType,
-            typename MatrixType,
-            typename VectorType>
-  void assemble_poisson(DeviceType const & device,
-                        viennashe::she::timestep_quantities<DeviceType> const & quantities,
+  template<typename MatrixType,
+           typename VectorType>
+  void assemble_poisson(viennashe::device const & device,
+                        viennashe::she::timestep_quantities const & quantities,
                         viennashe::config const & conf,
                         MatrixType & A,
                         VectorType & b)
   {
-    typedef typename DeviceType::mesh_type           MeshType;
+    typedef typename viennashe::device::mesh_type           MeshType;
 
-    typedef typename viennashe::she::timestep_quantities<DeviceType>::unknown_quantity_type      SpatialUnknownType;
-    typedef typename viennashe::she::timestep_quantities<DeviceType>::unknown_she_quantity_type  SHEUnknownType;
+    typedef typename viennashe::she::timestep_quantities::unknown_quantity_type      SpatialUnknownType;
+    typedef typename viennashe::she::timestep_quantities::unknown_she_quantity_type  SHEUnknownType;
 
     //
     // Poisson equation:  + eps * laplace psi - |q| * (n - p - doping) = 0
@@ -182,8 +181,8 @@ namespace viennashe
     bool with_full_newton = (conf.nonlinear_solver().id() == viennashe::solvers::nonlinear_solver_ids::newton_nonlinear_solver);
 
     // Set up filters:
-    permittivity_accessor<DeviceType>              permittivity(device);
-    fixed_charge_accessor<DeviceType>              fixed_charge(device);
+    permittivity_accessor     permittivity(device);
+    fixed_charge_accessor     fixed_charge(device);
 
     // Quantity lookup:
     SpatialUnknownType const & potential = quantities.get_unknown_quantity(viennashe::quantity::potential());
@@ -278,8 +277,8 @@ namespace viennashe
       double cell_volume;
       VIENNASHE_VIENNAGRID_CHECK(viennagrid_element_volume(mesh, *cit, &cell_volume));
 
-      const double value_n = detail::get_carrier_density_for_poisson<DeviceType>(conf, *cit, n_density, f_n);
-      const double value_p = detail::get_carrier_density_for_poisson<DeviceType>(conf, *cit, p_density, f_p);
+      const double value_n = detail::get_carrier_density_for_poisson(conf, *cit, n_density, f_n);
+      const double value_p = detail::get_carrier_density_for_poisson(conf, *cit, p_density, f_p);
 
       //
       // Gummel-Damping:  extra volume term q * (n + p) / V_T
@@ -319,7 +318,7 @@ namespace viennashe
       if (conf.with_traps() && conf.with_trap_selfconsistency()
            && viennashe::materials::is_semiconductor(device.get_material(*cit))) // *Trapped* charges
       {
-        typedef typename DeviceType::trap_level_container_type     trap_level_container_type;
+        typedef typename viennashe::device::trap_level_container_type     trap_level_container_type;
         typedef typename trap_level_container_type::const_iterator trap_iterator_type;
 
         trap_level_container_type const & traps = device.get_trap_levels(*cit);
@@ -358,18 +357,17 @@ namespace viennashe
    * @param A The system matrix
    * @param b The right hand side (RHS)
    */
-  template <typename DeviceType,
-            typename MatrixType,
+  template <typename MatrixType,
             typename VectorType>
-  void assemble_dd(DeviceType const & device,
-                   viennashe::she::timestep_quantities<DeviceType> const & quantities,
+  void assemble_dd(viennashe::device const & device,
+                   viennashe::she::timestep_quantities const & quantities,
                    viennashe::config const & conf,
                    carrier_type_id ctype,
                    MatrixType & A,
                    VectorType & b)
   {
-    typedef typename viennashe::she::timestep_quantities<DeviceType>::unknown_quantity_type      SpatialUnknownType;
-    typedef typename viennashe::contact_carrier_density_accessor<DeviceType> bnd_carrier_accessor;
+    typedef typename viennashe::she::timestep_quantities::unknown_quantity_type    SpatialUnknownType;
+    typedef typename viennashe::contact_carrier_density_accessor                   bnd_carrier_accessor;
 
     viennagrid_mesh mesh = device.mesh();
 
@@ -573,15 +571,15 @@ namespace viennashe
    * @param b The right hand side (RHS)
    *
    */
-  template <typename DeviceType, typename MatrixType, typename VectorType>
-  void assemble_density_gradient(DeviceType const & device,
-                                 viennashe::she::timestep_quantities<DeviceType> const & quantities,
+  template <typename MatrixType, typename VectorType>
+  void assemble_density_gradient(viennashe::device const & device,
+                                 viennashe::she::timestep_quantities const & quantities,
                                  viennashe::config const & conf,
                                  carrier_type_id ctype,
                                  MatrixType & A,
                                  VectorType & b)
   {
-    typedef typename viennashe::she::timestep_quantities<DeviceType>::unknown_quantity_type      SpatialUnknownType;
+    typedef typename viennashe::she::timestep_quantities::unknown_quantity_type      SpatialUnknownType;
 
     viennagrid_mesh mesh = device.mesh();
 
@@ -727,17 +725,17 @@ namespace viennashe
    * @param A The system matrix
    * @param b The right hand side
    */
-  template <typename DeviceType, typename MatrixType, typename VectorType>
-  void assemble_heat(DeviceType const & device,
-                     viennashe::she::timestep_quantities<DeviceType> const & quantities,
+  template <typename MatrixType, typename VectorType>
+  void assemble_heat(viennashe::device const & device,
+                     viennashe::she::timestep_quantities const & quantities,
                      viennashe::config const & conf,
                      MatrixType & A,
                      VectorType & b)
   {
-    typedef typename viennashe::she::timestep_quantities<DeviceType> QuantitiesType;
-    typedef typename DeviceType::mesh_type           MeshType;
+    typedef typename viennashe::she::timestep_quantities    QuantitiesType;
+    typedef typename viennashe::device::mesh_type           MeshType;
 
-    typedef typename viennashe::she::timestep_quantities<DeviceType>::unknown_quantity_type      SpatialUnknownType;
+    typedef typename viennashe::she::timestep_quantities::unknown_quantity_type      SpatialUnknownType;
 
     //
     // Poisson equation for heat:  + kappa * laplace T = Q
@@ -745,8 +743,8 @@ namespace viennashe
 
     MeshType const & mesh = device.mesh();
 
-    diffusivity_accessor<DeviceType>  diffusivity(device);
-    viennashe::hde::power_density_accessor<DeviceType, QuantitiesType> quan_power_density(device, quantities, conf);
+    diffusivity_accessor  diffusivity(device);
+    viennashe::hde::power_density_accessor<QuantitiesType> quan_power_density(device, quantities, conf);
 
     // Quantity lookup:
     SpatialUnknownType const & lattice_temperature = quantities.get_unknown_quantity(viennashe::quantity::lattice_temperature());
@@ -861,12 +859,11 @@ namespace viennashe
    * @throw Throws an assembly_not_implemented_exception if no assembly routine for quan can be found.
    *
    */
-  template <typename DeviceType,
-            typename TimeStepQuantitiesT,
+  template <typename TimeStepQuantitiesT,
             typename VertexT,
             typename MatrixType,
             typename VectorType>
-  void assemble( DeviceType const & device,
+  void assemble( viennashe::device const & device,
                  TimeStepQuantitiesT & quantities,
                  viennashe::config const & conf,
                  viennashe::unknown_quantity<VertexT> const & quan,

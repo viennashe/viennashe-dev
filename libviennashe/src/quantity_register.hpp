@@ -46,26 +46,25 @@ namespace libviennashe
      * @param mobility_model A suitable mobility model (DD mobility)
      * @param name A unique name for the new quantity
      */
-    template <typename DeviceType,
-      typename PotentialQuantityType,
-      typename CarrierQuantityType,
-      typename MobilityModel>
+    template <typename PotentialQuantityType,
+              typename CarrierQuantityType,
+              typename MobilityModel>
     void register_DD_current_density(quan_register_internal & reg,
-                                     DeviceType const & device,
+                                     viennashe::device const & device,
                                      PotentialQuantityType const & potential,
                                      CarrierQuantityType const & carrier,
                                      viennashe::carrier_type_id ctype,
                                      MobilityModel const & mobility_model, std::string name)
     {
-      typedef typename DeviceType::mesh_type  MeshType;
-      typedef typename viennashe::current_density_wrapper<DeviceType, PotentialQuantityType, CarrierQuantityType, MobilityModel> CurrentDensityAccessorType;
+      typedef typename viennashe::device::mesh_type  MeshType;
+      typedef typename viennashe::current_density_wrapper<PotentialQuantityType, CarrierQuantityType, MobilityModel> CurrentDensityAccessorType;
 
       CurrentDensityAccessorType Jfield(device, ctype, potential, carrier, mobility_model);
 
       viennagrid_dimension cell_dim;
       viennagrid_mesh_cell_dimension_get(device.mesh(), &cell_dim);
 
-      libviennashe::quantity::accessor_based_array_quantity_wrapper<DeviceType, CurrentDensityAccessorType> quan_cell(Jfield, device, cell_dim, name);
+      libviennashe::quantity::accessor_based_array_quantity_wrapper<CurrentDensityAccessorType> quan_cell(Jfield, device, cell_dim, name);
       reg.cell_based.register_quan(quan_cell);
     }
 
@@ -77,21 +76,21 @@ namespace libviennashe
      * @param conf The simulator configuration
      * @param name A unique name for the new quantity
      */
-    template <typename DeviceType, typename SHEQuanT, typename ConfigT>
+    template <typename SHEQuanT, typename ConfigT>
       void register_SHE_current_density(quan_register_internal & reg,
-                                        DeviceType const & device,
+                                        viennashe::device const & device,
                                         SHEQuanT const & shequan,
                                         ConfigT const & conf, std::string name)
     {
-      typedef typename DeviceType::mesh_type  MeshType;
-      typedef typename viennashe::she::current_density_wrapper<DeviceType, SHEQuanT> CurrentDensityAccessorType;
+      typedef typename viennashe::device::mesh_type  MeshType;
+      typedef typename viennashe::she::current_density_wrapper<SHEQuanT> CurrentDensityAccessorType;
 
       CurrentDensityAccessorType Jfield(device, conf, shequan);
 
       viennagrid_dimension cell_dim;
       viennagrid_mesh_cell_dimension_get(device.mesh(), &cell_dim);
 
-      libviennashe::quantity::accessor_based_array_quantity_wrapper<DeviceType, CurrentDensityAccessorType> quan_cell(Jfield, device, cell_dim, name);
+      libviennashe::quantity::accessor_based_array_quantity_wrapper<CurrentDensityAccessorType> quan_cell(Jfield, device, cell_dim, name);
       reg.cell_based.register_quan(quan_cell);
     }
 
@@ -103,20 +102,20 @@ namespace libviennashe
      * @param conf The configuration of the simulator used for computing the quantity shequan
      * @param name A unique name for the new quantity
      */
-    template <typename DeviceType, typename SHEQuanT, typename ConfigT>
+    template <typename SHEQuanT, typename ConfigT>
     void register_average_velocity(quan_register_internal & reg,
-                                   DeviceType const & device,
+                                   viennashe::device const & device,
                                    SHEQuanT const & shequan,
                                    ConfigT const & conf, std::string name)
     {
-      typedef typename DeviceType::mesh_type  MeshType;
-      typedef typename viennashe::she::carrier_velocity_wrapper<DeviceType, SHEQuanT> AccessorType;
+      typedef typename viennashe::device::mesh_type  MeshType;
+      typedef typename viennashe::she::carrier_velocity_wrapper<SHEQuanT> AccessorType;
 
       viennagrid_dimension cell_dim;
       viennagrid_mesh_cell_dimension_get(device.mesh(), &cell_dim);
 
       AccessorType acc(device, conf, shequan);
-      libviennashe::quantity::accessor_based_array_quantity_wrapper<DeviceType, AccessorType> quan_cell(acc, device, cell_dim, name);
+      libviennashe::quantity::accessor_based_array_quantity_wrapper<AccessorType> quan_cell(acc, device, cell_dim, name);
       reg.cell_based.register_quan(quan_cell);
     }
 
@@ -128,13 +127,13 @@ namespace libviennashe
      * @param conf The simulator configuration
      * @param name A unique name for the new quantity
      */
-    template <typename DeviceType, typename SHEQuanT, typename ConfigT>
+    template <typename SHEQuanT, typename ConfigT>
     void register_average_energy(quan_register_internal & reg,
-                                 DeviceType const & device,
+                                 viennashe::device const & device,
                                  SHEQuanT const & shequan,
                                  ConfigT const & conf, std::string name)
     {
-      typedef typename DeviceType::mesh_type  MeshType;
+      typedef typename viennashe::device::mesh_type  MeshType;
       typedef typename viennashe::she::carrier_energy_wrapper<SHEQuanT> AccessorType;
 
       AccessorType acc(conf, shequan);
@@ -142,7 +141,7 @@ namespace libviennashe
       viennagrid_dimension cell_dim;
       viennagrid_mesh_cell_dimension_get(device.mesh(), &cell_dim);
 
-      libviennashe::quantity::accessor_based_quantity_wrapper<DeviceType, AccessorType> quan_cell(acc, device, cell_dim, name);
+      libviennashe::quantity::accessor_based_quantity_wrapper<AccessorType> quan_cell(acc, device, cell_dim, name);
       reg.cell_based.register_quan(quan_cell);
     }
 
@@ -153,21 +152,21 @@ namespace libviennashe
      * @param shequan An accessor to the SHE quantities
      * @param name A unique name for the new quantity
      */
-    template <typename DeviceType, typename SHEQuanT>
+    template <typename SHEQuanT>
     void register_average_expansion_order(quan_register_internal & reg,
-                                 DeviceType const & device,
-                                 SHEQuanT const & shequan,
-                                 std::string name)
+                                          viennashe::device const & device,
+                                          SHEQuanT const & shequan,
+                                          std::string name)
     {
-      typedef typename DeviceType::mesh_type  MeshType;
-      typedef typename viennashe::she::average_expansion_order_wrapper<DeviceType, SHEQuanT> AccessorType;
+      typedef typename viennashe::device::mesh_type  MeshType;
+      typedef typename viennashe::she::average_expansion_order_wrapper<SHEQuanT> AccessorType;
 
       AccessorType acc(shequan, 0.0, 1.0);
 
       viennagrid_dimension cell_dim;
       viennagrid_mesh_cell_dimension_get(device.mesh(), &cell_dim);
 
-      libviennashe::quantity::accessor_based_quantity_wrapper<DeviceType, AccessorType> quan_cell(acc, device, cell_dim, name);
+      libviennashe::quantity::accessor_based_quantity_wrapper<AccessorType> quan_cell(acc, device, cell_dim, name);
       reg.cell_based.register_quan(quan_cell);
     }
 
@@ -180,18 +179,18 @@ namespace libviennashe
      * @param potential An accessor to the electrostatic potential
      * @param quantity_name A unique name for the new quantity
      */
-    template <typename DeviceType, typename PotentialAccessor>
-    void register_electric_field(quan_register_internal & reg, DeviceType const & device,
+    template <typename PotentialAccessor>
+    void register_electric_field(quan_register_internal & reg, viennashe::device const & device,
                                  PotentialAccessor const & potential, std::string quantity_name)
     {
-      typedef typename DeviceType::mesh_type  MeshType;
-      typedef typename viennashe::electric_field_wrapper<DeviceType, PotentialAccessor> ElectricFieldAccessorType;
+      typedef typename viennashe::device::mesh_type  MeshType;
+      typedef typename viennashe::electric_field_wrapper<PotentialAccessor> ElectricFieldAccessorType;
       ElectricFieldAccessorType Efield(device, potential);
 
       viennagrid_dimension cell_dim;
       viennagrid_mesh_cell_dimension_get(device.mesh(), &cell_dim);
 
-      libviennashe::quantity::accessor_based_array_quantity_wrapper<DeviceType, ElectricFieldAccessorType> quan_vertex(Efield, device, cell_dim, quantity_name);
+      libviennashe::quantity::accessor_based_array_quantity_wrapper<ElectricFieldAccessorType> quan_vertex(Efield, device, cell_dim, quantity_name);
       reg.cell_based.register_quan(quan_vertex);
     }
 
@@ -202,13 +201,12 @@ namespace libviennashe
      * @param potential An accessor to the elec. potential
      * @param quantity_name A unique name for the new quantity
      */
-    template <typename DeviceType, typename PotentialAccessor>
-    void register_electric_flux(quan_register_internal & reg, DeviceType const & device,
-      PotentialAccessor const & potential, std::string quantity_name)
+    template <typename PotentialAccessor>
+    void register_electric_flux(quan_register_internal & reg, viennashe::device const & device, PotentialAccessor const & potential, std::string quantity_name)
     {
-      typedef typename DeviceType::mesh_type  MeshType;
-      typedef typename viennashe::electric_flux_wrapper<DeviceType, PotentialAccessor> AccessorType;
-      typedef typename libviennashe::quantity::accessor_based_array_quantity_wrapper<DeviceType, AccessorType> WrapperType;
+      typedef typename viennashe::device::mesh_type  MeshType;
+      typedef typename viennashe::electric_flux_wrapper<PotentialAccessor> AccessorType;
+      typedef typename libviennashe::quantity::accessor_based_array_quantity_wrapper<AccessorType> WrapperType;
 
       viennagrid_dimension cell_dim;
       viennagrid_mesh_cell_dimension_get(device.mesh(), &cell_dim);
@@ -243,23 +241,23 @@ namespace libviennashe
     viennagrid_mesh_cell_dimension_get(device.mesh(), &cell_dim);
 
     // Doping
-    viennashe::doping_accessor<DeviceType> doping_n(device, viennashe::ELECTRON_TYPE_ID);
-    viennashe::doping_accessor<DeviceType> doping_p(device, viennashe::HOLE_TYPE_ID);
-    quantity::accessor_based_quantity_wrapper<DeviceType, viennashe::doping_accessor<DeviceType> > doping_n_vertex(doping_n, device, cell_dim, "Donor doping concentration");
-    quantity::accessor_based_quantity_wrapper<DeviceType, viennashe::doping_accessor<DeviceType> > doping_p_vertex(doping_p, device, cell_dim, "Acceptor doping concentration");
+    viennashe::doping_accessor doping_n(device, viennashe::ELECTRON_TYPE_ID);
+    viennashe::doping_accessor doping_p(device, viennashe::HOLE_TYPE_ID);
+    quantity::accessor_based_quantity_wrapper<viennashe::doping_accessor> doping_n_vertex(doping_n, device, cell_dim, "Donor doping concentration");
+    quantity::accessor_based_quantity_wrapper<viennashe::doping_accessor> doping_p_vertex(doping_p, device, cell_dim, "Acceptor doping concentration");
     reg.cell_based.register_quan(doping_n_vertex);
     reg.cell_based.register_quan(doping_p_vertex);
 
     // Built-in Potential
-    viennashe::built_in_potential_accessor<DeviceType> builtinpot(device);
-    quantity::accessor_based_quantity_wrapper<DeviceType, viennashe::built_in_potential_accessor<DeviceType> > builtinpot_vt(builtinpot, device, cell_dim, "Built-In potential");
+    viennashe::built_in_potential_accessor builtinpot(device);
+    quantity::accessor_based_quantity_wrapper<viennashe::built_in_potential_accessor> builtinpot_vt(builtinpot, device, cell_dim, "Built-In potential");
     reg.cell_based.register_quan(builtinpot_vt);
 
     //
     // Register basic quantities
     //
 
-    typedef typename quantity::accessor_based_quantity_wrapper<DeviceType, ResultQuantityType> ResultQuantityWrapperType;
+    typedef typename quantity::accessor_based_quantity_wrapper<ResultQuantityType> ResultQuantityWrapperType;
 
     // Potential
     ResultQuantityWrapperType pot_vertex(sim.potential(), device, cell_dim, viennashe::quantity::potential());
@@ -285,8 +283,8 @@ namespace libviennashe
     ResultQuantityWrapperType hde_lat_temp(sim.quantities().lattice_temperature(), device, cell_dim, viennashe::quantity::lattice_temperature());
     reg.cell_based.register_quan(hde_lat_temp);
 
-    viennashe::lattice_temperature_accessor<DeviceType> lattice_temp(device);
-    quantity::accessor_based_quantity_wrapper<DeviceType, viennashe::lattice_temperature_accessor<DeviceType> >
+    viennashe::lattice_temperature_accessor lattice_temp(device);
+    quantity::accessor_based_quantity_wrapper<viennashe::lattice_temperature_accessor>
         tl_dev(lattice_temp, device, cell_dim, "Transport lattice temperature");
     reg.cell_based.register_quan(tl_dev);
 

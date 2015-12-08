@@ -44,16 +44,15 @@ namespace viennashe
     /** @brief Trapped charge scattering process
     *
     */
-    template <typename DeviceType>
-    class fixed_charge_scattering : public scattering_base<DeviceType>
+    class fixed_charge_scattering : public scattering_base
     {
-        typedef scattering_base<DeviceType>                     base_type;
+        typedef scattering_base                   base_type;
 
       public:
         typedef typename base_type::scatter_processes_type      scatter_processes_type;
         typedef scatter_processes_type                          value_type;
 
-        explicit fixed_charge_scattering(DeviceType const & device,
+        explicit fixed_charge_scattering(viennashe::device const & device,
                                          viennashe::config const & conf)
         : base_type(device, conf), params_(conf.scattering().fixed_charge())
         { }
@@ -109,7 +108,7 @@ namespace viennashe
         double get_charged_trap_density(viennagrid_element_id vt,
                                         viennashe::carrier_type_id) const
         {
-          const fixed_charge_accessor<DeviceType> fixed_charge(base_type::device_);
+          const fixed_charge_accessor fixed_charge(base_type::device_);
           return fixed_charge(vt);
         }
 

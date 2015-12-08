@@ -133,8 +133,8 @@ int main()
       Here we select a ViennaGrid mesh consisting of triangles.
       See \ref manual-page-api or the ViennaGrid manual for other mesh types.
    **/
-  typedef viennashe::device<viennagrid_mesh>       DeviceType;
-  typedef DeviceType::segment_type                 SegmentType;
+  typedef viennashe::device         DeviceType;
+  typedef DeviceType::segment_type  SegmentType;
 
   std::cout << viennashe::preamble() << std::endl;
 
@@ -192,7 +192,7 @@ int main()
       changes to the config *will not* affect the simulator object anymore.
       The simulator is then started using the member function .run()
     **/
-  viennashe::simulator<DeviceType> dd_simulator(device, dd_cfg);
+  viennashe::simulator dd_simulator(device, dd_cfg);
   std::cout << "* main(): Launching DD simulator..." << std::endl;
   dd_simulator.run();
 
@@ -277,14 +277,14 @@ int main()
     Then, the simulation is invoked using the member function run()
    **/
   std::cout << "* main(): Computing first-order SHE..." << std::endl;
-  viennashe::simulator<DeviceType> she_simulator(device, config);
+  viennashe::simulator she_simulator(device, config);
 
   // Set the previous DD solution as an initial guess
-  she_simulator.set_initial_guess(viennashe::quantity::potential(), dd_simulator.potential());
-  she_simulator.set_initial_guess(viennashe::quantity::electron_density(), dd_simulator.electron_density());
-  she_simulator.set_initial_guess(viennashe::quantity::hole_density(), dd_simulator.hole_density());
+  she_simulator.set_initial_guess(viennashe::quantity::potential(),                            dd_simulator.potential());
+  she_simulator.set_initial_guess(viennashe::quantity::electron_density(),                     dd_simulator.electron_density());
+  she_simulator.set_initial_guess(viennashe::quantity::hole_density(),                         dd_simulator.hole_density());
   she_simulator.set_initial_guess(viennashe::quantity::density_gradient_electron_correction(), dd_simulator.dg_pot_n());
-  she_simulator.set_initial_guess(viennashe::quantity::density_gradient_hole_correction(), dd_simulator.dg_pot_p());
+  she_simulator.set_initial_guess(viennashe::quantity::density_gradient_hole_correction(),     dd_simulator.dg_pot_p());
 
   // Run the simulation
   she_simulator.run();
@@ -295,10 +295,10 @@ int main()
   The solutions computed in this augmented space are written to a VTK file for inspection using e.g. ParaView:
   **/
   std::cout << "* main(): Writing energy distribution function from first-order SHE result..." << std::endl;
-  viennashe::io::she_vtk_writer<DeviceType>()(device,
-                                              she_simulator.config(),
-                                              she_simulator.quantities().electron_distribution_function(),
-                                              "mosfet-dg_she_edf");
+  viennashe::io::she_vtk_writer()(device,
+                                  she_simulator.config(),
+                                  she_simulator.quantities().electron_distribution_function(),
+                                  "mosfet-dg_she_edf");
 
   /** Here we also write the potential and electron density to separate VTK files: **/
   viennashe::io::write_quantity_to_VTK_file(she_simulator.potential(), device, "mosfet-dg_she_potential");

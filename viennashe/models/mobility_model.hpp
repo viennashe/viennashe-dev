@@ -207,13 +207,12 @@ namespace viennashe
 
       /** @brief The main mobility model. Contains submodels for lattice, impurity, field and
        *         surface scattering related mobility changes. For drift diffusion only! */
-      template < typename DeviceType >
       class mobility
       {
       public:
         typedef double value_type;
 
-        mobility(const DeviceType & device, const mobility_paramters & params) : _params(params), _device(device) { }
+        mobility(viennashe::device const & device, const mobility_paramters & params) : _params(params), _device(device) { }
 
         mobility(const mobility & mob) : _params(mob._params), _device(mob._device) { }
 
@@ -290,7 +289,7 @@ namespace viennashe
 
       private:
         const mobility_paramters  _params;
-        const DeviceType & _device;
+        viennashe::device const & _device;
 
       }; // mobility
 

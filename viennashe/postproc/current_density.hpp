@@ -52,15 +52,14 @@ namespace viennashe
   namespace detail
   {
     /** @brief An accessor to the current density (drift diffusion only!) on edges */
-    template <typename DeviceType,
-              typename PotentialAccessorType,
+    template <typename PotentialAccessorType,
               typename AccessorTypeCarrier,
               typename MobilityModel>
     struct current_density_on_facet
     {
       typedef std::vector<double> value_type;
 
-      current_density_on_facet(DeviceType const & device,
+      current_density_on_facet(viennashe::device const & device,
                                viennashe::carrier_type_id ctype,
                                PotentialAccessorType const & potential,
                                AccessorTypeCarrier const & carrier,
@@ -69,7 +68,7 @@ namespace viennashe
 
       value_type operator()(viennagrid_element_id facet) const
       {
-        typename viennashe::contact_carrier_density_accessor<DeviceType> bnd_carrier_density(device_, carrier_type_id_);
+        typename viennashe::contact_carrier_density_accessor bnd_carrier_density(device_, carrier_type_id_);
 
         scharfetter_gummel flux_approximator(carrier_type_id_);
 
@@ -127,7 +126,7 @@ namespace viennashe
       } // operator()
 
     private:
-      DeviceType                 const & device_;
+      viennashe::device          const & device_;
       viennashe::carrier_type_id         carrier_type_id_;
       PotentialAccessorType      const & potential_;
       AccessorTypeCarrier        const & carrier_;
@@ -135,7 +134,7 @@ namespace viennashe
 
     }; // current_density_on_edge
 
-    template <typename DeviceType, typename SimulatorQuantity>
+    template <typename SimulatorQuantity>
     class macroscopic_carrier_mask_filter
     {
       public:
@@ -149,8 +148,8 @@ namespace viennashe
         SimulatorQuantity const & quantity_;
     };
 
-    template <typename DeviceType, typename ValueT>
-    class macroscopic_carrier_mask_filter<DeviceType, viennashe::const_quantity<ValueT> >
+    template <typename ValueT>
+    class macroscopic_carrier_mask_filter<viennashe::const_quantity<ValueT> >
     {
       public:
         typedef bool    value_type;
@@ -169,8 +168,7 @@ namespace viennashe
   /**
    * @brief An accessor to the current density on vertices and edges (drift diffusion only!)
    */
-  template <typename DeviceType,
-            typename PotentialQuantityType,
+  template <typename PotentialQuantityType,
             typename CarrierQuantityType,
             typename MobilityModel>
   class current_density_wrapper
@@ -178,7 +176,7 @@ namespace viennashe
     public:
       typedef std::vector<double> value_type;
 
-      current_density_wrapper(DeviceType const & device,
+      current_density_wrapper(viennashe::device const & device,
                               viennashe::carrier_type_id ctype,
                               PotentialQuantityType const & potential,
                               CarrierQuantityType const & carrier,
@@ -194,9 +192,9 @@ namespace viennashe
 
           if (cell_dim == element_dim) // cell provided
           {
-            typedef detail::current_density_on_facet<DeviceType, PotentialQuantityType, CarrierQuantityType, MobilityModel> current_density_evaluator;
+            typedef detail::current_density_on_facet<PotentialQuantityType, CarrierQuantityType, MobilityModel> current_density_evaluator;
 
-            detail::macroscopic_carrier_mask_filter<DeviceType, CarrierQuantityType>    carrier_contribution_filter(carrier_);
+            detail::macroscopic_carrier_mask_filter<CarrierQuantityType>    carrier_contribution_filter(carrier_);
 
             std::vector<double> J(3);
 
@@ -212,7 +210,7 @@ namespace viennashe
           }
           else if (cell_dim == element_dim + 1) // facet provided
           {
-            detail::current_density_on_facet<DeviceType, PotentialQuantityType, CarrierQuantityType, MobilityModel> edge_evaluator(device_, carrier_type_id_, potential_, carrier_, mobility_);
+            detail::current_density_on_facet<PotentialQuantityType, CarrierQuantityType, MobilityModel> edge_evaluator(device_, carrier_type_id_, potential_, carrier_, mobility_);
 
             return edge_evaluator(cell_or_facet);
           }
@@ -221,7 +219,7 @@ namespace viennashe
         }
 
     private:
-      DeviceType                 const & device_;
+      viennashe::device          const & device_;
       viennashe::carrier_type_id         carrier_type_id_;
       PotentialQuantityType      const & potential_;
       CarrierQuantityType        const & carrier_;
@@ -238,18 +236,17 @@ namespace viennashe
    * @param mobility_model   The mobility model functor
    * @param container        A reference to the container, which is going to be filled with values, ie. std::vector
    */
-  template <typename DeviceType,
-            typename PotentialQuantityType,
+  template <typename PotentialQuantityType,
             typename CarrierQuantityType,
             typename MobilityModel>
-  void write_current_density_to_quantity_field(DeviceType const & device,
+  void write_current_density_to_quantity_field(viennashe::device const & device,
                                                PotentialQuantityType const & potential,
                                                CarrierQuantityType const & carrier,
                                                viennashe::carrier_type_id ctype,
                                                MobilityModel const & mobility_model,
                                                viennagrid_quantity_field field)
   {
-    current_density_wrapper<DeviceType, PotentialQuantityType, CarrierQuantityType, MobilityModel> Jfield(device, ctype, potential, carrier, mobility_model);
+    current_density_wrapper<PotentialQuantityType, CarrierQuantityType, MobilityModel> Jfield(device, ctype, potential, carrier, mobility_model);
 
     viennashe::write_macroscopic_quantity_to_quantity_field(device, Jfield, field);
   }
@@ -260,8 +257,8 @@ namespace viennashe
    * @param device             The device
    * @param current_on_facet   A function object returning the normal components of the current on each facet
    */
-  template<typename DeviceT, typename CurrentDensityT>
-  void check_current_conservation(DeviceT const & device,
+  template<typename CurrentDensityT>
+  void check_current_conservation(viennashe::device const & device,
                                   CurrentDensityT const & current_on_facet)
   {
     viennagrid_dimension cell_dim;
@@ -336,17 +333,16 @@ namespace viennashe
 
   }
 
-  template <typename DeviceType,
-            typename PotentialQuantityType,
+  template <typename PotentialQuantityType,
             typename CarrierQuantityType,
             typename MobilityModel>
-  void check_current_conservation(DeviceType const & device,
+  void check_current_conservation(viennashe::device const & device,
                                   viennashe::carrier_type_id ctype,
                                   PotentialQuantityType const & potential,
                                   CarrierQuantityType const & carrier,
                                   MobilityModel const & mobility_model)
   {
-    current_density_wrapper<DeviceType, PotentialQuantityType, CarrierQuantityType, MobilityModel> Jfield(device, ctype, potential, carrier, mobility_model);
+    current_density_wrapper<PotentialQuantityType, CarrierQuantityType, MobilityModel> Jfield(device, ctype, potential, carrier, mobility_model);
 
     viennashe::check_current_conservation(device, Jfield);
   }

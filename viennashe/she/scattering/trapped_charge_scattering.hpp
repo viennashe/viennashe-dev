@@ -47,16 +47,16 @@ namespace viennashe
     *
     *
     */
-    template <typename DeviceType, typename TimeStepQuantitiesT>
-    class trapped_charge_scattering : public scattering_base<DeviceType>
+    template <typename TimeStepQuantitiesT>
+    class trapped_charge_scattering : public scattering_base
     {
-        typedef scattering_base<DeviceType>                     base_type;
+        typedef scattering_base                     base_type;
 
       public:
         typedef typename base_type::scatter_processes_type      scatter_processes_type;
         typedef scatter_processes_type                          value_type;
 
-        explicit trapped_charge_scattering(DeviceType const & device,
+        explicit trapped_charge_scattering(viennashe::device const & device,
                                            viennashe::config const & conf,
                                            TimeStepQuantitiesT const & quantities)
           : base_type(device, conf), params_(conf.scattering().trapped_charge()), quantities_(quantities)
@@ -116,7 +116,7 @@ namespace viennashe
         double get_charged_trap_density(viennagrid_element_id cell,
                                         viennashe::carrier_type_id) const
         {
-          typedef typename DeviceType::trap_level_container_type     trap_level_container_type;
+          typedef typename viennashe::device::trap_level_container_type     trap_level_container_type;
           typedef typename trap_level_container_type::const_iterator trap_iterator_type;
 
           double N = 0.0;

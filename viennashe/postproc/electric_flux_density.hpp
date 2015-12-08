@@ -35,6 +35,7 @@
 
 #include "viennashe/util/misc.hpp"
 #include "viennashe/util/dual_box_flux.hpp"
+#include "viennashe/accessors.hpp"
 
 /** @brief Computes the electric flux density from a potential
  * @file viennashe/postproc/electric_flux_density.hpp
@@ -47,12 +48,12 @@ namespace viennashe
     /**
      * @brief Simple accessor to get the electric flux density along an edge
      */
-    template < typename DeviceType, typename PotentialAccessorType >
+    template<typename PotentialAccessorType>
     struct electric_flux_on_facet
     {
-      typedef typename DeviceType::mesh_type MeshType;
+      typedef typename viennashe::device::mesh_type MeshType;
 
-      electric_flux_on_facet(DeviceType const & device, PotentialAccessorType const & potential) : device_(device), potential_(potential) {}
+      electric_flux_on_facet(viennashe::device const & device, PotentialAccessorType const & potential) : device_(device), potential_(potential) {}
 
       std::vector<double> operator()(viennagrid_element_id facet) const
       {
@@ -69,7 +70,7 @@ namespace viennashe
         viennagrid_element_id c1 = cells_on_facet_begin[0];
         viennagrid_element_id c2 = cells_on_facet_begin[1];
 
-        viennashe::permittivity_accessor<DeviceType>  permittivity(device_);
+        viennashe::permittivity_accessor  permittivity(device_);
 
         const double potential_center = potential_.get_value(c1);
         const double potential_outer  = potential_.get_value(c2);
@@ -98,7 +99,7 @@ namespace viennashe
       }
 
       private:
-        DeviceType            const & device_;
+        viennashe::device     const & device_;
         PotentialAccessorType const & potential_;
 
     };
@@ -109,13 +110,13 @@ namespace viennashe
   /**
    * @brief An electric flux accessor. Provides the electric flux along edges and on vertices given the electrostatic potential.
    */
-  template < typename DeviceType, typename PotentialAccessorType >
+  template<typename PotentialAccessorType>
   struct electric_flux_wrapper
   {
   public:
     typedef std::vector<double> value_type;
 
-    electric_flux_wrapper(DeviceType const & device, PotentialAccessorType const & potential)
+    electric_flux_wrapper(viennashe::device const & device, PotentialAccessorType const & potential)
       : device_(device), potential_(potential)
     { }
 
@@ -124,7 +125,7 @@ namespace viennashe
       viennagrid_dimension cell_dim;
       VIENNASHE_VIENNAGRID_CHECK(viennagrid_mesh_cell_dimension_get(device_.mesh(), &cell_dim));
 
-      viennashe::detail::electric_flux_on_facet<DeviceType, PotentialAccessorType> facet_eval(device_, potential_);
+      viennashe::detail::electric_flux_on_facet<PotentialAccessorType> facet_eval(device_, potential_);
 
       std::vector<double> ret(3);
       if (viennagrid_topological_dimension_from_element_id(cell_or_facet) == cell_dim) // cell
@@ -155,7 +156,7 @@ namespace viennashe
     }
 
     private:
-      DeviceType            const & device_;
+      viennashe::device     const & device_;
       PotentialAccessorType const & potential_;
 
   }; // electric_flux_wrapper
