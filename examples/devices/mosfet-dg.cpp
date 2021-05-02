@@ -20,6 +20,7 @@
 #include <iostream>
 #include <cstdlib>
 #include <vector>
+#include "iacaMarks.h"
 
 // ViennaSHE includes:
 #include "viennashe/core.hpp"
@@ -144,12 +145,15 @@ int main()
       of the Netgen mesh are in nanometers, while ViennaSHE expects
       SI units (meter). Thus, we scale the mesh by a factor of \f$ 10^{-9} \f$.
   **/
+
   std::cout << "* main(): Creating and scaling device..." << std::endl;
   DeviceType device;
   device.load_mesh("../examples/data/mosfet840.mesh");
   device.scale(1e-9);
 
-
+//while(cond)
+{
+    IACA_START
   /** <h3>Initialize the Device</h3>
     Here we just need to call the initialization routine defined before:
    **/
@@ -323,8 +327,9 @@ int main()
   std::cout << "*********************************************************" << std::endl;
   std::cout << "*           ViennaSHE finished successfully             *" << std::endl;
   std::cout << "*********************************************************" << std::endl;
+}
+IACA_END
 
   return EXIT_SUCCESS;
-
 }
 

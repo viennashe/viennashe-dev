@@ -391,6 +391,7 @@ namespace viennashe
     scharfetter_gummel_dVj flux_approximator_dVj(ctype);
 
     CellContainer cells(mesh);
+//#pragrama openmp for
     for (CellIterator cit = cells.begin();
         cit != cells.end();
         ++cit)
