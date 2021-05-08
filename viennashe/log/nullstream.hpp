@@ -37,7 +37,8 @@ namespace viennashe
     inline nullstream & get_nullstream()
     {
       // not exactly singleton, but enough for our purpose
-      static std::auto_ptr<nullstream> stnull(new nullstream());
+      //static std::auto_ptr<nullstream> stnull(new nullstream());
+      static std::unique_ptr<nullstream> stnull(new nullstream());
       return *stnull;
     }
 

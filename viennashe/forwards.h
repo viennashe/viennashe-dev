@@ -208,6 +208,10 @@ namespace viennashe
     /** @brief Internal tag used for the specification of a CPU-based multi-threaded linear solver */
     class parallel_linear_solver_tag {};
 
+    /** @brief Internal tag used for the specification of a CPU-based PETSC solver */
+    class petsc_linear_solver_tag {};
+
+    class petsc_amgx_solver_tag {};
     /** @brief Internal tag used for the specification of a GPU-accelerated linear solver */
     class gpu_parallel_linear_solver_tag {};
 
