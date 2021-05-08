@@ -19,6 +19,7 @@
 #include <fstream>
 #include <vector>
 #include <memory>
+#include <petsc.h>
 
 //ViennaGrid includes:
 #include "viennagrid/mesh/mesh.hpp"
@@ -102,6 +103,7 @@ namespace viennashe
     {
       const long   expansion_order    = static_cast<long>(quan.get_expansion_order(cell, index_H));
       const double kinetic_energy_max = conf.max_kinetic_energy_range(quan.get_carrier_type_id());
+
 
       if ( device.get_material(cell) == viennashe::materials::metal::id) //this is a contact element attached to a semiconductor
       {
@@ -228,9 +230,20 @@ namespace viennashe
     // Number of unknowns at that energy point is obtained from the (local) expansion order.
     //
 
-    long unknown_index = unknown_offset;
+    /*
+        * PETSC
+        * */
+    if(quan.get_value_H_size() == 0 )return 0;
 
-    for (std::size_t index_H = 0; index_H < quan.get_value_H_size(); ++index_H)
+    int size,rank;
+    MPI_Comm_size(PETSC_COMM_WORLD,&size);
+    MPI_Comm_rank(PETSC_COMM_WORLD,&rank);
+    std::size_t maxquantityfull = quan.get_value_H_size();
+    //* Overleap the regions to avoid the singular matrix*/
+    std::size_t maxquantity = rank < size-1 ? ((rank+1)*maxquantityfull)/size+1 :maxquantityfull ;
+    std::size_t init = ((rank)*maxquantityfull)/size;//;
+    long unknown_index = unknown_offset;
+    for (std::size_t index_H = init; index_H < maxquantity; ++index_H)
     {
       for (CellIterator cit  = cells.begin();
                         cit != cells.end();
@@ -278,15 +291,24 @@ namespace viennashe
     MeshType const & mesh = device.mesh();
 
     FacetContainer facets(mesh);
-
+    /*
+     * PETSC
+     * */
+    if(quan.get_value_H_size() == 0 )return 0;
+    int size,rank;
+    MPI_Comm_size(PETSC_COMM_WORLD,&size);
+    MPI_Comm_rank(PETSC_COMM_WORLD,&rank);
+    std::size_t maxquantityfull = quan.get_value_H_size();
+    std::size_t maxquantity = rank < size-1 ? ((rank+1)*maxquantityfull)/size+1:maxquantityfull ;
+    std::size_t init = ((rank)*maxquantityfull)/size;
     long unknown_index = unknown_offset;
-
-    for (std::size_t index_H = 0; index_H < quan.get_value_H_size(); ++index_H)
+    for (std::size_t index_H = init; index_H < maxquantity; ++index_H)
     {
       for (FacetIterator fit = facets.begin();
                          fit != facets.end();
                        ++fit)
       {
+
         detail::map_facet(device, quan, conf, *fit, index_H, unknown_index);
       }
     }
@@ -318,6 +340,8 @@ namespace viennashe
     long last_mapping_index = 0;
     long current_mapping_index = 0;
     map_info_type map_info;
+
+
 
     // Create mapping for spatial quantities:
     for (std::size_t i=0; i<quantities.unknown_quantities().size(); ++i)

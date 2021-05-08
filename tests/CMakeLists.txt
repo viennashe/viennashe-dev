@@ -4,7 +4,7 @@ foreach(PROG spherical_harmonics spherical_harmonics_iter equilibrium_resistor l
              random_numbers markov_chains simple_impurity_scattering 
              hde_1d )
    add_executable(${PROG}-test src/${PROG}.cpp )
-   target_link_libraries(${PROG}-test shesolvers ${OPENCL_LIBRARIES})
+   target_link_libraries(${PROG}-test shesolvers ${OPENCL_LIBRARIES} ${PETSC_LIBRARIES} ${MPI_mpi_cxx_LIBRARY})
    add_test(${PROG} ${PROG}-test)
 endforeach(PROG)
 

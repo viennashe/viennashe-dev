@@ -7,4 +7,5 @@ ENDIF(MSVC)
 
 
 target_link_libraries(viennashe shesolvers)
+target_link_libraries(viennashe ${OPENCL_LIBRARIES} ${PETSC_LIBRARIES} ${MPI_mpi_cxx_LIBRARY})
 

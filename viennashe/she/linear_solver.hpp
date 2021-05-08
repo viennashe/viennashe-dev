@@ -150,7 +150,7 @@ namespace viennashe
       //
       // Normalize equation system (solver will be thankful)
       //
-      viennashe::math::row_normalize_system(compressed_matrix, compressed_rhs);
+      VectorType scale_factors = viennashe::math::row_normalize_system(compressed_matrix, compressed_rhs);
 
       //log::debug<log_linear_solver>() << "Reduced matrix: " << viennashe::util::sparse_to_string(compressed_matrix) << std::endl;
       //log::debug<log_linear_solver>() << "Reduced rhs: " << compressed_rhs << std::endl;
@@ -172,7 +172,7 @@ namespace viennashe
       if (conf.scale())
       {
       for (std::size_t i=0; i<compressed_result.size(); ++i)
-        compressed_result[i] *= scaling_vector[i];
+        compressed_result[i] *= scaling_vector[i]*scale_factors[i];
       }
 
       //

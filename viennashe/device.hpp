@@ -1,18 +1,18 @@
 #ifndef VIENNASHE_DEVICE_HPP
 #define VIENNASHE_DEVICE_HPP
 /* ============================================================================
-   Copyright (c) 2011-2014, Institute for Microelectronics,
-                            Institute for Analysis and Scientific Computing,
-                            TU Wien.
+ Copyright (c) 2011-2014, Institute for Microelectronics,
+ Institute for Analysis and Scientific Computing,
+ TU Wien.
 
-                            -----------------
-     ViennaSHE - The Vienna Spherical Harmonics Expansion Boltzmann Solver
-                            -----------------
+ -----------------
+ ViennaSHE - The Vienna Spherical Harmonics Expansion Boltzmann Solver
+ -----------------
 
-                    http://viennashe.sourceforge.net/
+ http://viennashe.sourceforge.net/
 
-   License:         MIT (X11), see file LICENSE in the base directory
-=============================================================================== */
+ License:         MIT (X11), see file LICENSE in the base directory
+ =============================================================================== */
 
 #include <stdexcept>
 
@@ -24,6 +24,7 @@
 #include "viennagrid/forwards.hpp"
 #include "viennagrid/mesh/mesh.hpp"
 #include "viennagrid/algorithm/norm.hpp"
+#include "viennagrid/algorithm/refine.hpp"
 #include "viennagrid/algorithm/geometric_transform.hpp"
 #include "viennagrid/io/netgen_reader.hpp"
 #include "viennagrid/io/vtk_reader.hpp"
@@ -40,8 +41,8 @@
 #include "viennashe/setters.hpp"
 
 /** @file  viennashe/device.hpp
-    @brief Contains the definition of a device class independent of the actual macroscopic model to be solved.
-*/
+ @brief Contains the definition of a device class independent of the actual macroscopic model to be solved.
+ */
 
 namespace viennashe
 {
@@ -49,590 +50,773 @@ namespace viennashe
   namespace detail
   {
     /** @brief Defines the physical properties of a device, e.g. doping */
-    template <typename MeshT>
-    class device_base
-    {
+    template<typename MeshT>
+      class device_base
+      {
       protected:
-        typedef typename viennagrid::result_of::segmentation<MeshT>::type  segmentation_type;
+	typedef typename viennagrid::result_of::segmentation<MeshT>::type segmentation_type;
 
-        typedef typename viennagrid::result_of::vertex<MeshT>::type        vertex_type;
-        typedef typename viennagrid::result_of::point<MeshT>::type         point_type;
+	typedef typename viennagrid::result_of::vertex<MeshT>::type vertex_type;
+	typedef typename viennagrid::result_of::point<MeshT>::type point_type;
 
-        typedef typename viennagrid::result_of::const_cell_handle<MeshT>::type                       const_cell_handle_type;
+	typedef typename viennagrid::result_of::const_cell_handle<MeshT>::type const_cell_handle_type;
 
       public:
-        typedef MeshT                           mesh_type;
-        typedef typename viennagrid::result_of::facet<MeshT>::type         facet_type;
-        typedef typename viennagrid::result_of::cell<MeshT>::type          cell_type;
+	typedef MeshT mesh_type;
+	typedef typename viennagrid::result_of::facet<MeshT>::type facet_type;
+	typedef typename viennagrid::result_of::cell<MeshT>::type cell_type;
+	typedef typename viennagrid::result_of::accessor_container<cell_type,
+	    bool, viennagrid::std_vector_tag>::type CellRefinementContainerType;
 
-        typedef typename viennagrid::result_of::segment_handle<segmentation_type>::type  segment_type;
-        typedef typename viennagrid::result_of::segmentation_segment_id_type<segmentation_type>::type   segment_id_type;
-        typedef long                            material_id_type;
-        typedef std::size_t                     id_type;
-        typedef trap_level                      trap_level_type;
-        typedef std::vector<trap_level_type>    trap_level_container_type;
+	typedef typename viennagrid::result_of::segment_handle<segmentation_type>::type segment_type;
+	typedef typename viennagrid::result_of::segmentation_segment_id_type<
+	    segmentation_type>::type segment_id_type;
+	typedef long material_id_type;
+	typedef std::size_t id_type;
+	typedef trap_level trap_level_type;
+	typedef std::vector<trap_level_type> trap_level_container_type;
 
-        typedef typename viennagrid::result_of::voronoi_cell_contribution<const_cell_handle_type>::type   voronoi_contribution_container_type;
+	typedef typename viennagrid::result_of::voronoi_cell_contribution<
+	    const_cell_handle_type>::type voronoi_contribution_container_type;
 
       private:
-        std::size_t get_id(cell_type const & cell) const { return static_cast<std::size_t>(cell.id().get()); }
+	std::size_t
+	get_id (cell_type const &cell) const
+	{
+	  return static_cast<std::size_t> (cell.id ().get ());
+	}
 
       public:
-        device_base()
-          : seg_(mesh_) {}
+	device_base () :
+	    seg_ (mesh_)
+	{
+	}
 
-        void load_mesh(std::string filename)
-        {
-          if (filename.size() > 5 && filename.substr(filename.size()-5) == ".mesh")
-          {
-            viennagrid::io::netgen_reader my_reader;
-            my_reader(mesh_, seg_, filename);
-          }
-          else if (filename.size() > 4 && (filename.substr(filename.size()-4) == ".vtu" || filename.substr(filename.size()-4) == ".pvd"))
-          {
-            viennagrid::io::vtk_reader<MeshT> mesh_reader;
-            mesh_reader(mesh_, seg_, filename);
-          }
-          else
-          {
-            throw std::runtime_error("Unknown file extension!");
-          }
+	void
+	load_mesh (std::string filename)
+	{
+	  if (filename.size () > 5
+	      && filename.substr (filename.size () - 5) == ".mesh")
+	    {
+	      viennagrid::io::netgen_reader my_reader;
+	      my_reader (mesh_, seg_, filename);
+	    }
+	  else if (filename.size () > 4
+	      && (filename.substr (filename.size () - 4) == ".vtu"
+		  || filename.substr (filename.size () - 4) == ".pvd"))
+	    {
+	      viennagrid::io::vtk_reader<MeshT> mesh_reader;
+	      mesh_reader (mesh_, seg_, filename);
+	    }
+	  else
+	    {
+	      throw std::runtime_error ("Unknown file extension!");
+	    }
 
-          init_datastructures();
-        }
+	  init_datastructures ();
+	}
 
-        template <typename DeviceLoaderType>
-        void load_device(DeviceLoaderType & loader)
-        {
-          loader(mesh_, seg_);
-          init_datastructures();
-        }
+	template<typename DeviceLoaderType>
+	  void
+	  load_device (DeviceLoaderType &loader)
+	  {
+	    loader (mesh_, seg_);
+	    init_datastructures ();
+	  }
 
+	void
+	generate_mesh (
+	    viennashe::util::device_generation_config const &generator_params)
+	{
+	  viennashe::util::generate_device (mesh_, seg_, generator_params);
+	  init_datastructures ();
+	}
 
-        void generate_mesh(viennashe::util::device_generation_config const & generator_params)
-        {
-          viennashe::util::generate_device(mesh_, seg_, generator_params);
-          init_datastructures();
-        }
+	template<typename MeshGeneratorType>
+	  void
+	  generate_mesh (MeshGeneratorType const &gen)
+	  {
+	    gen (mesh_, seg_);
+	    init_datastructures ();
+	  }
 
-        template < typename MeshGeneratorType >
-        void generate_mesh(MeshGeneratorType const & gen)
-        {
-          gen(mesh_, seg_);
-          init_datastructures();
-        }
+	/** @brief Returns the underlying mesh */
+	MeshT const&
+	mesh () const
+	{
+	  return mesh_;
+	}
+	MeshT&
+	mesh ()
+	{
+	  return mesh_;
+	}
 
-        /** @brief Returns the underlying mesh */
-        MeshT const & mesh() const { return mesh_; }
-        MeshT       & mesh()       { return mesh_; }
+	segmentation_type const&
+	segmentation () const
+	{
+	  return seg_;
+	}
+	segmentation_type&
+	segmentation ()
+	{
+	  return seg_;
+	}
 
-        segmentation_type const & segmentation() const { return seg_; }
-        segmentation_type       & segmentation()       { return seg_; }
+	segment_type const&
+	segment (segment_id_type id) const
+	{
+	  return seg_.at (id);
+	}
 
-        segment_type const & segment(segment_id_type id) const { return seg_.at(id); }
+	void
+	scale (double factor)
+	{
+	  viennagrid::scale (mesh_, factor);
+	  init_datastructures (); //for Voronoi quantities
+	}
 
-        void scale(double factor)
-        {
-          viennagrid::scale(mesh_, factor);
-          init_datastructures(); //for Voronoi quantities
-        }
+	void
+	refine (int factor)
+	{
+	  MeshT mesh_refined,mesh_refined_temp;
+	  segmentation_type seg_temp (mesh_refined);
+	  CellRefinementContainerType cell_refinement_flag;
+	  int cellsize = viennagrid::cells (mesh_).size ();
+	  long unsigned int finalcellsize = factor * cellsize;
+	  int ibegin = 0;
+	  typename viennagrid::result_of::field< CellRefinementContainerType,cell_type >::type cell_refinement_field(cell_refinement_flag);
+	  mesh_refined = mesh_;
+	  std::cout << "* Size of mesh:" <<cellsize <<std::endl;
+	  std::cout << "* Size of mesh:" <<finalcellsize <<std::endl;
+	  if(factor <8 ){
+	  do
+	    {
+	      typename viennagrid::result_of::field< CellRefinementContainerType,cell_type >::type cell_refinement_field(cell_refinement_flag);
+	      for(int i =ibegin;i<ibegin+700;i+=2)
+		cell_refinement_field( viennagrid::cells(mesh_refined)[i] ) = true;
+	      viennagrid::cell_refine(mesh_refined,seg_, mesh_refined_temp,seg_temp, cell_refinement_field);
+	      for(int i =ibegin;i<ibegin+700;i+=2)
+	     	cell_refinement_field( viennagrid::cells(mesh_refined)[i] ) = false;
+	      mesh_refined = mesh_refined_temp;
+	      seg_ = seg_temp;
+	      std::cout << "* Size of mesh:" <<viennagrid::cells (mesh_refined).size() <<std::endl;
+	      ibegin += 400;
+	    }while(finalcellsize >  viennagrid::cells ( mesh_refined).size() );}
+	  else{
+	      do
+	     	    {
+	     	      typename viennagrid::result_of::field< CellRefinementContainerType,cell_type >::type cell_refinement_field(cell_refinement_flag);
+	     	      for(int i =ibegin;i< cellsize;i+=2)
+	     		cell_refinement_field( viennagrid::cells(mesh_refined)[i] ) = true;
+	     	      viennagrid::cell_refine(mesh_refined,seg_, mesh_refined_temp,seg_temp, cell_refinement_field);
+	     	      for(int i =ibegin;i< cellsize;i+=2)
+	     	     	cell_refinement_field( viennagrid::cells(mesh_refined)[i] ) = false;
+	     	      mesh_refined = mesh_refined_temp;
+	     	      seg_ = seg_temp;
+	     	      std::cout << "* Size of mesh:" <<viennagrid::cells (mesh_refined).size() <<std::endl;
 
-        //
-        // Lattice temperature: Cell-centric
-        //
+	     	    }while(finalcellsize >  viennagrid::cells ( mesh_refined).size() );
 
-        /** @brief Sets the homogeneous temperature of the device. */
-        void set_lattice_temperature(double new_value)
-        {
-          set_lattice_temp_impl(new_value, mesh_);
-        }
+	  }
+	  mesh_ = mesh_refined;
+	  seg_ = seg_temp;
+	  init_datastructures (); //for Voronoi quantities
 
-        /** @brief Sets the lattice temperature at a cell. */
-        void set_lattice_temperature(double new_value, cell_type const & c)
-        {
-          set_lattice_temp_impl(new_value, c);
-        }
+	}
 
-        /** @brief Sets the lattice temperature on a segment. */
-        void set_lattice_temperature(double new_value, segment_type const & s)
-        {
-          set_lattice_temp_impl(new_value, s);
-        }
+	//
+	// Lattice temperature: Cell-centric
+	//
 
-        /** @brief Returns the lattice temperature on a cell */
-        double get_lattice_temperature(cell_type const & c) const
-        {
-          assert(cell_temperature_.at(get_id(c)) > 0 && bool("get_lattice_temp_impl(): Accessing non-positive temperature from cell!"));
-          return cell_temperature_.at(get_id(c));
-        }
+	/** @brief Sets the homogeneous temperature of the device. */
+	void
+	set_lattice_temperature (double new_value)
+	{
+	  set_lattice_temp_impl (new_value, mesh_);
+	}
 
-        double get_lattice_temperature(facet_type const & facet) const
-        {
-          typedef typename viennagrid::result_of::const_coboundary_range<MeshT, facet_type, cell_type>::type     CellOnFacetContainer;
-          typedef typename viennagrid::result_of::iterator<CellOnFacetContainer>::type                           CellOnFacetIterator;
+	/** @brief Sets the lattice temperature at a cell. */
+	void
+	set_lattice_temperature (double new_value, cell_type const &c)
+	{
+	  set_lattice_temp_impl (new_value, c);
+	}
 
-          CellOnFacetContainer cells_on_facet(mesh_, viennagrid::handle(mesh_, facet));
+	/** @brief Sets the lattice temperature on a segment. */
+	void
+	set_lattice_temperature (double new_value, segment_type const &s)
+	{
+	  set_lattice_temp_impl (new_value, s);
+	}
 
-          CellOnFacetIterator cofit = cells_on_facet.begin();
-          cell_type const & c1 = *cofit;
-          ++cofit;
+	/** @brief Returns the lattice temperature on a cell */
+	double
+	get_lattice_temperature (cell_type const &c) const
+	{
+	  assert(
+	      cell_temperature_.at (get_id (c)) > 0
+		  && bool (
+		      "get_lattice_temp_impl(): Accessing non-positive temperature from cell!"));
+	  return cell_temperature_.at (get_id (c));
+	}
 
-          if (cofit == cells_on_facet.end())
-            return get_lattice_temperature(c1);
+	double
+	get_lattice_temperature (facet_type const &facet) const
+	{
+	  typedef typename viennagrid::result_of::const_coboundary_range<MeshT,
+	      facet_type, cell_type>::type CellOnFacetContainer;
+	  typedef typename viennagrid::result_of::iterator<CellOnFacetContainer>::type CellOnFacetIterator;
 
-          cell_type const & c2 = *cofit;
-          return (get_lattice_temperature(c1) + get_lattice_temperature(c2)) / 2.0;
-        }
+	  CellOnFacetContainer cells_on_facet (
+	      mesh_, viennagrid::handle (mesh_, facet));
 
-        //
-        // Doping: cell- and vertex-centric; cell-centric preferred. Conversion utilities are available.
-        //
+	  CellOnFacetIterator cofit = cells_on_facet.begin ();
+	  cell_type const &c1 = *cofit;
+	  ++cofit;
 
-        /** @brief Sets the donator doping (in m^-3) in the specified cell */
-        void set_doping_n(double value, cell_type const & c)
-        {
-          set_doping_n_impl(value, c);
-        }
+	  if (cofit == cells_on_facet.end ())
+	    return get_lattice_temperature (c1);
 
-        /** @brief Sets the donator doping (in m^-3) in the specified segment */
-        void set_doping_n(double value, segment_type const & d)
-        {
-          set_doping_n_impl(value, d);
-        }
+	  cell_type const &c2 = *cofit;
+	  return (get_lattice_temperature (c1) + get_lattice_temperature (c2))
+	      / 2.0;
+	}
 
-        /** @brief Sets the donator doping (in m^-3) in the specified segment */
-        void set_doping_n(double value, segment_id_type const & seg_id)
-        {
-          set_doping_n_impl(value, segment(seg_id));
-        }
+	//
+	// Doping: cell- and vertex-centric; cell-centric preferred. Conversion utilities are available.
+	//
 
-        /** @brief Sets the donator doping (in m^-3) in the whole device */
-        void set_doping_n(double value)
-        {
-          set_doping_n_impl(value, mesh_);
-        }
+	/** @brief Sets the donator doping (in m^-3) in the specified cell */
+	void
+	set_doping_n (double value, cell_type const &c)
+	{
+	  set_doping_n_impl (value, c);
+	}
 
-        /** @brief Returns the donator doping (in m^-3) in the specified cell */
-        double get_doping_n(cell_type const & c) const
-        {
-          return cell_doping_n_.at(get_id(c));
-        }
+	/** @brief Sets the donator doping (in m^-3) in the specified segment */
+	void
+	set_doping_n (double value, segment_type const &d)
+	{
+	  set_doping_n_impl (value, d);
+	}
 
-        double get_doping_n(facet_type const & facet) const
-        {
-          typedef typename viennagrid::result_of::const_coboundary_range<MeshT, facet_type, cell_type>::type     CellOnFacetContainer;
-          typedef typename viennagrid::result_of::iterator<CellOnFacetContainer>::type                           CellOnFacetIterator;
+	/** @brief Sets the donator doping (in m^-3) in the specified segment */
+	void
+	set_doping_n (double value, segment_id_type const &seg_id)
+	{
+	  set_doping_n_impl (value, segment (seg_id));
+	}
 
-          CellOnFacetContainer cells_on_facet(mesh_, viennagrid::handle(mesh_, facet));
+	/** @brief Sets the donator doping (in m^-3) in the whole device */
+	void
+	set_doping_n (double value)
+	{
+	  set_doping_n_impl (value, mesh_);
+	}
 
-          CellOnFacetIterator cofit = cells_on_facet.begin();
-          cell_type const & c1 = *cofit;
-          ++cofit;
+	/** @brief Returns the donator doping (in m^-3) in the specified cell */
+	double
+	get_doping_n (cell_type const &c) const
+	{
+	  return cell_doping_n_.at (get_id (c));
+	}
 
-          if (cofit == cells_on_facet.end())
-            return get_doping_n(c1);
+	double
+	get_doping_n (facet_type const &facet) const
+	{
+	  typedef typename viennagrid::result_of::const_coboundary_range<MeshT,
+	      facet_type, cell_type>::type CellOnFacetContainer;
+	  typedef typename viennagrid::result_of::iterator<CellOnFacetContainer>::type CellOnFacetIterator;
 
-          cell_type const & c2 = *cofit;
-          if (viennashe::materials::is_semiconductor(get_material(c1)))
-          {
-            if (viennashe::materials::is_semiconductor(get_material(c2)))
-              return std::sqrt(get_doping_n(c1)) * std::sqrt(get_doping_n(c2));
-            else
-              return get_doping_n(c1);
-          }
-          else if (viennashe::materials::is_semiconductor(get_material(c2)))
-            return get_doping_n(c2);
+	  CellOnFacetContainer cells_on_facet (
+	      mesh_, viennagrid::handle (mesh_, facet));
 
-          return 0;
-        }
+	  CellOnFacetIterator cofit = cells_on_facet.begin ();
+	  cell_type const &c1 = *cofit;
+	  ++cofit;
 
-        std::vector<double> const & doping_n() const { return cell_doping_n_; }
+	  if (cofit == cells_on_facet.end ())
+	    return get_doping_n (c1);
 
+	  cell_type const &c2 = *cofit;
+	  if (viennashe::materials::is_semiconductor (get_material (c1)))
+	    {
+	      if (viennashe::materials::is_semiconductor (get_material (c2)))
+		return std::sqrt (get_doping_n (c1))
+		    * std::sqrt (get_doping_n (c2));
+	      else
+		return get_doping_n (c1);
+	    }
+	  else if (viennashe::materials::is_semiconductor (get_material (c2)))
+	    return get_doping_n (c2);
 
-        /** @brief Sets the acceptor doping (in m^-3) in the specified cell */
-        void set_doping_p(double value, cell_type const & c)
-        {
-          set_doping_p_impl(value, c);
-        }
+	  return 0;
+	}
 
-        /** @brief Sets the acceptor doping (in m^-3) in the specified segment */
-        void set_doping_p(double value, segment_type const & d)
-        {
-          set_doping_p_impl(value, d);
-        }
+	std::vector<double> const&
+	doping_n () const
+	{
+	  return cell_doping_n_;
+	}
 
-        /** @brief Sets the donator doping (in m^-3) in the specified segment */
-        void set_doping_p(double value, segment_id_type const & seg_id)
-        {
-          set_doping_p_impl(value, segment(seg_id));
-        }
+	/** @brief Sets the acceptor doping (in m^-3) in the specified cell */
+	void
+	set_doping_p (double value, cell_type const &c)
+	{
+	  set_doping_p_impl (value, c);
+	}
 
-        /** @brief Sets the acceptor doping (in m^-3) in the whole device */
-        void set_doping_p(double value)
-        {
-          set_doping_p_impl(value, mesh_);
-        }
+	/** @brief Sets the acceptor doping (in m^-3) in the specified segment */
+	void
+	set_doping_p (double value, segment_type const &d)
+	{
+	  set_doping_p_impl (value, d);
+	}
 
-        /** @brief Returns the donator doping (in m^-3) in the specified cell */
-        double get_doping_p(cell_type const & c) const
-        {
-          return cell_doping_p_.at(get_id(c));
-        }
+	/** @brief Sets the donator doping (in m^-3) in the specified segment */
+	void
+	set_doping_p (double value, segment_id_type const &seg_id)
+	{
+	  set_doping_p_impl (value, segment (seg_id));
+	}
 
-        double get_doping_p(facet_type const & facet) const
-        {
-          typedef typename viennagrid::result_of::const_coboundary_range<MeshT, facet_type, cell_type>::type     CellOnFacetContainer;
-          typedef typename viennagrid::result_of::iterator<CellOnFacetContainer>::type                           CellOnFacetIterator;
+	/** @brief Sets the acceptor doping (in m^-3) in the whole device */
+	void
+	set_doping_p (double value)
+	{
+	  set_doping_p_impl (value, mesh_);
+	}
 
-          CellOnFacetContainer cells_on_facet(mesh_, viennagrid::handle(mesh_, facet));
+	/** @brief Returns the donator doping (in m^-3) in the specified cell */
+	double
+	get_doping_p (cell_type const &c) const
+	{
+	  return cell_doping_p_.at (get_id (c));
+	}
 
-          CellOnFacetIterator cofit = cells_on_facet.begin();
-          cell_type const & c1 = *cofit;
-          ++cofit;
+	double
+	get_doping_p (facet_type const &facet) const
+	{
+	  typedef typename viennagrid::result_of::const_coboundary_range<MeshT,
+	      facet_type, cell_type>::type CellOnFacetContainer;
+	  typedef typename viennagrid::result_of::iterator<CellOnFacetContainer>::type CellOnFacetIterator;
 
-          if (cofit == cells_on_facet.end())
-            return get_doping_p(c1);
+	  CellOnFacetContainer cells_on_facet (
+	      mesh_, viennagrid::handle (mesh_, facet));
 
-          cell_type const & c2 = *cofit;
-          if (viennashe::materials::is_semiconductor(get_material(c1)))
-          {
-            if (viennashe::materials::is_semiconductor(get_material(c2)))
-              return std::sqrt(get_doping_p(c1)) * std::sqrt(get_doping_p(c2));
-            else
-              return get_doping_p(c1);
-          }
-          else if (viennashe::materials::is_semiconductor(get_material(c2)))
-            return get_doping_p(c2);
+	  CellOnFacetIterator cofit = cells_on_facet.begin ();
+	  cell_type const &c1 = *cofit;
+	  ++cofit;
 
-          return 0;
-        }
+	  if (cofit == cells_on_facet.end ())
+	    return get_doping_p (c1);
 
-        std::vector<double> const & doping_p() const { return cell_doping_p_; }
+	  cell_type const &c2 = *cofit;
+	  if (viennashe::materials::is_semiconductor (get_material (c1)))
+	    {
+	      if (viennashe::materials::is_semiconductor (get_material (c2)))
+		return std::sqrt (get_doping_p (c1))
+		    * std::sqrt (get_doping_p (c2));
+	      else
+		return get_doping_p (c1);
+	    }
+	  else if (viennashe::materials::is_semiconductor (get_material (c2)))
+	    return get_doping_p (c2);
 
-        double get_doping(cell_type const & c, carrier_type_id ctype) const
-        {
-          return (ctype == ELECTRON_TYPE_ID) ? get_doping_n(c) : get_doping_p(c);
-        }
+	  return 0;
+	}
 
-        //
-        // Material: cell-centric.
-        //
-        /** @brief Sets the material ID on a cell */
-        void set_material(long material_id, cell_type const & elem)
-        {
-          cell_material_.at(get_id(elem)) = material_id;
-        }
+	std::vector<double> const&
+	doping_p () const
+	{
+	  return cell_doping_p_;
+	}
 
-        /** @brief Sets the material type using the structs defined in viennashe::materials on a cell */
-        template <typename MaterialType>
-        void set_material(MaterialType, cell_type const & elem)
-        {
-          set_material(long(MaterialType::id), elem);
-        }
+	double
+	get_doping (cell_type const &c, carrier_type_id ctype) const
+	{
+	  return
+	      (ctype == ELECTRON_TYPE_ID) ? get_doping_n (c) : get_doping_p (c);
+	}
 
-        //segment
-        /** @brief Sets the material ID on a segment */
-        void set_material(long material_id, segment_type const & seg)
-        {
-          set_material_on_complex(material_id, seg);
-        }
+	//
+	// Material: cell-centric.
+	//
+	/** @brief Sets the material ID on a cell */
+	void
+	set_material (long material_id, cell_type const &elem)
+	{
+	  cell_material_.at (get_id (elem)) = material_id;
+	}
 
-        /** @brief Sets the material ID on a segment */
-        void set_material(long material_id, segment_id_type id)
-        {
-          set_material_on_complex(material_id, segment(id));
-        }
+	/** @brief Sets the material type using the structs defined in viennashe::materials on a cell */
+	template<typename MaterialType>
+	  void
+	  set_material (MaterialType, cell_type const &elem)
+	  {
+	    set_material (long (MaterialType::id), elem);
+	  }
 
-        /** @brief Sets the material type using the structs defined in viennashe::materials on a segment */
-        template <typename MaterialType>
-        void set_material(MaterialType, segment_type const & seg)
-        {
-          set_material_on_complex(long(MaterialType::id), seg);
-        }
+	//segment
+	/** @brief Sets the material ID on a segment */
+	void
+	set_material (long material_id, segment_type const &seg)
+	{
+	  set_material_on_complex (material_id, seg);
+	}
 
-        // full mesh
-        /** @brief Sets a uniform material ID on the whole device */
-        void set_material(long material_id)
-        {
-          set_material_on_complex(material_id, mesh_);
-        }
+	/** @brief Sets the material ID on a segment */
+	void
+	set_material (long material_id, segment_id_type id)
+	{
+	  set_material_on_complex (material_id, segment (id));
+	}
 
-        /** @brief Sets a uniform material type using the structs defined in viennashe::materials on the whole device */
-        template <typename MaterialType>
-        void set_material(MaterialType)
-        {
-          set_material_on_complex(long(MaterialType::id), mesh_);
-        }
+	/** @brief Sets the material type using the structs defined in viennashe::materials on a segment */
+	template<typename MaterialType>
+	  void
+	  set_material (MaterialType, segment_type const &seg)
+	  {
+	    set_material_on_complex (long (MaterialType::id), seg);
+	  }
 
-        /** @brief Returns the material id of the provided cell */
-        long get_material(cell_type const & elem) const
-        {
-          return cell_material_.at(get_id(elem));
-        }
+	// full mesh
+	/** @brief Sets a uniform material ID on the whole device */
+	void
+	set_material (long material_id)
+	{
+	  set_material_on_complex (material_id, mesh_);
+	}
 
-        std::vector<material_id_type> const & material() const { return cell_material_; }
+	/** @brief Sets a uniform material type using the structs defined in viennashe::materials on the whole device */
+	template<typename MaterialType>
+	  void
+	  set_material (MaterialType)
+	  {
+	    set_material_on_complex (long (MaterialType::id), mesh_);
+	  }
 
-        //
-        // Contact potential: vertex-centric.
-        //
+	/** @brief Returns the material id of the provided cell */
+	long
+	get_material (cell_type const &elem) const
+	{
+	  return cell_material_.at (get_id (elem));
+	}
+
+	std::vector<material_id_type> const&
+	material () const
+	{
+	  return cell_material_;
+	}
+
+	//
+	// Contact potential: vertex-centric.
+	//
 
       private:
 
-        void init_datastructures()
-        {
-          cell_doping_n_.resize(viennagrid::cells(mesh_).size());
-          cell_doping_p_.resize(viennagrid::cells(mesh_).size());
+	void
+	init_datastructures ()
+	{
+	  cell_doping_n_.resize (viennagrid::cells (mesh_).size ());
+	  cell_doping_p_.resize (viennagrid::cells (mesh_).size ());
 
-          cell_temperature_.resize(viennagrid::cells(mesh_).size(), 300.0);
+	  cell_temperature_.resize (viennagrid::cells (mesh_).size (), 300.0);
 
-          cell_contact_potential_mask_.resize(viennagrid::cells(mesh_).size());
-          cell_contact_potential_.resize(viennagrid::cells(mesh_).size(), -1000.0);
+	  cell_contact_potential_mask_.resize (
+	      viennagrid::cells (mesh_).size ());
+	  cell_contact_potential_.resize (viennagrid::cells (mesh_).size (),
+					  -1000.0);
 
-          cell_material_.resize(viennagrid::cells(mesh_).size());
+	  cell_material_.resize (viennagrid::cells (mesh_).size ());
 
-          cell_traps_.resize(viennagrid::cells(mesh_).size());
+	  cell_traps_.resize (viennagrid::cells (mesh_).size ());
 
-          cell_fixed_charges_.resize(viennagrid::cells(mesh_).size());
-        }
+	  cell_fixed_charges_.resize (viennagrid::cells (mesh_).size ());
+	}
 
       public:
-        /** @brief Sets the contact potential at a cell */
-        void set_contact_potential(double pot, cell_type const & c)
-        {
-          cell_contact_potential_mask_.at(get_id(c)) = true;
-          cell_contact_potential_.at(get_id(c)) = pot;
-        }
+	/** @brief Sets the contact potential at a cell */
+	void
+	set_contact_potential (double pot, cell_type const &c)
+	{
+	  cell_contact_potential_mask_.at (get_id (c)) = true;
+	  cell_contact_potential_.at (get_id (c)) = pot;
+	}
 
-        /** @brief Sets a contact potential for a whole segment */
-        void set_contact_potential(double pot, segment_type const & seg)
-        {
-          typedef typename viennagrid::result_of::const_cell_range<segment_type>::type        CellOnSegmentContainer;
-          typedef typename viennagrid::result_of::iterator<CellOnSegmentContainer>::type      CellOnSegmentIterator;
+	/** @brief Sets a contact potential for a whole segment */
+	void
+	set_contact_potential (double pot, segment_type const &seg)
+	{
+	  typedef typename viennagrid::result_of::const_cell_range<segment_type>::type CellOnSegmentContainer;
+	  typedef typename viennagrid::result_of::iterator<
+	      CellOnSegmentContainer>::type CellOnSegmentIterator;
 
-          CellOnSegmentContainer cells_on_segment(seg);
-          for (CellOnSegmentIterator cit  = cells_on_segment.begin();
-                                     cit != cells_on_segment.end();
-                                   ++cit)
-          {
-            set_contact_potential(pot, *cit);
-          }
-        }
+	  CellOnSegmentContainer cells_on_segment (seg);
+	  for (CellOnSegmentIterator cit = cells_on_segment.begin ();
+	      cit != cells_on_segment.end (); ++cit)
+	    {
+	      set_contact_potential (pot, *cit);
+	    }
+	}
 
-        /** @brief Returns the contact potential at a given cell (this is the externally applied voltage not considering any built-in potential) */
-        double get_contact_potential(cell_type const & c) const
-        {
-          assert (cell_contact_potential_mask_.at(get_id(c)) == true && bool("Accessing potential from vertex for which no contact potential was set!"));
-          return cell_contact_potential_.at(get_id(c));
-        }
+	/** @brief Returns the contact potential at a given cell (this is the externally applied voltage not considering any built-in potential) */
+	double
+	get_contact_potential (cell_type const &c) const
+	{
+	  assert(
+	      cell_contact_potential_mask_.at (get_id (c)) == true
+		  && bool (
+		      "Accessing potential from vertex for which no contact potential was set!"));
+	  return cell_contact_potential_.at (get_id (c));
+	}
 
-        /** @brief Returns true if a contact potential has been set for the respective vertex */
-        bool has_contact_potential(cell_type const & c) const
-        {
-          return cell_contact_potential_mask_.at(get_id(c));
-        }
+	/** @brief Returns true if a contact potential has been set for the respective vertex */
+	bool
+	has_contact_potential (cell_type const &c) const
+	{
+	  return cell_contact_potential_mask_.at (get_id (c));
+	}
 
-        bool has_contact_potential(facet_type const &) const { return false; }
+	bool
+	has_contact_potential (facet_type const&) const
+	{
+	  return false;
+	}
 
-        //
-        // Traps
-        //
+	//
+	// Traps
+	//
 
-        /** @brief Adds a trap (density, energy) to a cell of the device */
-        void add_trap_level(trap_level_type trap, cell_type const & cell)
-        {
-          cell_traps_.at(get_id(cell)).push_back(trap);
-        }
+	/** @brief Adds a trap (density, energy) to a cell of the device */
+	void
+	add_trap_level (trap_level_type trap, cell_type const &cell)
+	{
+	  cell_traps_.at (get_id (cell)).push_back (trap);
+	}
 
-        /** @brief Adds a trap (density, energy) to a segment of the device */
-        void add_trap_level(trap_level_type trap, segment_type const & seg)
-        {
-          add_trap_level_on_complex(trap, seg);
-        }
+	/** @brief Adds a trap (density, energy) to a segment of the device */
+	void
+	add_trap_level (trap_level_type trap, segment_type const &seg)
+	{
+	  add_trap_level_on_complex (trap, seg);
+	}
 
-        /** @brief Adds a trap (density, energy) to the whole device */
-        void add_trap_level(trap_level_type trap)
-        {
-          add_trap_level_on_complex(trap, mesh_);
-        }
+	/** @brief Adds a trap (density, energy) to the whole device */
+	void
+	add_trap_level (trap_level_type trap)
+	{
+	  add_trap_level_on_complex (trap, mesh_);
+	}
 
-        /** @brief Returns all the trap levels defined for the provided cell */
-        trap_level_container_type const & get_trap_levels(cell_type const & cell) const
-        {
-          return cell_traps_.at(get_id(cell));
-        }
+	/** @brief Returns all the trap levels defined for the provided cell */
+	trap_level_container_type const&
+	get_trap_levels (cell_type const &cell) const
+	{
+	  return cell_traps_.at (get_id (cell));
+	}
 
-        /** @brief Removes all traps from the device */
-        void clear_traps()
-        {
-          for (std::size_t i=0; i<cell_traps_.size(); ++i)
-            cell_traps_[i].clear();
-        }
+	/** @brief Removes all traps from the device */
+	void
+	clear_traps ()
+	{
+	  for (std::size_t i = 0; i < cell_traps_.size (); ++i)
+	    cell_traps_[i].clear ();
+	}
 
-        //
-        // Fixed charges
-        //
+	//
+	// Fixed charges
+	//
 
-        /** @brief Sets a fixed charge at a cell.
-         * @param charge The charge on the given cell. Use SI-unit: Coulomb
-         * @param c The cell on which to put a fixed charge
-         */
-        void set_fixed_charge(cell_type const & c, double charge)
-        {
-          cell_fixed_charges_.at(get_id(c)) = charge;
-        }
+	/** @brief Sets a fixed charge at a cell.
+	 * @param charge The charge on the given cell. Use SI-unit: Coulomb
+	 * @param c The cell on which to put a fixed charge
+	 */
+	void
+	set_fixed_charge (cell_type const &c, double charge)
+	{
+	  cell_fixed_charges_.at (get_id (c)) = charge;
+	}
 
-        /**
-         * @brief Gives the fixed charge set at a certain cell
-         * @param c The cell
-         * @return The charge in Coulomb
-         */
-        double get_fixed_charge(cell_type const & c) const
-        {
-          return cell_fixed_charges_.at(get_id(c));
-        }
+	/**
+	 * @brief Gives the fixed charge set at a certain cell
+	 * @param c The cell
+	 * @return The charge in Coulomb
+	 */
+	double
+	get_fixed_charge (cell_type const &c) const
+	{
+	  return cell_fixed_charges_.at (get_id (c));
+	}
 
-    protected:
+      protected:
 
-        //
-        // Lattice temperature
-        //
-        void set_lattice_temp_impl(double value, cell_type const & c)
-        {
-          cell_temperature_.at(get_id(c)) = value;
-        }
+	//
+	// Lattice temperature
+	//
+	void
+	set_lattice_temp_impl (double value, cell_type const &c)
+	{
+	  cell_temperature_.at (get_id (c)) = value;
+	}
 
-        template <typename MeshOrSegmentT>
-        void set_lattice_temp_impl(double value, MeshOrSegmentT const & meshseg)    //ComplexType is a segment or a mesh
-        {
-          typedef typename viennagrid::result_of::const_cell_range<MeshOrSegmentT>::type     CellContainer;
-          typedef typename viennagrid::result_of::iterator<CellContainer>::type              CellIterator;
-          if (value <= 0.0) { throw viennashe::invalid_value_exception("device.set_lattice_temp*: Lattice temperatures have to be greater 0 K!", value); }
+	template<typename MeshOrSegmentT>
+	  void
+	  set_lattice_temp_impl (double value, MeshOrSegmentT const &meshseg) //ComplexType is a segment or a mesh
+	  {
+	    typedef typename viennagrid::result_of::const_cell_range<
+		MeshOrSegmentT>::type CellContainer;
+	    typedef typename viennagrid::result_of::iterator<CellContainer>::type CellIterator;
+	    if (value <= 0.0)
+	      {
+		throw viennashe::invalid_value_exception (
+		    "device.set_lattice_temp*: Lattice temperatures have to be greater 0 K!",
+		    value);
+	      }
 
-          CellContainer cells(meshseg);
-          for (CellIterator cit  = cells.begin();
-                            cit != cells.end();
-                          ++cit)
-          {
-            set_lattice_temp_impl(value, *cit);
-          }
-        }
+	    CellContainer cells (meshseg);
+	    for (CellIterator cit = cells.begin (); cit != cells.end (); ++cit)
+	      {
+		set_lattice_temp_impl (value, *cit);
+	      }
+	  }
 
+	//
+	// Doping
+	//
 
-        //
-        // Doping
-        //
+	void
+	set_doping_n_impl (double value, cell_type const &c)
+	{
+	  if (value <= 0.0)
+	    {
+	      throw viennashe::invalid_value_exception (
+		  "device.set_doping_p_impl(): Concentrations have to be greater 0 !",
+		  value);
+	    }
+	  cell_doping_n_.at (get_id (c)) = value;
+	}
 
-        void set_doping_n_impl(double value, cell_type const & c)
-        {
-          if (value <= 0.0) { throw viennashe::invalid_value_exception("device.set_doping_p_impl(): Concentrations have to be greater 0 !", value); }
-          cell_doping_n_.at(get_id(c)) = value;
-        }
+	void
+	set_doping_p_impl (double value, cell_type const &c)
+	{
+	  if (value <= 0.0)
+	    {
+	      throw viennashe::invalid_value_exception (
+		  "device.set_doping_p_impl(): Concentrations have to be greater 0 !",
+		  value);
+	    }
+	  cell_doping_p_.at (get_id (c)) = value;
+	}
 
-        void set_doping_p_impl(double value, cell_type const & c)
-        {
-          if (value <= 0.0) { throw viennashe::invalid_value_exception("device.set_doping_p_impl(): Concentrations have to be greater 0 !", value); }
-          cell_doping_p_.at(get_id(c)) = value;
-        }
+	template<typename MeshOrSegmentT>
+	  void
+	  set_doping_n_impl (double value, MeshOrSegmentT const &meshseg)
+	  {
+	    typedef typename viennagrid::result_of::const_cell_range<
+		MeshOrSegmentT>::type CellContainer;
+	    typedef typename viennagrid::result_of::iterator<CellContainer>::type CellIterator;
 
-        template <typename MeshOrSegmentT>
-        void set_doping_n_impl(double value, MeshOrSegmentT const & meshseg)
-        {
-          typedef typename viennagrid::result_of::const_cell_range<MeshOrSegmentT>::type   CellContainer;
-          typedef typename viennagrid::result_of::iterator<CellContainer>::type            CellIterator;
+	    if (value <= 0.0)
+	      {
+		throw viennashe::invalid_value_exception (
+		    "device.set_doping*: Concentrations have to be greater 0 !",
+		    value);
+	      }
+	    CellContainer cells (meshseg);
+	    for (CellIterator cit = cells.begin (); cit != cells.end (); ++cit)
+	      {
+		set_doping_n_impl (value, *cit);
+	      }
+	  }
 
-          if (value <= 0.0) { throw viennashe::invalid_value_exception("device.set_doping*: Concentrations have to be greater 0 !", value); }
-          CellContainer cells(meshseg);
-          for (CellIterator cit = cells.begin();
-              cit != cells.end();
-              ++cit)
-          {
-            set_doping_n_impl(value, *cit);
-          }
-        }
+	template<typename MeshOrSegmentT>
+	  void
+	  set_doping_p_impl (double value, MeshOrSegmentT const &meshseg)
+	  {
+	    typedef typename viennagrid::result_of::const_cell_range<
+		MeshOrSegmentT>::type CellContainer;
+	    typedef typename viennagrid::result_of::iterator<CellContainer>::type CellIterator;
 
-        template <typename MeshOrSegmentT>
-        void set_doping_p_impl(double value, MeshOrSegmentT const & meshseg)
-        {
-          typedef typename viennagrid::result_of::const_cell_range<MeshOrSegmentT>::type    CellContainer;
-          typedef typename viennagrid::result_of::iterator<CellContainer>::type             CellIterator;
+	    if (value <= 0.0)
+	      {
+		throw viennashe::invalid_value_exception (
+		    "device.set_doping*: Concentrations have to be greater 0 !",
+		    value);
+	      }
+	    CellContainer cells (meshseg);
+	    for (CellIterator cit = cells.begin (); cit != cells.end (); ++cit)
+	      {
+		set_doping_p_impl (value, *cit);
+	      }
+	  }
 
-          if (value <= 0.0) { throw viennashe::invalid_value_exception("device.set_doping*: Concentrations have to be greater 0 !", value); }
-          CellContainer cells(meshseg);
-          for (CellIterator cit = cells.begin();
-              cit != cells.end();
-              ++cit)
-          {
-            set_doping_p_impl(value, *cit);
-          }
-        }
+	//
+	// Material
+	//
 
-        //
-        // Material
-        //
+	template<typename MeshOrSegmentT>
+	  void
+	  set_material_on_complex (long material_id,
+				   MeshOrSegmentT const &meshseg)
+	  {
+	    typedef typename viennagrid::result_of::const_cell_range<
+		MeshOrSegmentT>::type CellContainer;
+	    typedef typename viennagrid::result_of::iterator<CellContainer>::type CellIterator;
+	    //if (material_id < 0.0) { throw viennashe::invalid_value_exception("device.set_material*:  !", material_id); }
 
-        template <typename MeshOrSegmentT>
-        void set_material_on_complex(long material_id, MeshOrSegmentT const & meshseg)
-        {
-          typedef typename viennagrid::result_of::const_cell_range<MeshOrSegmentT>::type    CellContainer;
-          typedef typename viennagrid::result_of::iterator<CellContainer>::type             CellIterator;
-          //if (material_id < 0.0) { throw viennashe::invalid_value_exception("device.set_material*:  !", material_id); }
+	    CellContainer cells (meshseg);
+	    for (CellIterator cit = cells.begin (); cit != cells.end (); ++cit)
+	      set_material (material_id, *cit);
+	  }
 
-          CellContainer cells(meshseg);
-          for (CellIterator cit = cells.begin();
-                            cit != cells.end();
-                          ++cit)
-            set_material(material_id, *cit);
-        }
+	//
+	// Traps
+	//
 
+	template<typename MeshOrSegmentT>
+	  void
+	  add_trap_level_on_complex (trap_level_type trap,
+				     MeshOrSegmentT const &meshseg)
+	  {
+	    typedef typename viennagrid::result_of::const_cell_range<
+		MeshOrSegmentT>::type CellContainer;
+	    typedef typename viennagrid::result_of::iterator<CellContainer>::type CellIterator;
 
+	    CellContainer cells (meshseg);
+	    for (CellIterator cit = cells.begin (); cit != cells.end (); ++cit)
+	      {
+		add_trap_level (trap, *cit);
+	      }
+	  }
 
-        //
-        // Traps
-        //
+	MeshT mesh_;
+	segmentation_type seg_;
 
-        template <typename MeshOrSegmentT>
-        void add_trap_level_on_complex(trap_level_type trap, MeshOrSegmentT const & meshseg)
-        {
-          typedef typename viennagrid::result_of::const_cell_range<MeshOrSegmentT>::type   CellContainer;
-          typedef typename viennagrid::result_of::iterator<CellContainer>::type               CellIterator;
+	// device data:
+	std::vector<double> cell_doping_n_;
+	std::vector<double> cell_doping_p_;
 
-          CellContainer cells(meshseg);
-          for (CellIterator cit = cells.begin();
-                            cit != cells.end();
-                          ++cit)
-          {
-            add_trap_level(trap, *cit);
-          }
-        }
+	std::vector<double> cell_temperature_; //TODO: Think about handling temperatures in device
 
-        MeshT             mesh_;
-        segmentation_type seg_;
+	std::vector<bool> cell_contact_potential_mask_;
+	std::vector<double> cell_contact_potential_;
 
-        // device data:
-        std::vector<double>   cell_doping_n_;
-        std::vector<double>   cell_doping_p_;
+	std::vector<material_id_type> cell_material_;
 
-        std::vector<double>         cell_temperature_; //TODO: Think about handling temperatures in device
+	std::vector<trap_level_container_type> cell_traps_;
 
-        std::vector<bool>     cell_contact_potential_mask_;
-        std::vector<double>   cell_contact_potential_;
-
-        std::vector<material_id_type> cell_material_;
-
-        std::vector<trap_level_container_type> cell_traps_;
-
-        std::vector<double>        cell_fixed_charges_;
-    };
+	std::vector<double> cell_fixed_charges_;
+      };
 
   }
 
-
   /** @brief Defines the physical properties of a device, e.g. doping. This is the implementation for 2d and higher dimensions */
-  template <typename MeshT,
-            bool edges_and_cells_different /* see forwards.h for default argument */ >
-  class device : public detail::device_base<MeshT> {};
-
-
+  template<typename MeshT, bool edges_and_cells_different /* see forwards.h for default argument */>
+    class device : public detail::device_base<MeshT>
+    {
+    };
 
 } //namespace viennashe
 

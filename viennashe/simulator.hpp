@@ -894,7 +894,7 @@ namespace viennashe
 
         for (std::size_t nonlinear_iter = 1; nonlinear_iter <= this->config().nonlinear_solver().max_iters(); ++nonlinear_iter)
         {
-          viennashe::util::timer stopwatch;
+          viennashe::util::timer stopwatch,stopwatch2;
           stopwatch.start();
 
           // If this is the last iteration set update_no_damping
@@ -1000,7 +1000,7 @@ namespace viennashe
             std::size_t total_number_of_unknowns = 0;
             for (viennashe::map_info_type::const_iterator it = map_info.begin(); it != map_info.end(); ++it)
               total_number_of_unknowns += (it->second).first + (it->second).second;   //sum of unknowns on vertices and edges
-
+            stopwatch2.start();
             MatrixType A(total_number_of_unknowns, total_number_of_unknowns);
             VectorType b(total_number_of_unknowns);
 
@@ -1012,7 +1012,7 @@ namespace viennashe
             for (std::size_t i = 0; i < this->quantities().unknown_she_quantities().size(); ++i)
               viennashe::she::assemble(this->device(), transferred_quantities, this->quantities(), this->config(), this->quantities().unknown_she_quantities()[i], A, b,
                                         (quantities_history_.size() > 1), nonlinear_iter > 1);
-
+            log::info<log_simulator>() << " Assemble TIME:"  << std::fixed      << std::setprecision(3) << std::setw(8) << stopwatch.get() << std::endl;
             //VectorType x = viennashe::she::solve(A, b, map_info);  //TODO: use this!
             VectorType x = this->solve(A, b, true);
 
@@ -1031,12 +1031,13 @@ namespace viennashe
               std::size_t number_of_unknowns = map_info[quantities().unknown_quantities()[i].get_name()].first;
               if (number_of_unknowns == 0)
                 continue;
-
+              stopwatch2.start();
               // System for this quantity only:
               MatrixType A(number_of_unknowns, number_of_unknowns);
               VectorType b(number_of_unknowns);
 
               viennashe::assemble(this->device(), this->quantities(), this->config(), this->quantities().unknown_quantities()[i], A, b);
+              log::info<log_simulator>() << " Assemble TIME:"  << std::fixed      << std::setprecision(3) << std::setw(8) << stopwatch.get() << std::endl;
 
               VectorType x = solve(A, b);
 
@@ -1058,7 +1059,7 @@ namespace viennashe
               std::size_t number_of_unknowns = quan_unknowns.first + quan_unknowns.second;
               if (number_of_unknowns == 0)
                 continue;
-
+              stopwatch2.start();
               // System for this quantity only:
               MatrixType A(number_of_unknowns, number_of_unknowns);
               VectorType b(number_of_unknowns);
@@ -1066,6 +1067,7 @@ namespace viennashe
               viennashe::she::assemble(device(), transferred_quantities, this->quantities(), this->config(),
                                         this->quantities().unknown_she_quantities()[i], A, b,
                                         (quantities_history_.size() > 1), nonlinear_iter > 1);
+              log::info<log_simulator>() << " Assemble TIME:"  << std::fixed      << std::setprecision(3) << std::setw(8) << stopwatch.get() << std::endl;
 
               VectorType x = viennashe::she::solve(this->device(), this->quantities().unknown_she_quantities()[i], this->config(), A, b, quan_unknowns.first);
 
@@ -1262,11 +1264,10 @@ namespace viennashe
         }
 
         // Step 2: Normalize matrix rows:
-        viennashe::math::row_normalize_system(matrix, rhs);
+        VectorType scale_factors = viennashe::math::row_normalize_system(matrix, rhs);
 
         // Step 3: Solve
         VectorType update = viennashe::solvers::solve(matrix, rhs, config().linear_solver());
-
         // Step 4: Check convergence:
         double lin_sol_res = viennashe::math::norm_2(viennashe::math::subtract(viennashe::math::prod(matrix, update), rhs));
         lin_sol_res       /= viennashe::math::norm_2(rhs);
@@ -1279,7 +1280,8 @@ namespace viennashe
           //log::debug() << rhs << std::endl;
           throw viennashe::solver_failed_exception("Linear solver failed to converge properly!");
         }
-
+        for (std::size_t i=0; i<update.size(); ++i)
+                   update[i] *= scale_factors[i];
         if (this->config_.linear_solver().scale())
         {
           // Step 4: Revert unknown scaling:

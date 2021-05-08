@@ -22,6 +22,7 @@
 #include "viennashe/solvers/exception.hpp"
 #include "src/solvers/viennacl/all.h"
 #include "src/solvers/native/dense_linear_solver.hpp"
+#include "src/solvers/petsc/petsc_solver.hpp"
 
 #include "viennashe/util/checks.hpp"
 #include "viennacl/linalg/norm_2.hpp"
@@ -72,14 +73,21 @@ namespace viennashe
           return viennashe::solvers::solve(system_matrix, rhs, config, viennashe::solvers::serial_linear_solver_tag());
         case linear_solver_config::parallel_linear_solver:
           return viennashe::solvers::solve(system_matrix, rhs, config, viennashe::solvers::parallel_linear_solver_tag());
+        case linear_solver_config::petsc_parallel_linear_solver:
+          return viennashe::solvers::solve(system_matrix, rhs, config, viennashe::solvers::petsc_linear_solver_tag());
 #ifdef VIENNASHE_HAVE_GPU_SOLVER
         case linear_solver_config::gpu_parallel_linear_solver:
           return solve(system_matrix, rhs, config, viennashe::solvers::gpu_parallel_linear_solver_tag());
+        case linear_solver_config::petsc_parallel_AMGX_solver:
+          return viennashe::solvers::solve(system_matrix, rhs, config, viennashe::solvers::petsc_amgx_solver_tag());
 #endif
         default:
           throw invalid_linear_solver_exception();
       }
     }
+
+
+
 
   }
 }
