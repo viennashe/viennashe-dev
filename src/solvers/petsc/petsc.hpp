@@ -457,7 +457,7 @@ namespace viennashe
 	  sizeg = M.size2();
 	  rstart = M.getRstart();
 	  rend = M.getRend();
-	  for (PetscInt k = 0; k < V.size(); k++)
+	  for (size_t k = 0; k < V.size(); k++)
 	    {
 	      if (V[k] != 0.0){
 		nnz++;
