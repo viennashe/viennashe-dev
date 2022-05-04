@@ -69,7 +69,7 @@ namespace viennashe
           values_(values_array) {}
 
       const_quantity(self_type const & o) : name_(o.name_), values_(o.values_) { }
-      void operator=(self_type const & o) { name_(o.name_); values_(o.values_); }
+      void operator=(self_type const & o) { name_ = o.name_; values_ = o.values_; }
 
       ValueT get_value (associated_type const & elem) const { return values_.at(static_cast<std::size_t>(elem.id().get())); }
       ValueT at        (associated_type const & elem) const { return this->get_value(elem); }
@@ -101,7 +101,7 @@ namespace viennashe
         : name_(quan_name), values_(values_array) {}
 
       non_const_quantity(self_type const & o) : name_(o.name_), values_(o.values_) { }
-      void operator=(self_type const & o) { name_(o.name_); values_(o.values_); }
+      void operator=(self_type const & o) { name_ = o.name_; values_ = o.values_; }
 
 
       ValueT get_value(associated_type const & elem)  const         { return values_.at(static_cast<std::size_t>(elem.id().get()));   }
