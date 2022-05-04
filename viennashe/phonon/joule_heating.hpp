@@ -1,7 +1,7 @@
 #ifndef VIENNASHE_PHONON_JOULE_HEATING_HPP
 #define VIENNASHE_PHONON_JOULE_HEATING_HPP
 /* ============================================================================
-   Copyright (c) 2011-2014, Institute for Microelectronics,
+   Copyright (c) 2011-2022, Institute for Microelectronics,
                             Institute for Analysis and Scientific Computing,
                             TU Wien.
 

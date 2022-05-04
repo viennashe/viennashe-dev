@@ -1,7 +1,7 @@
 #ifndef VIENNASHE_MODELS_DD_MOBILITY_PARAMETERS_H
 #define VIENNASHE_MODELS_DD_MOBILITY_PARAMETERS_H
 /* ============================================================================
-   Copyright (c) 2011-2014, Institute for Microelectronics,
+   Copyright (c) 2011-2022, Institute for Microelectronics,
                             Institute for Analysis and Scientific Computing,
                             TU Wien.
 
