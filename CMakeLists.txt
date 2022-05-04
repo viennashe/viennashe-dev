@@ -1,68 +1,111 @@
 
-
 PROJECT(ViennaSHE)
 
 cmake_minimum_required(VERSION 3.0)
-if(COMMAND cmake_policy)
-  cmake_policy(SET CMP0003 NEW)
-endif(COMMAND cmake_policy)
 
-set(VERSION_MAJOR 1)
-set(VERSION_MINOR 2)
-set(VERSION_PATCH 0)
-set(VERSION ${VERSION_MAJOR}.${VERSION_MINOR}.${VERSION_PATCH})
+include(cmake/CMakeLists.txt.in)
 
+add_subdirectory(doc)
 
-# If you want the full compiler output, uncomment the following line
-#SET(CMAKE_VERBOSE_MAKEFILE ON)
+# Add visibility of headers
+# Necessary for Qt-Creator usage.
+################
+file( GLOB_RECURSE MAKE_HEADERS_VISIBLE_SRC
+    *.hpp *.h *.dox)
+add_custom_target( MAKE_HEADERS_VISIBLE SOURCES ${MAKE_HEADERS_VISIBLE_SRC} )
 
+# Dist target
+#############
 
-# ************************** Section 1: Configure  **************************
+option(ENABLE_DIST "Build the dist package" FALSE)
 
-#
-# Uncomment the following line to enable the GPU-accelerated OpenCL-based solver:
-#
-#SET(ENABLE_OPENCL ON)
+if(ENABLE_DIST)
+   file(MAKE_DIRECTORY "${PROJECT_BINARY_DIR}/dist")
 
+   set(DISTDIR "${PROJECT_BINARY_DIR}/dist/ViennaSHE-${VERSION}")
+   configure_file(cmake/CMakeLists.txt.in "${DISTDIR}/CMakeLists.txt" @ONLY)
 
-#
-###################### END OF USER CUSTOMIZATION OPTIONS ################################
-#
-# In most situations, there is no need to change anything below this line.
-#
+   set(PROJECT_SOURCE_DIR_FIXED "${PROJECT_SOURCE_DIR}")  # Looks like CMake behavior has changed over the versions.
 
+   #
+   # Full package:
+   #
+   add_custom_target(dist
+      COMMAND "${CMAKE_COMMAND}" -E make_directory "${DISTDIR}"
 
-# **************************  Section 2: Configure CMake **************************
+      COMMAND "${CMAKE_COMMAND}" -E copy_if_different
+         "${PROJECT_SOURCE_DIR_FIXED}/LICENSE" "${DISTDIR}/LICENSE"
 
+      COMMAND "${CMAKE_COMMAND}" -E copy_if_different
+         "${PROJECT_SOURCE_DIR_FIXED}/changelog" "${DISTDIR}/changelog"
 
-list(APPEND CMAKE_MODULE_PATH "${PROJECT_SOURCE_DIR}/cmake")
-include(ViennaSHECommon)
+      COMMAND "${CMAKE_COMMAND}" -E copy_if_different
+         "${PROJECT_SOURCE_DIR_FIXED}/README" "${DISTDIR}/README"
 
-# Set release build:
-IF(DEFINED CMAKE_BUILD_TYPE)
- SET (CMAKE_BUILD_TYPE ${CMAKE_BUILD_TYPE})
-ELSE()
- SET (CMAKE_BUILD_TYPE Release)
-ENDIF()
+      COMMAND "${CMAKE_COMMAND}" -E copy_if_different
+         "${PROJECT_SOURCE_DIR_FIXED}/CTestConfig.cmake" "${DISTDIR}/CTestConfig.cmake"
 
-
-add_subdirectory(src)
-add_subdirectory(examples)
-add_subdirectory(python)
-
-if(BUILD_TESTING)
-   INCLUDE(CTest)
-   add_subdirectory(tests)
-endif()
+      COMMAND "${CMAKE_COMMAND}" -E make_directory "${DISTDIR}/build"
 
 
-add_subdirectory(libviennashe)
+      COMMAND "${CMAKE_COMMAND}" -E make_directory "${DISTDIR}/cmake"
+      COMMAND "${CMAKE_COMMAND}" -E copy_if_different
+         "${PROJECT_SOURCE_DIR_FIXED}/cmake/copymanual.cmake" "${DISTDIR}/cmake/copymanual.cmake"
+      COMMAND "${CMAKE_COMMAND}" -E copy_if_different
+         "${PROJECT_SOURCE_DIR_FIXED}/cmake/FindOpenCL.cmake" "${DISTDIR}/cmake/FindOpenCL.cmake"
+      COMMAND "${CMAKE_COMMAND}" -E copy_if_different
+         "${PROJECT_SOURCE_DIR_FIXED}/cmake/FindPETSc.cmake" "${DISTDIR}/cmake/FindPETSc.cmake"
+      COMMAND "${CMAKE_COMMAND}" -E copy_if_different
+         "${PROJECT_SOURCE_DIR_FIXED}/cmake/ViennaSHECommon.cmake" "${DISTDIR}/cmake/ViennaSHECommon.cmake"
+      COMMAND "${CMAKE_COMMAND}" -E copy_if_different
+         "${PROJECT_SOURCE_DIR_FIXED}/cmake/ViennaSHEConfig.cmake.in" "${DISTDIR}/cmake/ViennaSHEConfig.cmake.in"
+      COMMAND "${CMAKE_COMMAND}" -E copy_if_different
+         "${PROJECT_SOURCE_DIR_FIXED}/cmake/ViennaSHEConfigVersion.cmake.in" "${DISTDIR}/cmake/ViennaSHEConfigVersion.cmake.in"
 
+      COMMAND "${CMAKE_COMMAND}" -E make_directory "${DISTDIR}/doc"
+      COMMAND "${CMAKE_COMMAND}" -E copy_directory
+         "${CMAKE_CURRENT_BINARY_DIR}/doc/doxygen/html"
+         "${DISTDIR}/doc/html"
 
-# Install
-#########
+      COMMAND "${CMAKE_COMMAND}" -E copy_if_different
+         "${PROJECT_SOURCE_DIR_FIXED}/doc/Doxyfile.in" "${DISTDIR}/doc/Doxyfile.in"
+      COMMAND "${CMAKE_COMMAND}" -E copy_if_different
+         "${PROJECT_SOURCE_DIR_FIXED}/doc/doxyfilter.py" "${DISTDIR}/doc/doxyfilter.py"
 
-install(DIRECTORY viennashe
-   DESTINATION ${INSTALL_INCLUDE_DIR} COMPONENT dev
-   FILES_MATCHING PATTERN "*.h" PATTERN "*.hpp")
+      COMMAND "${CMAKE_COMMAND}" -E copy_directory
+         "${PROJECT_SOURCE_DIR_FIXED}/src" "${DISTDIR}/src"
 
+      COMMAND "${CMAKE_COMMAND}" -E copy_directory
+         "${PROJECT_SOURCE_DIR_FIXED}/libviennashe" "${DISTDIR}/libviennashe"
+
+      COMMAND "${CMAKE_COMMAND}" -E copy_directory
+         "${PROJECT_SOURCE_DIR_FIXED}/python" "${DISTDIR}/python"
+
+      COMMAND "${CMAKE_COMMAND}" -E copy_directory
+         "${PROJECT_SOURCE_DIR_FIXED}/examples" "${DISTDIR}/examples"
+
+      COMMAND "${CMAKE_COMMAND}" -E make_directory "${DISTDIR}/tests"
+      COMMAND "${CMAKE_COMMAND}" -E make_directory "${DISTDIR}/tests/src"
+      COMMAND "${CMAKE_COMMAND}" -E copy_directory
+         "${PROJECT_SOURCE_DIR_FIXED}/tests/data" "${DISTDIR}/tests/data"
+      COMMAND "${CMAKE_COMMAND}" -E copy_directory
+         "${PROJECT_SOURCE_DIR_FIXED}/tests/src" "${DISTDIR}/tests/src"
+      COMMAND "${CMAKE_COMMAND}" -E copy_if_different
+         "${PROJECT_SOURCE_DIR_FIXED}/tests/CMakeLists.txt" "${DISTDIR}/tests/CMakeLists.txt"
+
+      COMMAND "${CMAKE_COMMAND}" -E copy_directory
+         "${PROJECT_SOURCE_DIR_FIXED}/viennacl" "${DISTDIR}/viennacl"
+
+      COMMAND "${CMAKE_COMMAND}" -E copy_directory
+         "${PROJECT_SOURCE_DIR_FIXED}/viennagrid" "${DISTDIR}/viennagrid"
+
+      COMMAND "${CMAKE_COMMAND}" -E copy_directory
+         "${PROJECT_SOURCE_DIR_FIXED}/viennashe" "${DISTDIR}/viennashe"
+
+      COMMAND "${CMAKE_COMMAND}" -E tar czf ViennaSHE-${VERSION}.tar.gz ViennaSHE-${VERSION}
+      WORKING_DIRECTORY "${PROJECT_BINARY_DIR}/dist"
+      COMMENT "Generating dist/ViennaSHE-${VERSION}.tar.gz"
+      VERBATIM)
+   add_dependencies(dist apidoc)
+
+endif(ENABLE_DIST)
