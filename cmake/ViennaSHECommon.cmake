@@ -67,6 +67,9 @@ if (ENABLE_OPENMP)
 endif(ENABLE_OPENMP)
 
 find_package(PETSc)
+SET(PETSC_ROOT "$ENV{PETSC_DIR}/$ENV{PETSC_ARCH}")
+set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -Wl,-rpath -Wl,${PETSC_ROOT}/lib")
+set(CMAKE_EXE_LINKER_FLAGS "${CMAKE_EXE_LINKER_FLAGS} -Wl,-rpath -Wl,${PETSC_ROOT}/lib")
 
 
 # ************************** Section 3: Miscellaneous compiler settings **************************
