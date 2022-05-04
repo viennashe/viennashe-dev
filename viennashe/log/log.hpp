@@ -100,9 +100,9 @@ namespace viennashe
           this->get() << "[" << component_name << "] ";
         }
 
-        logger(const logger & r) : _messageLevel(r._messageLevel)
-        {
-          if ( do_log() ) get() << r.get(); // _messageLevel must have been copied already!
+        logger(const logger & r) : _messageLevel(r._messageLevel){
+        	 if ( do_log() ){local_out.str(r.local_out.str());} // _messageLevel must have been copied already! C++7 change of policy
+//         if ( do_log() ){ get() << r.get()}; // _messageLevel must have been copied already!
         }
 
         /** @brief Destructor. Does actually write the log-message to the output-stream (normally std::cout) */
