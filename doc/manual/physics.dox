@@ -18,7 +18,7 @@ The second half of this chapter is devoted to the various scattering effects.
 Since scattering balances the energy gain of carriers due to the electric field, accurate expressions for the scattering operators are mandatory.
 ViennaSHE provides the most important linear scattering operators, see \ref manual-sec-scattering
 
-\warning <i>Keep in mind that ViennaSHE 1.2.0 is not rigorously calibrated! Before any quantitative interpretation of the obtained simulation results, ensure a proper calibration for your application domain first.</i>
+\warning <i>Keep in mind that ViennaSHE is not rigorously calibrated! Before any quantitative interpretation of the obtained simulation results, ensure a proper calibration for your application domain first.</i>
 
 \section manual-sec-dispersion Dispersion Relations
 

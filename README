@@ -17,11 +17,12 @@ A. License
 
 1. Requirements
 -----------------
-ViennaSHE requires only 
+ViennaSHE requires only
  - a not too dated C++ compiler (e.g. gcc 4.x.x),
  - the C++ Standard Template Library,
- - ViennaGrid (http://viennagrid.sourceforge.net), and
- - ViennaCL (http://viennacl.sourceforge.net)
+ - PETSc (https://petsc.org/
+ - ViennaGrid (http://viennagrid.sourceforge.net/), and
+ - ViennaCL (http://viennacl.sourceforge.net/)
 
 For building the examples, CMake can be used.
 
@@ -32,9 +33,9 @@ For building the examples, CMake can be used.
 The first step is to extract the file:
 
 Unix-based OS:
-$> gunzip ViennaSHE-1.2.0.tar.gz
-$> tar -xf ViennaSHE-1.2.0.tar
-$> cd ViennaSHE-1.2.0
+$> gunzip ViennaSHE-1.3.0.tar.gz
+$> tar -xf ViennaSHE-1.3.0.tar
+$> cd ViennaSHE-1.3.0
 
 Detailed instructions for the various operating systems can obtained by opening the file
   ./doc/html/manual-page-installation.html

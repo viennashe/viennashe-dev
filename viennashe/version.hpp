@@ -34,7 +34,7 @@ namespace viennashe
   /** @brief Returns the current ViennaSHE minor version as std::size_t   */
   inline std::size_t minor_version()
   {
-    return 2;
+    return 3;
   }
 
   /** @brief Returns the current ViennaSHE revision number as std::size_t   */

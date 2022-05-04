@@ -47,7 +47,7 @@ Thus, ViennaSHE must be used with extreme caution for the derivation of any quan
 Consequently, the simulation results should only provide a qualitative understanding of the carrier interaction in a semiconductor device, and users can already familiarize themselves with the handling of the simulator.
 The quantitative accuracy of the simulation results will be improved with subsequent releases of ViennaSHE.
 
-\warning <i>Keep in mind that ViennaSHE 1.2.0 is not rigorously calibrated! Before any quantitative interpretation of the obtained simulation results, ensure a proper calibration for your application domain first.</i>
+\warning <i>Keep in mind that ViennaSHE is not rigorously calibrated! Before any quantitative interpretation of the obtained simulation results, ensure a proper calibration for your application domain first.</i>
 
 <i>User contributions welcome! If you wish to contribute a feature to ViennaSHE, do not hesitate to contact us e.g. via the mailing list at viennashe-support@lists.sourceforge.net</i>
 

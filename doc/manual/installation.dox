@@ -13,8 +13,9 @@ If you experience any trouble, do not hesitate to ask for help at our mailinglis
 
   <table>
   <tr><td> A recent C++ compiler </td><td> GCC version 4.2.x or above, Clang 3.0 or above, and Visual C++ 2005 or above are known to work.</td></tr>
-  <tr><td> <a href="http://viennacl.sourceforge.net">ViennaCL</a>     </td><td> The ViennaCL sources are included in the ViennaSHE package, no separate installation required. </td></tr>
-  <tr><td> <a href="http://viennagrid.sourceforge.net">ViennaGrid</a> </td><td> The ViennaGrid sources are included in the ViennaSHE package, no separate installation required. </td></tr>
+  <tr><td> <a href="http://viennacl.sourceforge.net/">ViennaCL</a>     </td><td> The ViennaCL sources are included in the ViennaSHE package, no separate installation required. </td></tr>
+  <tr><td> <a href="http://viennagrid.sourceforge.net/">ViennaGrid</a> </td><td> The ViennaGrid sources are included in the ViennaSHE package, no separate installation required. </td></tr>
+  <tr><td> <a href="https://petsc.org/">PETSc</a> </td><td> A working PETSc installation is required. The environment variables PETSC_DIR and PETSC_ARCH need to be set.</td></tr>
   </table>
 
  Moreover, the following optional components are available:
