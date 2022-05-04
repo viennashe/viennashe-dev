@@ -235,9 +235,12 @@ namespace viennashe
         * */
     if(quan.get_value_H_size() == 0 )return 0;
 
-    int size,rank;
-    MPI_Comm_size(PETSC_COMM_WORLD,&size);
-    MPI_Comm_rank(PETSC_COMM_WORLD,&rank);
+    int size = 1, rank = 0;
+    if (conf.linear_solver().id() == viennashe::solvers::linear_solver_config::petsc_parallel_linear_solver)
+    {
+      MPI_Comm_size(PETSC_COMM_WORLD,&size);
+      MPI_Comm_rank(PETSC_COMM_WORLD,&rank);
+    }
     std::size_t maxquantityfull = quan.get_value_H_size();
     //* Overleap the regions to avoid the singular matrix*/
     std::size_t maxquantity = rank < size-1 ? ((rank+1)*maxquantityfull)/size+1 :maxquantityfull ;
@@ -295,9 +298,12 @@ namespace viennashe
      * PETSC
      * */
     if(quan.get_value_H_size() == 0 )return 0;
-    int size,rank;
-    MPI_Comm_size(PETSC_COMM_WORLD,&size);
-    MPI_Comm_rank(PETSC_COMM_WORLD,&rank);
+    int size = 1,rank = 0;
+    if (conf.linear_solver().id() == viennashe::solvers::linear_solver_config::petsc_parallel_linear_solver)
+    {
+      MPI_Comm_size(PETSC_COMM_WORLD,&size);
+      MPI_Comm_rank(PETSC_COMM_WORLD,&rank);
+    }
     std::size_t maxquantityfull = quan.get_value_H_size();
     std::size_t maxquantity = rank < size-1 ? ((rank+1)*maxquantityfull)/size+1:maxquantityfull ;
     std::size_t init = ((rank)*maxquantityfull)/size;
