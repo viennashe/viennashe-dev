@@ -1012,7 +1012,7 @@ namespace viennashe
             for (std::size_t i = 0; i < this->quantities().unknown_she_quantities().size(); ++i)
               viennashe::she::assemble(this->device(), transferred_quantities, this->quantities(), this->config(), this->quantities().unknown_she_quantities()[i], A, b,
                                         (quantities_history_.size() > 1), nonlinear_iter > 1);
-            log::info<log_simulator>() << " Assemble TIME:"  << std::fixed      << std::setprecision(3) << std::setw(8) << stopwatch.get() << std::endl;
+            //log::info<log_simulator>() << " Assemble TIME:"  << std::fixed      << std::setprecision(3) << std::setw(8) << stopwatch.get() << std::endl;
             //VectorType x = viennashe::she::solve(A, b, map_info);  //TODO: use this!
             VectorType x = this->solve(A, b, true);
 
@@ -1037,7 +1037,7 @@ namespace viennashe
               VectorType b(number_of_unknowns);
 
               viennashe::assemble(this->device(), this->quantities(), this->config(), this->quantities().unknown_quantities()[i], A, b);
-              log::info<log_simulator>() << " Assemble TIME:"  << std::fixed      << std::setprecision(3) << std::setw(8) << stopwatch.get() << std::endl;
+              //log::info<log_simulator>() << " Assemble TIME:"  << std::fixed      << std::setprecision(3) << std::setw(8) << stopwatch.get() << std::endl;
 
               VectorType x = solve(A, b);
 
@@ -1067,7 +1067,7 @@ namespace viennashe
               viennashe::she::assemble(device(), transferred_quantities, this->quantities(), this->config(),
                                         this->quantities().unknown_she_quantities()[i], A, b,
                                         (quantities_history_.size() > 1), nonlinear_iter > 1);
-              log::info<log_simulator>() << " Assemble TIME:"  << std::fixed      << std::setprecision(3) << std::setw(8) << stopwatch.get() << std::endl;
+              //log::info<log_simulator>() << " Assemble TIME:"  << std::fixed      << std::setprecision(3) << std::setw(8) << stopwatch.get() << std::endl;
 
               VectorType x = viennashe::she::solve(this->device(), this->quantities().unknown_she_quantities()[i], this->config(), A, b, quan_unknowns.first);
 
