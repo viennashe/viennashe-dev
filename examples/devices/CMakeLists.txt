@@ -1,5 +1,5 @@
 
-foreach(device-tutorial half-trigate half-trigate-PETSC mosfet mosfet-PETSC nin-diode-1d nin-diode-2d np-diode-bipolar np-diode-bipolar-PETSC resistor resistor-PETSC mosfet-dg nin-diode-2d-hde mos1d-dg )
+foreach(device-tutorial half-trigate half-trigate-PETSC mosfet mosfet-PETSC nin-diode-1d nin-diode-2d np-diode-bipolar resistor mosfet-dg nin-diode-2d-hde mos1d-dg )
    add_executable(${device-tutorial} ${device-tutorial}.cpp)
    target_link_libraries(${device-tutorial} shesolvers ${OPENCL_LIBRARIES} ${PETSC_LIBRARIES} ${MPI_mpi_cxx_LIBRARY})
 

@@ -66,6 +66,7 @@ if (ENABLE_OPENMP)
   ADD_DEFINITIONS( -DVIENNACL_WITH_OPENMP -DVIENNASHE_WITH_OPENMP )
 endif(ENABLE_OPENMP)
 
+find_package(PETSc)
 
 
 # ************************** Section 3: Miscellaneous compiler settings **************************
@@ -108,7 +109,8 @@ ENDIF(${CMAKE_SYSTEM_NAME} MATCHES "Darwin")
 include_directories(
    ${PROJECT_BINARY_DIR}
    ${PROJECT_SOURCE_DIR}
-   ${OPENCL_INCLUDE_DIRS})
+   ${OPENCL_INCLUDE_DIRS}
+   ${PETSC_INCLUDE_DIR})
 
 # Set high warning level on GCC
 if(ENABLE_PEDANTIC_FLAGS)
