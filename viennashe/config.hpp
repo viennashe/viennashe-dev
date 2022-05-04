@@ -194,8 +194,10 @@ namespace viennashe
         with_holes_ = other.with_holes_;
         with_traps_ = other.with_traps_;
         with_trap_selfconsistency_ = other.with_trap_selfconsistency_;
-        dispersion_relation_electrons_ = std::auto_ptr< viennashe::physics::dispersion_base >(other.dispersion_relation_electrons_->clone());
-        dispersion_relation_holes_ = std::auto_ptr< viennashe::physics::dispersion_base >(other.dispersion_relation_holes_->clone());
+//        dispersion_relation_electrons_ = std::auto_ptr< viennashe::physics::dispersion_base >(other.dispersion_relation_electrons_->clone());
+//        dispersion_relation_holes_ = std::auto_ptr< viennashe::physics::dispersion_base >(other.dispersion_relation_holes_->clone());
+        dispersion_relation_electrons_ = std::unique_ptr< viennashe::physics::dispersion_base >(other.dispersion_relation_electrons_->clone());
+        dispersion_relation_holes_ = std::unique_ptr< viennashe::physics::dispersion_base >(other.dispersion_relation_holes_->clone());
         she_discretization_id_ = other.she_discretization_id_;
         she_scaling_id_        = other.she_scaling_id_;
         L_max_ = other.L_max_;
@@ -286,8 +288,9 @@ namespace viennashe
           ss << "No electron dispersion found with id: " << dispersion_id << std::endl;
           throw she::unknown_dispersion_relation_exception(ss.str());
         }
+        dispersion_relation_electrons_ = std::unique_ptr< viennashe::physics::dispersion_base >( disp_ptr );
 
-        dispersion_relation_electrons_ = std::auto_ptr< viennashe::physics::dispersion_base >( disp_ptr );
+    //    dispersion_relation_electrons_ = std::auto_ptr< viennashe::physics::dispersion_base >( disp_ptr );
       }
 
       /** @brief Sets a new dispersion relation for electrons
@@ -339,7 +342,9 @@ namespace viennashe
           throw she::unknown_dispersion_relation_exception(ss.str());
         }
 
-        dispersion_relation_holes_ = std::auto_ptr< viennashe::physics::dispersion_base >( disp_ptr );
+        //dispersion_relation_holes_ = std::auto_ptr< viennashe::physics::dispersion_base >( disp_ptr );
+        dispersion_relation_holes_ = std::unique_ptr< viennashe::physics::dispersion_base >( disp_ptr );
+
       }
 
       /** @brief Sets a new dispersion relation for holes
@@ -588,8 +593,8 @@ namespace viennashe
       equation_id hole_equation_id_;
       bool with_traps_;
       bool with_trap_selfconsistency_;
-      std::auto_ptr< viennashe::physics::dispersion_base >  dispersion_relation_electrons_;
-      std::auto_ptr< viennashe::physics::dispersion_base >  dispersion_relation_holes_;
+      std::unique_ptr< viennashe::physics::dispersion_base >  dispersion_relation_electrons_;
+      std::unique_ptr< viennashe::physics::dispersion_base >  dispersion_relation_holes_;
       she_discretization_type_id  she_discretization_id_;
       she_scaling_type_id         she_scaling_id_;
 

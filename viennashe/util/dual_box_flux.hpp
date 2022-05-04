@@ -157,9 +157,9 @@ namespace viennashe
       typedef typename viennagrid::result_of::point<CellT>::type                PointType;
 
       typedef typename viennagrid::result_of::const_coboundary_range<MeshType, FacetType, CellT>::type    CellOnFacetContainer;
-
-      viennashe::math::dense_matrix<double> M(PointType::dim, PointType::dim);
-      std::vector<double>                   b(PointType::dim);
+      int N = PointType::dim;
+      viennashe::math::dense_matrix<double> M(N,N);
+      std::vector<double>                   b(N);
 
       std::vector<PointType>  normals(facets.size());
       std::vector<double>     flux_contributions(facets.size());
